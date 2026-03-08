@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useCallingMembers } from "@/hooks/useCallingMembers";
-import { GripVertical, Pencil, Check } from "lucide-react";
+import { GripVertical, Pencil, Check, Plus, Trash2, RotateCcw } from "lucide-react";
 
 // ───────────────────────────────────────────────────────────
 // Types
@@ -18,22 +18,21 @@ interface OrgSection {
   entries: OrgEntry[];
 }
 
-interface AssignedEntry extends OrgEntry {
-  assignedName: string;
-}
 interface AssignedSection extends OrgSection {
-  entries: AssignedEntry[];
+  entries: (OrgEntry & { assignedName: string })[];
 }
 
+// Layout: rows of section IDs
+type Layout = string[][];
+
 // ───────────────────────────────────────────────────────────
-// Top (감독단)
+// Static data
 // ───────────────────────────────────────────────────────────
 
 const TOP_SECTION: OrgEntry[] = [
   { role: "감 독",     callingKey: "감독" },
   { role: "건물 대표", callingKey: "건물대표" },
 ];
-
 const BISHOP_ROW: OrgEntry[] = [
   { role: "1 보 좌",   callingKey: "감독단 1보좌" },
   { role: "2 보 좌",   callingKey: "감독단 2보좌" },
@@ -42,15 +41,9 @@ const BISHOP_ROW: OrgEntry[] = [
   { role: "보조 서기", callingKey: "와드 보조 서기" },
 ];
 
-// ───────────────────────────────────────────────────────────
-// 10 Sections (default order)
-// ───────────────────────────────────────────────────────────
-
-const DEFAULT_SECTIONS: OrgSection[] = [
+const ALL_SECTIONS: OrgSection[] = [
   {
-    id: "elders",
-    title: "장로정원회",
-    color: "#2563EB",
+    id: "elders", title: "장로정원회", color: "#2563EB",
     entries: [
       { role: "회장",         callingKey: "장로정원회 회장" },
       { role: "제1보좌",      callingKey: "장로정원회 회장 제1보좌" },
@@ -65,9 +58,7 @@ const DEFAULT_SECTIONS: OrgSection[] = [
     ],
   },
   {
-    id: "rs",
-    title: "상호부조회",
-    color: "#0D9488",
+    id: "rs", title: "상호부조회", color: "#0D9488",
     entries: [
       { role: "회장",      callingKey: "상호부조회 회장" },
       { role: "제1보좌",   callingKey: "상호부조회 회장 제1보좌" },
@@ -82,9 +73,7 @@ const DEFAULT_SECTIONS: OrgSection[] = [
     ],
   },
   {
-    id: "aaronic",
-    title: "아론신권정원회",
-    color: "#16A34A",
+    id: "aaronic", title: "아론신권정원회", color: "#16A34A",
     entries: [
       { role: "정원회 회장",         callingKey: "아론신권 정원회 회장" },
       { role: "정원회 제1보좌",      callingKey: "아론신권 정원회 제1보좌" },
@@ -104,9 +93,7 @@ const DEFAULT_SECTIONS: OrgSection[] = [
     ],
   },
   {
-    id: "yw",
-    title: "청녀",
-    color: "#DB2777",
+    id: "yw", title: "청녀", color: "#DB2777",
     entries: [
       { role: "회장",       callingKey: "청녀 회장" },
       { role: "제1보좌",    callingKey: "청녀 제1보좌" },
@@ -119,9 +106,7 @@ const DEFAULT_SECTIONS: OrgSection[] = [
     ],
   },
   {
-    id: "primary",
-    title: "초등회",
-    color: "#D97706",
+    id: "primary", title: "초등회", color: "#D97706",
     entries: [
       { role: "회장",           callingKey: "초등회 회장" },
       { role: "회장단 제1보좌", callingKey: "초등회 회장단 제1보좌" },
@@ -142,9 +127,7 @@ const DEFAULT_SECTIONS: OrgSection[] = [
     ],
   },
   {
-    id: "ss",
-    title: "주일학교",
-    color: "#0891B2",
+    id: "ss", title: "주일학교", color: "#0891B2",
     entries: [
       { role: "회장",              callingKey: "주일학교 회장" },
       { role: "회장단 제1보좌",    callingKey: "주일학교 회장단 제1보좌" },
@@ -176,39 +159,25 @@ const DEFAULT_SECTIONS: OrgSection[] = [
     ],
   },
   {
-    id: "singles",
-    title: "와드 독신 대표",
-    color: "#475569",
+    id: "singles", title: "와드 독신 대표", color: "#475569",
     entries: [
       { role: "독신 형제대표", callingKey: "와드 독신 형제대표" },
       { role: "독신 자매대표", callingKey: "와드 독신 자매대표" },
     ],
   },
   {
-    id: "mission",
-    title: "와드 선교",
-    color: "#DC2626",
+    id: "mission", title: "와드 선교", color: "#DC2626",
     entries: [
       { role: "선교 담당자", callingKey: "와드 선교 담당자" },
-      ...Array.from({ length: 10 }, (_, i) => ({
-        role: `선교사 ${i + 1}`,
-        callingKey: `와드 선교사 ${i + 1}`,
-      })),
+      ...Array.from({ length: 10 }, (_, i) => ({ role: `선교사 ${i + 1}`, callingKey: `와드 선교사 ${i + 1}` })),
     ],
   },
   {
-    id: "seminary",
-    title: "세미나리",
-    color: "#7C3AED",
-    entries: Array.from({ length: 5 }, (_, i) => ({
-      role: `세미나리 교사 ${i + 1}`,
-      callingKey: `세미나리 교사 ${i + 1}`,
-    })),
+    id: "seminary", title: "세미나리", color: "#7C3AED",
+    entries: Array.from({ length: 5 }, (_, i) => ({ role: `세미나리 교사 ${i + 1}`, callingKey: `세미나리 교사 ${i + 1}` })),
   },
   {
-    id: "other",
-    title: "기타 부름",
-    color: "#94A3B8",
+    id: "other", title: "기타 부름", color: "#94A3B8",
     entries: [
       { role: "취업 전문가",  callingKey: "와드 취업 전문가" },
       { role: "방역 책임자",  callingKey: "와드 방역 책임자" },
@@ -218,25 +187,19 @@ const DEFAULT_SECTIONS: OrgSection[] = [
   },
 ];
 
-const STORAGE_KEY = "orgchart-section-order";
+const SECTION_MAP = Object.fromEntries(ALL_SECTIONS.map(s => [s.id, s]));
+const DEFAULT_LAYOUT: Layout = [ALL_SECTIONS.map(s => s.id)];
+const STORAGE_KEY = "orgchart-layout-v2";
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 3;
 
-function loadOrder(): string[] | null {
+function loadLayout(): Layout {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+    return raw ? JSON.parse(raw) : DEFAULT_LAYOUT;
+  } catch { return DEFAULT_LAYOUT; }
 }
-
-function saveOrder(ids: string[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-}
-
-function applyOrder(sections: OrgSection[], order: string[]): OrgSection[] {
-  const map = Object.fromEntries(sections.map(s => [s.id, s]));
-  return order.map(id => map[id]).filter(Boolean);
-}
+function saveLayout(l: Layout) { localStorage.setItem(STORAGE_KEY, JSON.stringify(l)); }
 
 // ───────────────────────────────────────────────────────────
 // Main Component
@@ -247,12 +210,11 @@ const OrgChartPage = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
-    const saved = loadOrder();
-    return saved ?? DEFAULT_SECTIONS.map(s => s.id);
-  });
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [layout, setLayout] = useState<Layout>(loadLayout);
+
+  // drag state: { id, fromRow, fromCol }
+  const drag = useRef<{ id: string; fromRow: number; fromCol: number } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
 
   const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -261,11 +223,9 @@ const OrgChartPage = () => {
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
 
-  const orderedSections = applyOrder(DEFAULT_SECTIONS, sectionOrder);
-
-  // Fit to screen once data loads
+  // Fit on load
   useEffect(() => {
-    if (isLoading || fittedRef.current) return;
+    if (isLoading || fittedRef.current || editMode) return;
     const fit = () => {
       if (!containerRef.current || !contentRef.current) return;
       const cw = containerRef.current.clientWidth - 48;
@@ -279,217 +239,296 @@ const OrgChartPage = () => {
     };
     const t = setTimeout(fit, 200);
     return () => clearTimeout(t);
-  }, [isLoading]);
+  }, [isLoading, editMode]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (editMode) return;
     e.preventDefault();
-    const delta = -e.deltaY * 0.001;
-    setScale(s => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s + delta * s)));
-  }, [editMode]);
-
+    setScale(s => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s - e.deltaY * 0.001 * s)));
+  }, []);
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (editMode || e.button !== 0) return;
+    if (e.button !== 0) return;
     setIsPanning(true);
     panStart.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
-  }, [offset, editMode]);
-
+  }, [offset]);
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning) return;
-    setOffset({
-      x: panStart.current.ox + e.clientX - panStart.current.x,
-      y: panStart.current.oy + e.clientY - panStart.current.y,
-    });
+    setOffset({ x: panStart.current.ox + e.clientX - panStart.current.x, y: panStart.current.oy + e.clientY - panStart.current.y });
   }, [isPanning]);
-
   const handleMouseUp = useCallback(() => setIsPanning(false), []);
 
+  // ── Layout mutations ──
+  const addRow = () => {
+    const next = [...layout, []];
+    setLayout(next); saveLayout(next);
+  };
+  const removeRow = (rowIdx: number) => {
+    const row = layout[rowIdx];
+    if (row.length > 0) return; // only remove empty
+    const next = layout.filter((_, i) => i !== rowIdx);
+    if (next.length === 0) return;
+    setLayout(next); saveLayout(next);
+  };
+
+  // Move section from (fromRow, fromCol) to (toRow, toCol insert position)
+  const moveSection = (id: string, fromRow: number, fromCol: number, toRow: number, toCol: number) => {
+    const next: Layout = layout.map(r => [...r]);
+    // remove from source
+    next[fromRow].splice(fromCol, 1);
+    // adjust insert col if same row and toCol > fromCol
+    let insertCol = toCol;
+    if (fromRow === toRow && toCol > fromCol) insertCol = toCol - 1;
+    next[toRow].splice(insertCol, 0, id);
+    // remove empty rows (unless last one)
+    const cleaned = next.filter((r, i) => r.length > 0 || i === next.length - 1 && next.length === 1);
+    setLayout(cleaned); saveLayout(cleaned);
+  };
+
   // Drag handlers
-  const handleDragStart = (id: string) => setDragId(id);
-  const handleDragOver = (e: React.DragEvent, id: string) => {
+  const onDragStart = (id: string, fromRow: number, fromCol: number) => {
+    drag.current = { id, fromRow, fromCol };
+  };
+  const onDragOverCell = (e: React.DragEvent, row: number, col: number) => {
     e.preventDefault();
-    if (id !== dragId) setDragOverId(id);
+    setDropTarget({ row, col });
   };
-  const handleDrop = (targetId: string) => {
-    if (!dragId || dragId === targetId) return;
-    setSectionOrder(prev => {
-      const next = [...prev];
-      const fromIdx = next.indexOf(dragId);
-      const toIdx = next.indexOf(targetId);
-      next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, dragId);
-      saveOrder(next);
-      return next;
-    });
-    setDragId(null);
-    setDragOverId(null);
+  const onDropCell = (row: number, col: number) => {
+    if (!drag.current) return;
+    const { id, fromRow, fromCol } = drag.current;
+    moveSection(id, fromRow, fromCol, row, col);
+    drag.current = null;
+    setDropTarget(null);
   };
-  const handleDragEnd = () => { setDragId(null); setDragOverId(null); };
+  const onDragEnd = () => { drag.current = null; setDropTarget(null); };
 
   const exitEdit = () => { setEditMode(false); fittedRef.current = false; };
+  const resetLayout = () => { setLayout(DEFAULT_LAYOUT); saveLayout(DEFAULT_LAYOUT); };
 
-  // Build assigned sections
-  const assignedSections: AssignedSection[] = orderedSections.map(sec => ({
-    ...sec,
-    entries: sec.entries
-      .filter(e => e.callingKey && callingMap[e.callingKey])
-      .map(e => ({ ...e, assignedName: callingMap[e.callingKey!] ?? "" })),
-  }));
+  // Build assigned view
+  const buildAssigned = (id: string): AssignedSection => {
+    const sec = SECTION_MAP[id];
+    return {
+      ...sec,
+      entries: sec.entries
+        .filter(e => e.callingKey && callingMap[e.callingKey])
+        .map(e => ({ ...e, assignedName: callingMap[e.callingKey!] ?? "" })),
+    };
+  };
 
   const topVisible = TOP_SECTION.filter(e => e.callingKey && callingMap[e.callingKey]);
   const bishopVisible = BISHOP_ROW.filter(e => e.callingKey && callingMap[e.callingKey]);
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="sticky top-0 z-10 bg-card border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-xl font-bold text-foreground">조직도</h1>
           <p className="text-xs text-muted-foreground">
-            {editMode
-              ? "섹션을 드래그하여 순서를 변경하세요"
-              : "마우스 휠: 확대/축소 · 드래그: 이동"}
+            {editMode ? "섹션을 드래그하여 행·열 위치를 변경하세요" : "마우스 휠: 확대/축소 · 드래그: 이동"}
             {isLoading && <span className="ml-2 text-primary">로딩 중...</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {editMode ? (
-            <button
-              onClick={exitEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90"
-            >
-              <Check className="w-3.5 h-3.5" />완료
-            </button>
+            <>
+              <button onClick={resetLayout} className="flex items-center gap-1 px-2.5 py-1.5 rounded border border-border text-xs hover:bg-muted text-muted-foreground">
+                <RotateCcw className="w-3 h-3" />초기화
+              </button>
+              <button onClick={exitEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90">
+                <Check className="w-3.5 h-3.5" />완료
+              </button>
+            </>
           ) : (
             <>
-              <button
-                onClick={() => setEditMode(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs hover:bg-muted"
-              >
+              <button onClick={() => setEditMode(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs hover:bg-muted">
                 <Pencil className="w-3.5 h-3.5" />편집
               </button>
               <div className="flex items-center gap-1 ml-1">
                 <button onClick={() => setScale(s => Math.min(MAX_SCALE, s * 1.2))} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">＋</button>
                 <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
                 <button onClick={() => setScale(s => Math.max(MIN_SCALE, s * 0.8))} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">－</button>
-                <button
-                  onClick={() => { fittedRef.current = false; setScale(1); setOffset({ x: 0, y: 0 }); }}
-                  className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
-                >초기화</button>
+                <button onClick={() => { fittedRef.current = false; setScale(1); setOffset({ x: 0, y: 0 }); }} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">초기화</button>
               </div>
             </>
           )}
         </div>
       </div>
 
-      {/* Edit mode: drag-to-reorder panel */}
-      {editMode && (
-        <div className="bg-muted/50 border-b border-border px-6 py-4 overflow-x-auto">
-          <p className="text-xs text-muted-foreground mb-3 font-medium">섹션 순서 조정 — 드래그하여 열 위치를 변경하세요</p>
-          <div className="flex gap-2 min-w-max">
-            {orderedSections.map((sec) => (
-              <div
-                key={sec.id}
-                draggable
-                onDragStart={() => handleDragStart(sec.id)}
-                onDragOver={(e) => handleDragOver(e, sec.id)}
-                onDrop={() => handleDrop(sec.id)}
-                onDragEnd={handleDragEnd}
-                style={{
-                  borderColor: dragOverId === sec.id ? sec.color : undefined,
-                  borderWidth: dragOverId === sec.id ? 2 : 1,
-                  opacity: dragId === sec.id ? 0.4 : 1,
-                  transition: "opacity 0.15s, border-color 0.15s",
-                }}
-                className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border border-border cursor-grab active:cursor-grabbing select-none shadow-sm hover:shadow-md"
-              >
-                <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ background: sec.color }}
-                />
-                <span className="text-xs font-semibold text-foreground whitespace-nowrap">{sec.title}</span>
+      {/* ── Edit Mode ── */}
+      {editMode ? (
+        <div className="flex-1 overflow-auto bg-muted/30 p-6">
+          <div className="max-w-5xl mx-auto space-y-3">
+            {layout.map((row, rowIdx) => (
+              <div key={rowIdx} className="bg-card rounded-xl border border-border p-4">
+                {/* Row header */}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    {rowIdx + 1}행
+                  </span>
+                  <button
+                    onClick={() => removeRow(rowIdx)}
+                    disabled={row.length > 0 || layout.length <= 1}
+                    className="flex items-center gap-1 text-xs text-destructive hover:opacity-70 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-3 h-3" />행 삭제
+                  </button>
+                </div>
+
+                {/* Drop zone at start */}
+                <div className="flex items-start gap-2 flex-wrap">
+                  <DropZone
+                    row={rowIdx} col={0}
+                    active={!!dropTarget && dropTarget.row === rowIdx && dropTarget.col === 0}
+                    onDragOver={(e) => onDragOverCell(e, rowIdx, 0)}
+                    onDrop={() => onDropCell(rowIdx, 0)}
+                  />
+                  {row.map((id, colIdx) => {
+                    const sec = SECTION_MAP[id];
+                    if (!sec) return null;
+                    return (
+                      <div key={id} className="flex items-center gap-1">
+                        {/* Section card */}
+                        <div
+                          draggable
+                          onDragStart={() => onDragStart(id, rowIdx, colIdx)}
+                          onDragEnd={onDragEnd}
+                          className="flex items-center gap-2 px-3 py-2.5 bg-background rounded-lg border border-border cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md select-none"
+                          style={{ borderLeftWidth: 3, borderLeftColor: sec.color }}
+                        >
+                          <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: sec.color }} />
+                          <span className="text-xs font-semibold text-foreground whitespace-nowrap">{sec.title}</span>
+                        </div>
+                        {/* Drop zone after this card */}
+                        <DropZone
+                          row={rowIdx} col={colIdx + 1}
+                          active={!!dropTarget && dropTarget.row === rowIdx && dropTarget.col === colIdx + 1}
+                          onDragOver={(e) => onDragOverCell(e, rowIdx, colIdx + 1)}
+                          onDrop={() => onDropCell(rowIdx, colIdx + 1)}
+                        />
+                      </div>
+                    );
+                  })}
+                  {row.length === 0 && (
+                    <div
+                      className="flex-1 min-h-14 rounded-lg border-2 border-dashed border-border flex items-center justify-center text-xs text-muted-foreground"
+                      onDragOver={(e) => onDragOverCell(e, rowIdx, 0)}
+                      onDrop={() => onDropCell(rowIdx, 0)}
+                    >
+                      여기에 섹션을 드래그하세요
+                    </div>
+                  )}
+                </div>
+
+                {/* Drop zone for other rows */}
+                {layout.filter((_, i) => i !== rowIdx).map((_, i) => {
+                  const actualIdx = i >= rowIdx ? i + 1 : i;
+                  return null; // handled inline
+                })}
               </div>
             ))}
+
+            {/* Add Row */}
+            <button
+              onClick={addRow}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+            >
+              <Plus className="w-4 h-4" />새 행 추가
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* ── View Mode ── */
+        <div
+          ref={containerRef}
+          className="flex-1 overflow-hidden relative bg-muted/30"
+          style={{ cursor: isPanning ? "grabbing" : "grab" }}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          <div
+            ref={contentRef}
+            style={{
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+              transformOrigin: "top left",
+              position: "absolute", top: 0, left: 0,
+              padding: "24px", userSelect: "none",
+            }}
+          >
+            {/* 제목 */}
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "0.3em", color: "#1e293b" }}>
+                신 풍 와 드 조 직 도
+              </h2>
+            </div>
+
+            {/* 감독단 */}
+            {topVisible.length > 0 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 10 }}>
+                {topVisible.map(e => <TopCard key={e.role} role={e.role} name={callingMap[e.callingKey!] ?? ""} />)}
+              </div>
+            )}
+            {bishopVisible.length > 0 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 20 }}>
+                {bishopVisible.map(e => <BishopCard key={e.role} role={e.role} name={callingMap[e.callingKey!] ?? ""} />)}
+              </div>
+            )}
+
+            {/* 행 × 열 그리드 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {layout.map((row, rowIdx) => (
+                <div key={rowIdx} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  {row.map(id => (
+                    <SectionBlock key={id} sec={buildAssigned(id)} />
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
-
-      {/* Canvas */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-hidden relative bg-muted/30"
-        style={{ cursor: editMode ? "default" : isPanning ? "grabbing" : "grab" }}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      >
-        <div
-          ref={contentRef}
-          style={{
-            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-            transformOrigin: "top left",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            padding: "24px",
-            userSelect: "none",
-          }}
-        >
-          {/* ── 제목 ── */}
-          <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <h2 style={{ fontSize: 26, fontWeight: 900, letterSpacing: "0.3em", color: "#1e293b" }}>
-              신 풍 와 드 조 직 도
-            </h2>
-          </div>
-
-          {/* ── 감독단 ── */}
-          {topVisible.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 10 }}>
-              {topVisible.map(e => (
-                <TopCard key={e.role} role={e.role} name={callingMap[e.callingKey!] ?? ""} />
-              ))}
-            </div>
-          )}
-          {bishopVisible.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 20 }}>
-              {bishopVisible.map(e => (
-                <BishopCard key={e.role} role={e.role} name={callingMap[e.callingKey!] ?? ""} />
-              ))}
-            </div>
-          )}
-
-          {/* ── 섹션 열 ── */}
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-            {assignedSections.map((sec) => (
-              <SectionBlock key={sec.id} sec={sec} />
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
 
+// ── DropZone ────────────────────────────────────────────────
+
+const DropZone = ({
+  active, onDragOver, onDrop,
+}: {
+  row: number; col: number; active: boolean;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: () => void;
+}) => (
+  <div
+    onDragOver={onDragOver}
+    onDrop={onDrop}
+    className="transition-all"
+    style={{
+      width: active ? 40 : 8,
+      minHeight: 44,
+      borderRadius: 6,
+      background: active ? "hsl(var(--primary) / 0.15)" : "transparent",
+      border: active ? "2px dashed hsl(var(--primary))" : "2px dashed transparent",
+      flexShrink: 0,
+    }}
+  />
+);
+
 // ── Sub-components ──────────────────────────────────────────
 
 const TopCard = ({ role, name }: { role: string; name: string }) => (
-  <div style={{
-    display: "inline-flex", alignItems: "center", border: "2px solid #f97316",
-    borderRadius: 4, overflow: "hidden", fontSize: 13, fontWeight: 700,
-  }}>
+  <div style={{ display: "inline-flex", alignItems: "center", border: "2px solid #f97316", borderRadius: 4, overflow: "hidden", fontSize: 13, fontWeight: 700 }}>
     <span style={{ background: "#f97316", color: "#fff", padding: "4px 10px" }}>{role}</span>
     <span style={{ padding: "4px 12px", color: "#1e293b", minWidth: 64, textAlign: "center" }}>{name}</span>
   </div>
 );
 
 const BishopCard = ({ role, name }: { role: string; name: string }) => (
-  <div style={{
-    display: "inline-flex", alignItems: "center", border: "1.5px solid #e2e8f0",
-    borderRadius: 4, overflow: "hidden", fontSize: 12, background: "#fff",
-  }}>
+  <div style={{ display: "inline-flex", alignItems: "center", border: "1.5px solid #e2e8f0", borderRadius: 4, overflow: "hidden", fontSize: 12, background: "#fff" }}>
     <span style={{ background: "#1e40af", color: "#fff", padding: "3px 8px", fontWeight: 700 }}>{role}</span>
     <span style={{ padding: "3px 10px", color: "#1e293b", fontWeight: 600, minWidth: 52, textAlign: "center" }}>{name}</span>
   </div>
@@ -497,23 +536,14 @@ const BishopCard = ({ role, name }: { role: string; name: string }) => (
 
 const SectionBlock = ({ sec }: { sec: AssignedSection }) => (
   <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11, width: 180, flexShrink: 0 }}>
-    <div style={{
-      background: sec.color, color: "#fff", textAlign: "center",
-      padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em",
-    }}>
+    <div style={{ background: sec.color, color: "#fff", textAlign: "center", padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em" }}>
       {sec.title}
     </div>
     {sec.entries.length === 0 ? (
-      <div style={{ padding: "10px 8px", color: "#cbd5e1", fontSize: 10, textAlign: "center" }}>
-        배정된 부름 없음
-      </div>
+      <div style={{ padding: "10px 8px", color: "#cbd5e1", fontSize: 10, textAlign: "center" }}>배정된 부름 없음</div>
     ) : (
       sec.entries.map((e, i) => (
-        <div key={i} style={{
-          display: "flex", alignItems: "center",
-          borderTop: i === 0 ? "none" : "1px solid #f1f5f9",
-          padding: "3px 8px", gap: 4,
-        }}>
+        <div key={i} style={{ display: "flex", alignItems: "center", borderTop: i === 0 ? "none" : "1px solid #f1f5f9", padding: "3px 8px", gap: 4 }}>
           <span style={{ color: "#64748b", flexShrink: 0, minWidth: 88, fontSize: 10 }}>{e.role}</span>
           <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 11 }}>{e.assignedName}</span>
         </div>
