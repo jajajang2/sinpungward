@@ -8,10 +8,11 @@ import { supabase } from "@/lib/supabase";
 // ───────────────────────────────────────────────────────────
 interface OrgEntry { role: string; callingKey?: string; }
 interface OrgSection { id: string; title: string; color: string; entries: OrgEntry[]; }
+interface SpecialMember { id: string; name: string; phone?: string; birth_date?: string; gender?: string; address?: string; }
 type PositionMap = { [id: string]: { x: number; y: number } };
 
 // ───────────────────────────────────────────────────────────
-// All sections (감독단 first, then rest)
+// All sections
 // ───────────────────────────────────────────────────────────
 const ALL_SECTIONS: OrgSection[] = [
   { id: "bishop", title: "감 독 단", color: "#f97316", entries: [
@@ -144,10 +145,14 @@ const ALL_SECTIONS: OrgSection[] = [
 // Layout helpers
 // ───────────────────────────────────────────────────────────
 const SECTION_W = 182;
+const SPECIAL_W = 280;
 const HEADER_H = 29;
 const ROW_H = 22;
+const SPECIAL_ROW_H = 52;
 const EMPTY_H = 28;
 const GAP = 10;
+const SPECIAL_SECTION_ID = "__special_care__";
+const STORAGE_KEY = "orgchart-freepos-v3";
 
 function calcHeight(sec: OrgSection, hideEmpty: boolean, callingMap: Record<string, string>): number {
   const rows = hideEmpty
@@ -156,41 +161,58 @@ function calcHeight(sec: OrgSection, hideEmpty: boolean, callingMap: Record<stri
   return HEADER_H + (rows > 0 ? rows * ROW_H : EMPTY_H) + 2;
 }
 
+function calcSpecialHeight(count: number): number {
+  return HEADER_H + (count > 0 ? count * SPECIAL_ROW_H : EMPTY_H) + 2;
+}
+
 function defaultPositions(): PositionMap {
   const pos: PositionMap = {};
-  // bishop at center top
   pos["bishop"] = { x: 400, y: 50 };
   const rest = ALL_SECTIONS.filter(s => s.id !== "bishop");
   rest.forEach((sec, i) => {
     pos[sec.id] = { x: (i % 5) * (SECTION_W + GAP), y: 220 + Math.floor(i / 5) * 320 };
   });
+  pos[SPECIAL_SECTION_ID] = { x: 20, y: 1100 };
   return pos;
 }
+
+function loadPositions(): PositionMap {
+  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : defaultPositions(); }
+  catch { return defaultPositions(); }
+}
+function savePositions(p: PositionMap) { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
 
 function resolveCollisions(
   positions: PositionMap,
   sections: OrgSection[],
   hideEmpty: boolean,
   callingMap: Record<string, string>,
+  specialCount: number,
   draggedId: string
 ): PositionMap {
   const result = { ...positions };
   const heights: Record<string, number> = {};
   sections.forEach(s => { heights[s.id] = calcHeight(s, hideEmpty, callingMap); });
+  heights[SPECIAL_SECTION_ID] = calcSpecialHeight(specialCount);
 
-  const overlaps = (a: { x: number; y: number }, ah: number, b: { x: number; y: number }, bh: number) =>
-    !(a.x + SECTION_W + GAP <= b.x || b.x + SECTION_W + GAP <= a.x ||
+  const allIds = [...sections.map(s => s.id), SPECIAL_SECTION_ID];
+
+  const overlaps = (a: { x: number; y: number }, aw: number, ah: number, b: { x: number; y: number }, bw: number, bh: number) =>
+    !(a.x + aw + GAP <= b.x || b.x + bw + GAP <= a.x ||
       a.y + ah + GAP <= b.y || b.y + bh + GAP <= a.y);
+
+  const getW = (id: string) => id === SPECIAL_SECTION_ID ? SPECIAL_W : SECTION_W;
 
   for (let iter = 0; iter < 30; iter++) {
     let changed = false;
-    const ids = Object.keys(result).sort((a, b) => result[a].y - result[b].y);
+    const ids = allIds.filter(id => result[id]).sort((a, b) => (result[a]?.y ?? 0) - (result[b]?.y ?? 0));
     for (let i = 0; i < ids.length; i++) {
       for (let j = 0; j < i; j++) {
         const upper = ids[j];
         const lower = ids[i];
-        if (lower === draggedId) continue; // don't move the card being dragged
-        if (overlaps(result[upper], heights[upper] || 100, result[lower], heights[lower] || 100)) {
+        if (lower === draggedId) continue;
+        if (!result[upper] || !result[lower]) continue;
+        if (overlaps(result[upper], getW(upper), heights[upper] || 100, result[lower], getW(lower), heights[lower] || 100)) {
           const newY = result[upper].y + (heights[upper] || 100) + GAP;
           if (result[lower].y < newY) {
             result[lower] = { ...result[lower], y: newY };
@@ -204,12 +226,14 @@ function resolveCollisions(
   return result;
 }
 
-const STORAGE_KEY = "orgchart-freepos-v2";
-function loadPositions(): PositionMap {
-  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : defaultPositions(); }
-  catch { return defaultPositions(); }
+function getAge(bd?: string): number | null {
+  if (!bd) return null;
+  const today = new Date();
+  const b = new Date(bd);
+  let age = today.getFullYear() - b.getFullYear();
+  if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) age--;
+  return age;
 }
-function save(p: PositionMap) { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
 
 const MIN_SCALE = 0.15;
 const MAX_SCALE = 3;
@@ -224,7 +248,7 @@ export default function OrgChartPage() {
   const [hideEmpty, setHideEmpty] = useState(true);
   const [positions, setPositions] = useState<PositionMap>(loadPositions);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [specialCareMembers, setSpecialCareMembers] = useState<{ id: string; name: string }[]>([]);
+  const [specialCareMembers, setSpecialCareMembers] = useState<SpecialMember[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
@@ -233,10 +257,12 @@ export default function OrgChartPage() {
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
 
-  // Fetch special care members
   useEffect(() => {
-    supabase.from("members").select("id, name").eq("is_special_care", true).order("name")
-      .then(({ data }) => setSpecialCareMembers(data ?? []));
+    supabase.from("members")
+      .select("id, name, phone, birth_date, gender, address")
+      .eq("is_special_care", true)
+      .order("name")
+      .then(({ data }) => setSpecialCareMembers((data as SpecialMember[]) ?? []));
   }, []);
 
   const clientToCanvas = useCallback((cx: number, cy: number) => {
@@ -289,14 +315,17 @@ export default function OrgChartPage() {
 
   const onMouseUp = useCallback(() => {
     if (draggingId) {
-      setPositions(p => resolveCollisions(p, ALL_SECTIONS, hideEmpty, callingMap, draggingId));
+      setPositions(p => resolveCollisions(p, ALL_SECTIONS, hideEmpty, callingMap, specialCareMembers.length, draggingId));
     }
     isPanning.current = false;
     setDraggingId(null);
-  }, [draggingId, hideEmpty, callingMap]);
+  }, [draggingId, hideEmpty, callingMap, specialCareMembers.length]);
 
-  const handleSave = () => { save(positions); setEditMode(false); };
-  const handleReset = () => { const d = defaultPositions(); setPositions(d); save(d); };
+  const handleSave = () => { savePositions(positions); setEditMode(false); };
+  const handleReset = () => { const d = defaultPositions(); setPositions(d); savePositions(d); };
+
+  // Special section pos — ensure it has a default if not saved yet
+  const specialPos = positions[SPECIAL_SECTION_ID] ?? { x: 20, y: 1100 };
 
   return (
     <div className="flex flex-col h-screen">
@@ -310,7 +339,6 @@ export default function OrgChartPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* 미배정 숨김 toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground">
             <input
               type="checkbox"
@@ -357,7 +385,6 @@ export default function OrgChartPage() {
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
       >
-        {/* grid dots in edit mode */}
         {editMode && (
           <div className="absolute inset-0 pointer-events-none" style={{
             backgroundImage: "radial-gradient(circle, #cbd5e1 1px, transparent 1px)",
@@ -372,14 +399,14 @@ export default function OrgChartPage() {
           position: "absolute", top: 0, left: 0,
           userSelect: "none",
         }}>
-          {/* title — fixed at top-left */}
+          {/* title */}
           <div style={{ position: "absolute", top: 0, left: 0, width: 1200, textAlign: "center", pointerEvents: "none" }}>
             <h2 style={{ fontSize: 28, fontWeight: 900, letterSpacing: "0.3em", color: "#1e293b" }}>
               신 풍 와 드 조 직 도
             </h2>
           </div>
 
-          {/* all sections */}
+          {/* all regular sections */}
           {ALL_SECTIONS.map(sec => {
             const pos = positions[sec.id] ?? { x: 0, y: 0 };
             const visibleEntries = hideEmpty
@@ -401,7 +428,6 @@ export default function OrgChartPage() {
                 }}
                 onMouseDown={e => onSectionMouseDown(e, sec.id)}
               >
-                {/* drag hint in edit mode */}
                 {editMode && (
                   <div style={{ position: "absolute", top: -18, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "#94a3b8" }}>
                     ⠿ 드래그
@@ -432,70 +458,90 @@ export default function OrgChartPage() {
             );
           })}
 
-          {/* ── Special Care Members separator + section ── */}
-          {specialCareMembers.length > 0 && (() => {
-            // Find the bottom-most section to place separator below it
-            const allSectionYs = ALL_SECTIONS.map(s => {
-              const pos = positions[s.id] ?? { x: 0, y: 0 };
-              return pos.y + calcHeight(s, hideEmpty, callingMap);
-            });
-            const maxBottom = Math.max(...allSectionYs, 300);
-            const sepY = maxBottom + 60;
-            const secY = sepY + 40;
-            const SPECIAL_W = 260;
+          {/* ── Special Care Members separator line ── */}
+          <div style={{
+            position: "absolute",
+            top: specialPos.y - 50,
+            left: -200,
+            width: 3000,
+            borderTop: "2px dashed #e2e8f0",
+            pointerEvents: "none",
+          }} />
+          <div style={{
+            position: "absolute",
+            top: specialPos.y - 62,
+            left: 20,
+            fontSize: 10,
+            color: "#94a3b8",
+            pointerEvents: "none",
+            background: "#f8fafc",
+            padding: "1px 8px",
+            borderRadius: 4,
+            letterSpacing: "0.1em",
+          }}>
+            ─── 특별관리 구역 ───
+          </div>
 
+          {/* ── Special Care section (draggable) ── */}
+          {(() => {
+            const SPECIAL_COLOR = "#DC2626";
+            const isDragging = draggingId === SPECIAL_SECTION_ID;
             return (
-              <>
-                {/* horizontal separator line */}
-                <div style={{
+              <div
+                style={{
                   position: "absolute",
-                  top: sepY,
-                  left: -100,
-                  width: 2000,
-                  borderTop: "2px dashed #e2e8f0",
-                  pointerEvents: "none",
-                }} />
-                <div style={{
-                  position: "absolute",
-                  top: sepY - 10,
-                  left: 0,
-                  width: 200,
-                  textAlign: "center",
-                  fontSize: 10,
-                  color: "#94a3b8",
-                  pointerEvents: "none",
-                  background: "#fff",
-                  padding: "0 8px",
-                }}>
-                  ─── 특별관리 구역 ───
-                </div>
-
-                {/* Special care section card */}
-                <div style={{
-                  position: "absolute",
-                  top: secY,
-                  left: 0,
+                  left: specialPos.x, top: specialPos.y,
                   width: SPECIAL_W,
-                }}>
-                  <div style={{
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 6,
-                    overflow: "hidden",
-                    background: "#fff",
-                    fontSize: 11,
-                  }}>
-                    <div style={{ background: "#DC2626", color: "#fff", textAlign: "center", padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em" }}>
-                      ★ 특별관리회원
-                    </div>
-                    {specialCareMembers.map((m, i) => (
-                      <div key={m.id} style={{ display: "flex", alignItems: "center", borderTop: i === 0 ? "none" : "1px solid #f1f5f9", padding: "4px 8px", gap: 6 }}>
-                        <span style={{ color: "#DC2626", fontSize: 9, flexShrink: 0 }}>●</span>
-                        <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 11 }}>{m.name}</span>
-                      </div>
-                    ))}
+                  zIndex: isDragging ? 100 : 1,
+                  cursor: editMode ? (isDragging ? "grabbing" : "grab") : "default",
+                  filter: isDragging ? "drop-shadow(0 8px 20px rgba(0,0,0,0.25))" : "none",
+                  transition: isDragging ? "none" : "filter 0.15s",
+                }}
+                onMouseDown={e => onSectionMouseDown(e, SPECIAL_SECTION_ID)}
+              >
+                {editMode && (
+                  <div style={{ position: "absolute", top: -18, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "#94a3b8" }}>
+                    ⠿ 드래그
                   </div>
+                )}
+                <div style={{
+                  border: editMode ? `2px dashed ${SPECIAL_COLOR}` : `1.5px solid #fca5a5`,
+                  borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11,
+                }}>
+                  <div style={{ background: SPECIAL_COLOR, color: "#fff", textAlign: "center", padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em" }}>
+                    ★ 특별관리회원
+                  </div>
+                  {specialCareMembers.length === 0 ? (
+                    <div style={{ padding: "10px 8px", color: "#cbd5e1", fontSize: 10, textAlign: "center" }}>특별관리회원 없음</div>
+                  ) : specialCareMembers.map((m, i) => {
+                    const age = getAge(m.birth_date);
+                    return (
+                      <div key={m.id} style={{ borderTop: i === 0 ? "none" : "1px solid #f1f5f9", padding: "6px 8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: SPECIAL_COLOR, fontSize: 9, flexShrink: 0 }}>●</span>
+                          <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 12 }}>{m.name}</span>
+                          {m.gender && (
+                            <span style={{ fontSize: 9, color: "#fff", background: m.gender === "남" ? "#3b82f6" : "#ec4899", borderRadius: 3, padding: "1px 4px" }}>
+                              {m.gender}
+                            </span>
+                          )}
+                          {age !== null && <span style={{ fontSize: 9, color: "#94a3b8" }}>{age}세</span>}
+                        </div>
+                        {m.phone && (
+                          <div style={{ paddingLeft: 15, fontSize: 10, color: "#64748b", marginTop: 2 }}>
+                            📞 {m.phone}
+                          </div>
+                        )}
+                        {m.address && (
+                          <div style={{ paddingLeft: 15, fontSize: 10, color: "#64748b", marginTop: 1, maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            📍 {m.address}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </>
+              </div>
             );
           })()}
         </div>
