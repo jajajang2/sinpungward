@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Save, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PhotoUpload from "./PhotoUpload";
 
 interface MemberDetailPanelProps {
   memberId: string;
