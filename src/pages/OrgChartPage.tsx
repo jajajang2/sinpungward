@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useCallingMembers } from "@/hooks/useCallingMembers";
 import { Pencil, Save, RotateCcw } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 // ───────────────────────────────────────────────────────────
 // Types
