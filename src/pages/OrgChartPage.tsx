@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useCallingMembers } from "@/hooks/useCallingMembers";
+import { GripVertical, Pencil, Check } from "lucide-react";
 
 // ───────────────────────────────────────────────────────────
 // Types
@@ -11,9 +12,17 @@ interface OrgEntry {
 }
 
 interface OrgSection {
+  id: string;
   title: string;
   color: string;
   entries: OrgEntry[];
+}
+
+interface AssignedEntry extends OrgEntry {
+  assignedName: string;
+}
+interface AssignedSection extends OrgSection {
+  entries: AssignedEntry[];
 }
 
 // ───────────────────────────────────────────────────────────
@@ -34,12 +43,12 @@ const BISHOP_ROW: OrgEntry[] = [
 ];
 
 // ───────────────────────────────────────────────────────────
-// 10 columns — each section in its own column, in this order
+// 10 Sections (default order)
 // ───────────────────────────────────────────────────────────
 
-const SECTIONS: OrgSection[] = [
-  // 1. 장로정원회
+const DEFAULT_SECTIONS: OrgSection[] = [
   {
+    id: "elders",
     title: "장로정원회",
     color: "#2563EB",
     entries: [
@@ -55,8 +64,8 @@ const SECTIONS: OrgSection[] = [
       { role: "교사 5",       callingKey: "장로정원회 교사 5" },
     ],
   },
-  // 2. 상호부조회
   {
+    id: "rs",
     title: "상호부조회",
     color: "#0D9488",
     entries: [
@@ -72,8 +81,8 @@ const SECTIONS: OrgSection[] = [
       { role: "교사 5",    callingKey: "상호부조회 교사 5" },
     ],
   },
-  // 3. 아론신권정원회
   {
+    id: "aaronic",
     title: "아론신권정원회",
     color: "#16A34A",
     entries: [
@@ -94,8 +103,8 @@ const SECTIONS: OrgSection[] = [
       { role: "집사 서기",           callingKey: "집사 정원회 서기" },
     ],
   },
-  // 4. 청녀
   {
+    id: "yw",
     title: "청녀",
     color: "#DB2777",
     entries: [
@@ -109,8 +118,8 @@ const SECTIONS: OrgSection[] = [
       { role: "반 서기",    callingKey: "청녀 반 서기" },
     ],
   },
-  // 5. 초등회
   {
+    id: "primary",
     title: "초등회",
     color: "#D97706",
     entries: [
@@ -132,8 +141,8 @@ const SECTIONS: OrgSection[] = [
       { role: "용기반 교사 3",  callingKey: "용기반 교사 3" },
     ],
   },
-  // 6. 주일학교
   {
+    id: "ss",
     title: "주일학교",
     color: "#0891B2",
     entries: [
@@ -166,8 +175,8 @@ const SECTIONS: OrgSection[] = [
       { role: "청소년 교사 3",     callingKey: "청소년 교사 3" },
     ],
   },
-  // 7. 와드 독신 대표
   {
+    id: "singles",
     title: "와드 독신 대표",
     color: "#475569",
     entries: [
@@ -175,8 +184,8 @@ const SECTIONS: OrgSection[] = [
       { role: "독신 자매대표", callingKey: "와드 독신 자매대표" },
     ],
   },
-  // 8. 와드 선교
   {
+    id: "mission",
     title: "와드 선교",
     color: "#DC2626",
     entries: [
@@ -187,8 +196,8 @@ const SECTIONS: OrgSection[] = [
       })),
     ],
   },
-  // 9. 세미나리 교사
   {
+    id: "seminary",
     title: "세미나리",
     color: "#7C3AED",
     entries: Array.from({ length: 5 }, (_, i) => ({
@@ -196,8 +205,8 @@ const SECTIONS: OrgSection[] = [
       callingKey: `세미나리 교사 ${i + 1}`,
     })),
   },
-  // 10. 기타 부름
   {
+    id: "other",
     title: "기타 부름",
     color: "#94A3B8",
     entries: [
@@ -209,8 +218,25 @@ const SECTIONS: OrgSection[] = [
   },
 ];
 
+const STORAGE_KEY = "orgchart-section-order";
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 3;
+
+function loadOrder(): string[] | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveOrder(ids: string[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+}
+
+function applyOrder(sections: OrgSection[], order: string[]): OrgSection[] {
+  const map = Object.fromEntries(sections.map(s => [s.id, s]));
+  return order.map(id => map[id]).filter(Boolean);
+}
 
 // ───────────────────────────────────────────────────────────
 // Main Component
@@ -220,12 +246,22 @@ const OrgChartPage = () => {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() => {
+    const saved = loadOrder();
+    return saved ?? DEFAULT_SECTIONS.map(s => s.id);
+  });
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
   const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const fittedRef = useRef(false);
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
+
+  const orderedSections = applyOrder(DEFAULT_SECTIONS, sectionOrder);
 
   // Fit to screen once data loads
   useEffect(() => {
@@ -246,16 +282,17 @@ const OrgChartPage = () => {
   }, [isLoading]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (editMode) return;
     e.preventDefault();
     const delta = -e.deltaY * 0.001;
     setScale(s => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s + delta * s)));
-  }, []);
+  }, [editMode]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+    if (editMode || e.button !== 0) return;
     setIsPanning(true);
     panStart.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
-  }, [offset]);
+  }, [offset, editMode]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning) return;
@@ -267,17 +304,40 @@ const OrgChartPage = () => {
 
   const handleMouseUp = useCallback(() => setIsPanning(false), []);
 
-  // Top row: only show if assigned
-  const topVisible = TOP_SECTION.filter(e => e.callingKey && callingMap[e.callingKey]);
-  const bishopVisible = BISHOP_ROW.filter(e => e.callingKey && callingMap[e.callingKey]);
+  // Drag handlers
+  const handleDragStart = (id: string) => setDragId(id);
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (id !== dragId) setDragOverId(id);
+  };
+  const handleDrop = (targetId: string) => {
+    if (!dragId || dragId === targetId) return;
+    setSectionOrder(prev => {
+      const next = [...prev];
+      const fromIdx = next.indexOf(dragId);
+      const toIdx = next.indexOf(targetId);
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, dragId);
+      saveOrder(next);
+      return next;
+    });
+    setDragId(null);
+    setDragOverId(null);
+  };
+  const handleDragEnd = () => { setDragId(null); setDragOverId(null); };
 
-  // Sections: always show the section header, but only show assigned entries
-  const sectionsWithVisibleEntries = SECTIONS.map(sec => ({
+  const exitEdit = () => { setEditMode(false); fittedRef.current = false; };
+
+  // Build assigned sections
+  const assignedSections: AssignedSection[] = orderedSections.map(sec => ({
     ...sec,
     entries: sec.entries
       .filter(e => e.callingKey && callingMap[e.callingKey])
-      .map(e => ({ ...e, assignedName: e.callingKey ? callingMap[e.callingKey] ?? "" : "" })),
+      .map(e => ({ ...e, assignedName: callingMap[e.callingKey!] ?? "" })),
   }));
+
+  const topVisible = TOP_SECTION.filter(e => e.callingKey && callingMap[e.callingKey]);
+  const bishopVisible = BISHOP_ROW.filter(e => e.callingKey && callingMap[e.callingKey]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -286,26 +346,80 @@ const OrgChartPage = () => {
         <div>
           <h1 className="text-xl font-bold text-foreground">조직도</h1>
           <p className="text-xs text-muted-foreground">
-            마우스 휠: 확대/축소 · 드래그: 이동
-            {isLoading && <span className="ml-2 text-primary">회원 데이터 로딩 중...</span>}
+            {editMode
+              ? "섹션을 드래그하여 순서를 변경하세요"
+              : "마우스 휠: 확대/축소 · 드래그: 이동"}
+            {isLoading && <span className="ml-2 text-primary">로딩 중...</span>}
           </p>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setScale(s => Math.min(MAX_SCALE, s * 1.2))} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">＋</button>
-          <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
-          <button onClick={() => setScale(s => Math.max(MIN_SCALE, s * 0.8))} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">－</button>
-          <button
-            onClick={() => { fittedRef.current = false; setScale(1); setOffset({ x: 0, y: 0 }); }}
-            className="px-2 py-1 rounded border border-border text-xs hover:bg-muted ml-1"
-          >초기화</button>
+        <div className="flex items-center gap-2">
+          {editMode ? (
+            <button
+              onClick={exitEdit}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90"
+            >
+              <Check className="w-3.5 h-3.5" />완료
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setEditMode(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs hover:bg-muted"
+              >
+                <Pencil className="w-3.5 h-3.5" />편집
+              </button>
+              <div className="flex items-center gap-1 ml-1">
+                <button onClick={() => setScale(s => Math.min(MAX_SCALE, s * 1.2))} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">＋</button>
+                <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
+                <button onClick={() => setScale(s => Math.max(MIN_SCALE, s * 0.8))} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">－</button>
+                <button
+                  onClick={() => { fittedRef.current = false; setScale(1); setOffset({ x: 0, y: 0 }); }}
+                  className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
+                >초기화</button>
+              </div>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Edit mode: drag-to-reorder panel */}
+      {editMode && (
+        <div className="bg-muted/50 border-b border-border px-6 py-4 overflow-x-auto">
+          <p className="text-xs text-muted-foreground mb-3 font-medium">섹션 순서 조정 — 드래그하여 열 위치를 변경하세요</p>
+          <div className="flex gap-2 min-w-max">
+            {orderedSections.map((sec) => (
+              <div
+                key={sec.id}
+                draggable
+                onDragStart={() => handleDragStart(sec.id)}
+                onDragOver={(e) => handleDragOver(e, sec.id)}
+                onDrop={() => handleDrop(sec.id)}
+                onDragEnd={handleDragEnd}
+                style={{
+                  borderColor: dragOverId === sec.id ? sec.color : undefined,
+                  borderWidth: dragOverId === sec.id ? 2 : 1,
+                  opacity: dragId === sec.id ? 0.4 : 1,
+                  transition: "opacity 0.15s, border-color 0.15s",
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border border-border cursor-grab active:cursor-grabbing select-none shadow-sm hover:shadow-md"
+              >
+                <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ background: sec.color }}
+                />
+                <span className="text-xs font-semibold text-foreground whitespace-nowrap">{sec.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Canvas */}
       <div
         ref={containerRef}
         className="flex-1 overflow-hidden relative bg-muted/30"
-        style={{ cursor: isPanning ? "grabbing" : "grab" }}
+        style={{ cursor: editMode ? "default" : isPanning ? "grabbing" : "grab" }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -347,10 +461,10 @@ const OrgChartPage = () => {
             </div>
           )}
 
-          {/* ── 10열 섹션 그리드 ── */}
+          {/* ── 섹션 열 ── */}
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-            {sectionsWithVisibleEntries.map(sec => (
-              <SectionBlock key={sec.title} sec={sec} />
+            {assignedSections.map((sec) => (
+              <SectionBlock key={sec.id} sec={sec} />
             ))}
           </div>
         </div>
@@ -381,25 +495,14 @@ const BishopCard = ({ role, name }: { role: string; name: string }) => (
   </div>
 );
 
-interface AssignedEntry extends OrgEntry {
-  assignedName: string;
-}
-interface AssignedSection {
-  title: string;
-  color: string;
-  entries: AssignedEntry[];
-}
-
 const SectionBlock = ({ sec }: { sec: AssignedSection }) => (
   <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11, width: 180, flexShrink: 0 }}>
-    {/* Section header — always visible */}
     <div style={{
       background: sec.color, color: "#fff", textAlign: "center",
       padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em",
     }}>
       {sec.title}
     </div>
-    {/* Assigned entries only */}
     {sec.entries.length === 0 ? (
       <div style={{ padding: "10px 8px", color: "#cbd5e1", fontSize: 10, textAlign: "center" }}>
         배정된 부름 없음
