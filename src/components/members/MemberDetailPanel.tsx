@@ -205,8 +205,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
               <input
                 type="checkbox"
                 id="special-care"
-                checked={(member as any).is_special_care ?? false}
-                onChange={e => setMember(m => m ? { ...m, is_special_care: e.target.checked } as any : m)}
+                checked={member.is_special_care ?? false}
+                onChange={e => setMember(m => m ? { ...m, is_special_care: e.target.checked } : m)}
                 className="w-4 h-4 accent-primary"
               />
               <div>
