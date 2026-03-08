@@ -274,7 +274,9 @@ const OrgChartPage = () => {
   // Sections: always show the section header, but only show assigned entries
   const sectionsWithVisibleEntries = SECTIONS.map(sec => ({
     ...sec,
-    entries: sec.entries.filter(e => e.callingKey && callingMap[e.callingKey]),
+    entries: sec.entries
+      .filter(e => e.callingKey && callingMap[e.callingKey])
+      .map(e => ({ ...e, assignedName: e.callingKey ? callingMap[e.callingKey] ?? "" : "" })),
   }));
 
   return (
