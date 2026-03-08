@@ -381,7 +381,16 @@ const BishopCard = ({ role, name }: { role: string; name: string }) => (
   </div>
 );
 
-const SectionBlock = ({ sec }: { sec: OrgSection }) => (
+interface AssignedEntry extends OrgEntry {
+  assignedName: string;
+}
+interface AssignedSection {
+  title: string;
+  color: string;
+  entries: AssignedEntry[];
+}
+
+const SectionBlock = ({ sec }: { sec: AssignedSection }) => (
   <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11, width: 180, flexShrink: 0 }}>
     {/* Section header — always visible */}
     <div style={{
@@ -403,9 +412,7 @@ const SectionBlock = ({ sec }: { sec: OrgSection }) => (
           padding: "3px 8px", gap: 4,
         }}>
           <span style={{ color: "#64748b", flexShrink: 0, minWidth: 88, fontSize: 10 }}>{e.role}</span>
-          <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 11 }}>
-            {e.callingKey ? (sec as any).__map?.[e.callingKey] ?? e.__name ?? "" : ""}
-          </span>
+          <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 11 }}>{e.assignedName}</span>
         </div>
       ))
     )}
