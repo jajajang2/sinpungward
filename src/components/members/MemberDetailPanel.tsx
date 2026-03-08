@@ -339,4 +339,53 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
   );
 };
 
+// ── Calling Combobox ──────────────────────────────────────────
+const CallingCombobox = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between h-10 font-normal text-sm"
+        >
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {value || "부름 선택 또는 검색..."}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="부름 검색..." />
+          <CommandList className="max-h-64">
+            <CommandEmpty>검색 결과 없음</CommandEmpty>
+            {CALLING_GROUPS.map(({ group, items }) => (
+              <CommandGroup key={group} heading={group}>
+                {items.map((item) => (
+                  <CommandItem
+                    key={item}
+                    value={item}
+                    onSelect={(v) => {
+                      onChange(v === value ? '' : v);
+                      setOpen(false);
+                    }}
+                    className="text-xs"
+                  >
+                    <Check className={cn("mr-2 h-3 w-3 shrink-0", value === item ? "opacity-100" : "opacity-0")} />
+                    {item}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 export default MemberDetailPanel;
