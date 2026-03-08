@@ -157,14 +157,17 @@ function calcHeight(sec: OrgSection, hideEmpty: boolean, callingMap: Record<stri
   return HEADER_H + (rows > 0 ? rows * ROW_H : EMPTY_H) + 2;
 }
 
+const STORAGE_KEY = "orgchart-freepos-v3";
+const SPECIAL_SECTION_ID = "__special_care__";
+
 function defaultPositions(): PositionMap {
   const pos: PositionMap = {};
-  // bishop at center top
   pos["bishop"] = { x: 400, y: 50 };
   const rest = ALL_SECTIONS.filter(s => s.id !== "bishop");
   rest.forEach((sec, i) => {
     pos[sec.id] = { x: (i % 5) * (SECTION_W + GAP), y: 220 + Math.floor(i / 5) * 320 };
   });
+  pos[SPECIAL_SECTION_ID] = { x: 0, y: 900 };
   return pos;
 }
 
