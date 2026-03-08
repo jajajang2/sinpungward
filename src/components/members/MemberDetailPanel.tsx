@@ -246,7 +246,10 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">현재 부름</Label>
-                  <Input value={ci.current_calling || ''} onChange={e => update('current_calling', e.target.value)} placeholder="감독단 1보좌, 등" />
+                  <CallingCombobox
+                    value={ci.current_calling || ''}
+                    onChange={v => update('current_calling', v)}
+                  />
                 </div>
                 <div className="col-span-2 space-y-1">
                   <Label className="text-xs">이전 부름 이력</Label>
