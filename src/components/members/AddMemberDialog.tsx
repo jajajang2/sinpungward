@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,6 +26,58 @@ const AddMemberDialog = ({ open, onClose, onSaved }: AddMemberDialogProps) => {
     address: '',
   });
 
+  // ── Fast date drag ────────────────────────────────────────
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const isDraggingDate = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartDate = useRef('');
+  const accumulatedDelta = useRef(0);
+
+  const parseDateStr = (s: string): Date | null => {
+    if (!s) return null;
+    const [y, m, d] = s.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  };
+
+  const formatDateStr = (d: Date): string => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  };
+
+  const onDateMouseDown = useCallback((e: React.MouseEvent) => {
+    isDraggingDate.current = true;
+    dragStartX.current = e.clientX;
+    dragStartDate.current = form.birth_date || formatDateStr(new Date(2000, 0, 1));
+    accumulatedDelta.current = 0;
+    e.preventDefault();
+  }, [form.birth_date]);
+
+  const onDateMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDraggingDate.current) return;
+    const dx = e.clientX - dragStartX.current;
+    // Every 4px = 1 day change (fast)
+    const daysDelta = Math.round(dx / 4);
+    if (daysDelta === accumulatedDelta.current) return;
+    accumulatedDelta.current = daysDelta;
+    const base = parseDateStr(dragStartDate.current);
+    if (!base) return;
+    const newDate = new Date(base);
+    newDate.setDate(base.getDate() + daysDelta);
+    // Clamp to reasonable range
+    const minYear = new Date(1920, 0, 1);
+    const maxYear = new Date();
+    if (newDate < minYear || newDate > maxYear) return;
+    setForm(f => ({ ...f, birth_date: formatDateStr(newDate) }));
+  }, []);
+
+  const onDateMouseUp = useCallback(() => {
+    isDraggingDate.current = false;
+  }, []);
+
+  // ── Save ──────────────────────────────────────────────────
   const handleSave = async () => {
     if (!form.name.trim()) {
       toast({ title: '필수 입력', description: '이름을 입력해주세요.', variant: 'destructive' });
@@ -73,8 +125,23 @@ const AddMemberDialog = ({ open, onClose, onSaved }: AddMemberDialogProps) => {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>생년월일</Label>
-              <Input type="date" value={form.birth_date} onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))} />
+              <Label>생년월일 <span className="text-xs text-muted-foreground">(좌우 드래그)</span></Label>
+              <div
+                className="relative"
+                onMouseDown={onDateMouseDown}
+                onMouseMove={onDateMouseMove}
+                onMouseUp={onDateMouseUp}
+                onMouseLeave={onDateMouseUp}
+                style={{ cursor: 'ew-resize' }}
+              >
+                <Input
+                  ref={dateInputRef}
+                  type="date"
+                  value={form.birth_date}
+                  onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))}
+                  className="cursor-ew-resize"
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>휴대폰</Label>

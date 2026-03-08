@@ -186,6 +186,7 @@ export type Database = {
           email: string | null
           gender: string | null
           id: string
+          is_special_care: boolean
           name: string
           notes: string | null
           occupation: string | null
@@ -200,6 +201,7 @@ export type Database = {
           email?: string | null
           gender?: string | null
           id?: string
+          is_special_care?: boolean
           name: string
           notes?: string | null
           occupation?: string | null
@@ -214,6 +216,7 @@ export type Database = {
           email?: string | null
           gender?: string | null
           id?: string
+          is_special_care?: boolean
           name?: string
           notes?: string | null
           occupation?: string | null

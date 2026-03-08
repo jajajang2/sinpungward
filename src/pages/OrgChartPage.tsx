@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useCallingMembers } from "@/hooks/useCallingMembers";
 import { Pencil, Save, RotateCcw } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 // ───────────────────────────────────────────────────────────
 // Types
@@ -223,6 +224,7 @@ export default function OrgChartPage() {
   const [hideEmpty, setHideEmpty] = useState(true);
   const [positions, setPositions] = useState<PositionMap>(loadPositions);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [specialCareMembers, setSpecialCareMembers] = useState<{ id: string; name: string }[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
@@ -230,6 +232,12 @@ export default function OrgChartPage() {
   const dragStart = useRef({ mouseX: 0, mouseY: 0, secX: 0, secY: 0 });
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
+
+  // Fetch special care members
+  useEffect(() => {
+    supabase.from("members").select("id, name").eq("is_special_care", true).order("name")
+      .then(({ data }) => setSpecialCareMembers(data ?? []));
+  }, []);
 
   const clientToCanvas = useCallback((cx: number, cy: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -281,7 +289,6 @@ export default function OrgChartPage() {
 
   const onMouseUp = useCallback(() => {
     if (draggingId) {
-      // resolve collisions: push overlapping sections down
       setPositions(p => resolveCollisions(p, ALL_SECTIONS, hideEmpty, callingMap, draggingId));
     }
     isPanning.current = false;
@@ -424,6 +431,73 @@ export default function OrgChartPage() {
               </div>
             );
           })}
+
+          {/* ── Special Care Members separator + section ── */}
+          {specialCareMembers.length > 0 && (() => {
+            // Find the bottom-most section to place separator below it
+            const allSectionYs = ALL_SECTIONS.map(s => {
+              const pos = positions[s.id] ?? { x: 0, y: 0 };
+              return pos.y + calcHeight(s, hideEmpty, callingMap);
+            });
+            const maxBottom = Math.max(...allSectionYs, 300);
+            const sepY = maxBottom + 60;
+            const secY = sepY + 40;
+            const SPECIAL_W = 260;
+
+            return (
+              <>
+                {/* horizontal separator line */}
+                <div style={{
+                  position: "absolute",
+                  top: sepY,
+                  left: -100,
+                  width: 2000,
+                  borderTop: "2px dashed #e2e8f0",
+                  pointerEvents: "none",
+                }} />
+                <div style={{
+                  position: "absolute",
+                  top: sepY - 10,
+                  left: 0,
+                  width: 200,
+                  textAlign: "center",
+                  fontSize: 10,
+                  color: "#94a3b8",
+                  pointerEvents: "none",
+                  background: "#fff",
+                  padding: "0 8px",
+                }}>
+                  ─── 특별관리 구역 ───
+                </div>
+
+                {/* Special care section card */}
+                <div style={{
+                  position: "absolute",
+                  top: secY,
+                  left: 0,
+                  width: SPECIAL_W,
+                }}>
+                  <div style={{
+                    border: "1.5px solid #e2e8f0",
+                    borderRadius: 6,
+                    overflow: "hidden",
+                    background: "#fff",
+                    fontSize: 11,
+                  }}>
+                    <div style={{ background: "#DC2626", color: "#fff", textAlign: "center", padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em" }}>
+                      ★ 특별관리회원
+                    </div>
+                    {specialCareMembers.map((m, i) => (
+                      <div key={m.id} style={{ display: "flex", alignItems: "center", borderTop: i === 0 ? "none" : "1px solid #f1f5f9", padding: "4px 8px", gap: 6 }}>
+                        <span style={{ color: "#DC2626", fontSize: 9, flexShrink: 0 }}>●</span>
+                        <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 11 }}>{m.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
