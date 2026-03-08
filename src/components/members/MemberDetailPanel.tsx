@@ -7,9 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Save, Trash2, Plus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { X, Save, Trash2, Plus, ChevronsUpDown, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import PhotoUpload from "./PhotoUpload";
+import { CALLING_GROUPS } from "@/data/callings";
 
 interface MemberDetailPanelProps {
   memberId: string;
@@ -242,7 +246,10 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">현재 부름</Label>
-                  <Input value={ci.current_calling || ''} onChange={e => update('current_calling', e.target.value)} placeholder="감독단 1보좌, 등" />
+                  <CallingCombobox
+                    value={ci.current_calling || ''}
+                    onChange={v => update('current_calling', v)}
+                  />
                 </div>
                 <div className="col-span-2 space-y-1">
                   <Label className="text-xs">이전 부름 이력</Label>
@@ -329,6 +336,55 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+// ── Calling Combobox ──────────────────────────────────────────
+const CallingCombobox = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between h-10 font-normal text-sm"
+        >
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {value || "부름 선택 또는 검색..."}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="부름 검색..." />
+          <CommandList className="max-h-64">
+            <CommandEmpty>검색 결과 없음</CommandEmpty>
+            {CALLING_GROUPS.map(({ group, items }) => (
+              <CommandGroup key={group} heading={group}>
+                {items.map((item) => (
+                  <CommandItem
+                    key={item}
+                    value={item}
+                    onSelect={(v) => {
+                      onChange(v === value ? '' : v);
+                      setOpen(false);
+                    }}
+                    className="text-xs"
+                  >
+                    <Check className={cn("mr-2 h-3 w-3 shrink-0", value === item ? "opacity-100" : "opacity-0")} />
+                    {item}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
 
