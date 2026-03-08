@@ -14,7 +14,242 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      attendance: {
+        Row: {
+          attendance_date: string
+          created_at: string
+          id: string
+          is_present: boolean
+          member_id: string
+          updated_at: string
+        }
+        Insert: {
+          attendance_date: string
+          created_at?: string
+          id?: string
+          is_present?: boolean
+          member_id: string
+          updated_at?: string
+        }
+        Update: {
+          attendance_date?: string
+          created_at?: string
+          id?: string
+          is_present?: boolean
+          member_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_church_info: {
+        Row: {
+          baptism_date: string | null
+          created_at: string
+          current_calling: string | null
+          id: string
+          member_id: string
+          ministry_target: string | null
+          missionary_work: string | null
+          previous_callings: string | null
+          priesthood: string | null
+          record_number: string | null
+          sunday_school_class: string | null
+          temple_recommend: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          baptism_date?: string | null
+          created_at?: string
+          current_calling?: string | null
+          id?: string
+          member_id: string
+          ministry_target?: string | null
+          missionary_work?: string | null
+          previous_callings?: string | null
+          priesthood?: string | null
+          record_number?: string | null
+          sunday_school_class?: string | null
+          temple_recommend?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          baptism_date?: string | null
+          created_at?: string
+          current_calling?: string | null
+          id?: string
+          member_id?: string
+          ministry_target?: string | null
+          missionary_work?: string | null
+          previous_callings?: string | null
+          priesthood?: string | null
+          record_number?: string | null
+          sunday_school_class?: string | null
+          temple_recommend?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_church_info_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_family: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string
+          name: string | null
+          phone: string | null
+          relationship: string | null
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id: string
+          name?: string | null
+          phone?: string | null
+          relationship?: string | null
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string
+          name?: string | null
+          phone?: string | null
+          relationship?: string | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_family_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_notes: {
+        Row: {
+          author: string | null
+          content: string
+          created_at: string
+          id: string
+          member_id: string
+          note_date: string
+        }
+        Insert: {
+          author?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          member_id: string
+          note_date: string
+        }
+        Update: {
+          author?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          member_id?: string
+          note_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_notes_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      members: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          created_at: string
+          email: string | null
+          gender: string | null
+          id: string
+          name: string
+          notes: string | null
+          occupation: string | null
+          phone: string | null
+          photo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          gender?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          occupation?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          gender?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          occupation?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      org_positions: {
+        Row: {
+          calling_keyword: string | null
+          created_at: string
+          id: string
+          role: string
+          section: string
+          sort_order: number | null
+        }
+        Insert: {
+          calling_keyword?: string | null
+          created_at?: string
+          id?: string
+          role: string
+          section: string
+          sort_order?: number | null
+        }
+        Update: {
+          calling_keyword?: string | null
+          created_at?: string
+          id?: string
+          role?: string
+          section?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
