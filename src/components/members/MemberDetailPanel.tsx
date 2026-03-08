@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Save, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PhotoUpload from "./PhotoUpload";
 
 interface MemberDetailPanelProps {
   memberId: string;
@@ -105,19 +106,35 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
   return (
     <div className="flex flex-col h-full">
       {/* Panel header */}
-      <div className="px-5 py-4 border-b border-border bg-[hsl(var(--table-header))] flex items-center justify-between">
-        <div>
-          <h2 className="font-bold text-foreground text-lg">{member.name}</h2>
-          <p className="text-xs text-muted-foreground">
-            {member.gender && `${member.gender}성`}
-            {age && ` · ${age}세`}
-            {churchInfo?.current_calling && ` · ${churchInfo.current_calling}`}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button size="sm" variant="ghost" className="text-destructive" onClick={deleteMember}><Trash2 className="w-4 h-4" /></Button>
-          <Button size="sm" onClick={saveMember} disabled={saving}><Save className="w-4 h-4 mr-1" />{saving ? '저장 중' : '저장'}</Button>
-          <Button size="sm" variant="ghost" onClick={onClose}><X className="w-4 h-4" /></Button>
+      <div className="px-5 py-4 border-b border-border bg-[hsl(var(--table-header))]">
+        <div className="flex items-start justify-between gap-3">
+          {/* Photo + name */}
+          <div className="flex items-center gap-4">
+            <PhotoUpload
+              memberId={memberId}
+              currentPhotoUrl={member.photo_url}
+              memberName={member.name}
+              gender={member.gender}
+              onPhotoUpdated={(url) => {
+                setMember(m => m ? { ...m, photo_url: url ?? undefined } : m);
+                onUpdated();
+              }}
+            />
+            <div>
+              <h2 className="font-bold text-foreground text-lg">{member.name}</h2>
+              <p className="text-xs text-muted-foreground">
+                {member.gender && `${member.gender}성`}
+                {age && ` · ${age}세`}
+                {churchInfo?.current_calling && ` · ${churchInfo.current_calling}`}
+              </p>
+            </div>
+          </div>
+          {/* Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={deleteMember}><Trash2 className="w-4 h-4" /></Button>
+            <Button size="sm" onClick={saveMember} disabled={saving}><Save className="w-4 h-4 mr-1" />{saving ? '저장 중' : '저장'}</Button>
+            <Button size="sm" variant="ghost" onClick={onClose}><X className="w-4 h-4" /></Button>
+          </div>
         </div>
       </div>
 
