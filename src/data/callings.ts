@@ -174,6 +174,16 @@ export const CALLING_GROUPS: { group: string; items: string[] }[] = [
     ],
   },
   {
+    group: "세미나리",
+    items: [
+      "세미나리 교사 1",
+      "세미나리 교사 2",
+      "세미나리 교사 3",
+      "세미나리 교사 4",
+      "세미나리 교사 5",
+    ],
+  },
+  {
     group: "기타 부름",
     items: [
       "와드 취업 전문가",
