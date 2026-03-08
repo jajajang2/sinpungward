@@ -1,31 +1,36 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useCallingMembers } from "@/hooks/useCallingMembers";
 
 // ───────────────────────────────────────────────────────────
-// Static org-chart data (from 신풍 와드 조직도 2025)
+// Types
 // ───────────────────────────────────────────────────────────
 
 interface OrgEntry {
-  role: string;
-  name: string;
+  role: string;       // display text
+  callingKey?: string; // matches current_calling in DB
 }
 
 interface OrgSection {
   title: string;
-  color: string; // header bg (tailwind class)
+  color: string;
   entries: OrgEntry[];
 }
 
+// ───────────────────────────────────────────────────────────
+// Static data — role = display label, callingKey = DB value
+// ───────────────────────────────────────────────────────────
+
 const TOP_SECTION: OrgEntry[] = [
-  { role: "감 독", name: "정 준 우" },
-  { role: "건물 대표", name: "김 영 태" },
+  { role: "감 독",    callingKey: "감독" },
+  { role: "건물 대표", callingKey: "건물대표" },
 ];
 
 const BISHOP_ROW: OrgEntry[] = [
-  { role: "1 보 좌", name: "정 태 호" },
-  { role: "2 보 좌", name: "양 우 리" },
-  { role: "집행 서기", name: "최 민 석" },
-  { role: "와드 서기", name: "성 민 호" },
-  { role: "보조 서기", name: "" },
+  { role: "1 보 좌",  callingKey: "감독단 1보좌" },
+  { role: "2 보 좌",  callingKey: "감독단 2보좌" },
+  { role: "집행 서기", callingKey: "와드 집행 서기" },
+  { role: "와드 서기", callingKey: "와드 서기" },
+  { role: "보조 서기", callingKey: "와드 보조 서기" },
 ];
 
 const SECTIONS: OrgSection[] = [
@@ -33,179 +38,186 @@ const SECTIONS: OrgSection[] = [
     title: "장 로 정 원 회",
     color: "#2563EB",
     entries: [
-      { role: "회장", name: "" },
-      { role: "제1보좌", name: "" },
-      { role: "제2보좌", name: "" },
-      { role: "서기", name: "" },
-      { role: "보조 서기", name: "" },
-      { role: "교사 1", name: "" },
-      { role: "교사 2", name: "" },
-      { role: "교사 3", name: "" },
-      { role: "교사 4", name: "" },
-      { role: "교사 5", name: "" },
-      { role: "와드 선교 담당자", name: "" },
+      { role: "회장",          callingKey: "장로정원회 회장" },
+      { role: "제1보좌",       callingKey: "장로정원회 회장 제1보좌" },
+      { role: "제2보좌",       callingKey: "장로정원회 회장 제2보좌" },
+      { role: "서기",          callingKey: "장로정원회 서기" },
+      { role: "보조 서기",     callingKey: "장로정원회 보조 서기" },
+      { role: "교사 1",        callingKey: "장로정원회 교사 1" },
+      { role: "교사 2",        callingKey: "장로정원회 교사 2" },
+      { role: "교사 3",        callingKey: "장로정원회 교사 3" },
+      { role: "교사 4",        callingKey: "장로정원회 교사 4" },
+      { role: "교사 5",        callingKey: "장로정원회 교사 5" },
+      { role: "선교 담당자",   callingKey: "와드 선교 담당자" },
     ],
   },
   {
     title: "상 호 부 조 회",
     color: "#0D9488",
     entries: [
-      { role: "회장", name: "" },
-      { role: "제1보좌", name: "" },
-      { role: "제2보좌", name: "" },
-      { role: "서기", name: "" },
-      { role: "보조 서기", name: "" },
-      { role: "교사 1", name: "" },
-      { role: "교사 2", name: "" },
-      { role: "교사 3", name: "" },
-      { role: "교사 4", name: "" },
-      { role: "교사 5", name: "" },
+      { role: "회장",      callingKey: "상호부조회 회장" },
+      { role: "제1보좌",   callingKey: "상호부조회 회장 제1보좌" },
+      { role: "제2보좌",   callingKey: "상호부조회 회장 제2보좌" },
+      { role: "서기",      callingKey: "상호부조회 서기" },
+      { role: "보조 서기", callingKey: "상호부조회 보조 서기" },
+      { role: "교사 1",    callingKey: "상호부조회 교사 1" },
+      { role: "교사 2",    callingKey: "상호부조회 교사 2" },
+      { role: "교사 3",    callingKey: "상호부조회 교사 3" },
+      { role: "교사 4",    callingKey: "상호부조회 교사 4" },
+      { role: "교사 5",    callingKey: "상호부조회 교사 5" },
     ],
   },
   {
     title: "아론신권정원회",
     color: "#16A34A",
     entries: [
-      { role: "정원회 회장", name: "" },
-      { role: "정원회 제1보좌", name: "" },
-      { role: "정원회 제2보좌", name: "" },
-      { role: "제사 정원회 회장", name: "" },
-      { role: "제사 정원회 제1보조", name: "" },
-      { role: "제사 정원회 제2보조", name: "" },
-      { role: "제사 정원회 서기", name: "" },
-      { role: "교사 정원회 회장", name: "" },
-      { role: "교사 정원회 제1보조", name: "" },
-      { role: "교사 정원회 제2보조", name: "" },
-      { role: "교사 정원회 서기", name: "" },
-      { role: "집사 정원회 회장", name: "" },
-      { role: "집사 정원회 제1보조", name: "" },
-      { role: "집사 정원회 제2보조", name: "" },
-      { role: "집사 정원회 서기", name: "" },
+      { role: "정원회 회장",        callingKey: "아론신권 정원회 회장" },
+      { role: "정원회 제1보좌",     callingKey: "아론신권 정원회 제1보좌" },
+      { role: "정원회 제2보좌",     callingKey: "아론신권 정원회 제2보좌" },
+      { role: "제사 정원회 회장",   callingKey: "제사 정원회 회장" },
+      { role: "제사 정원회 제1보조", callingKey: "제사 정원회 제1보조" },
+      { role: "제사 정원회 제2보조", callingKey: "제사 정원회 제2보조" },
+      { role: "제사 정원회 서기",   callingKey: "제사 정원회 서기" },
+      { role: "교사 정원회 회장",   callingKey: "교사 정원회 회장" },
+      { role: "교사 정원회 제1보조", callingKey: "교사 정원회 제1보조" },
+      { role: "교사 정원회 제2보조", callingKey: "교사 정원회 제2보조" },
+      { role: "교사 정원회 서기",   callingKey: "교사 정원회 서기" },
+      { role: "집사 정원회 회장",   callingKey: "집사 정원회 회장" },
+      { role: "집사 정원회 제1보조", callingKey: "집사 정원회 제1보조" },
+      { role: "집사 정원회 제2보조", callingKey: "집사 정원회 제2보조" },
+      { role: "집사 정원회 서기",   callingKey: "집사 정원회 서기" },
     ],
   },
   {
     title: "청 녀",
     color: "#DB2777",
     entries: [
-      { role: "회장", name: "" },
-      { role: "제1보좌", name: "" },
-      { role: "제2보좌", name: "" },
-      { role: "서기", name: "" },
-      { role: "반 회장", name: "" },
-      { role: "반 제1보좌", name: "" },
-      { role: "반 제2보좌", name: "" },
-      { role: "반 서기", name: "" },
+      { role: "회장",     callingKey: "청녀 회장" },
+      { role: "제1보좌",  callingKey: "청녀 제1보좌" },
+      { role: "제2보좌",  callingKey: "청녀 제2보좌" },
+      { role: "서기",     callingKey: "청녀 서기" },
+      { role: "반 회장",  callingKey: "청녀 반 회장" },
+      { role: "반 제1보좌", callingKey: "청녀 반 제1보좌" },
+      { role: "반 제2보좌", callingKey: "청녀 반 제2보좌" },
+      { role: "반 서기",  callingKey: "청녀 반 서기" },
     ],
   },
   {
     title: "주 일 학 교",
     color: "#0891B2",
     entries: [
-      { role: "회장", name: "" },
-      { role: "회장단 제1보좌", name: "" },
-      { role: "회장단 제2보좌", name: "" },
-      { role: "회장단 서기", name: "" },
-      { role: "회장단 보조서기", name: "" },
-      { role: "독신성인 교사 1", name: "" },
-      { role: "독신성인 교사 2", name: "" },
-      { role: "독신성인 교사 3", name: "" },
-      { role: "독신성인 교사 4", name: "" },
-      { role: "독신성인 교사 5", name: "" },
-      { role: "복음교리 교사 1", name: "" },
-      { role: "복음교리 교사 2", name: "" },
-      { role: "복음교리 교사 3", name: "" },
-      { role: "복음교리 교사 4", name: "" },
-      { role: "복음교리 교사 5", name: "" },
-      { role: "복음교리 A반 교사 1", name: "" },
-      { role: "복음교리 A반 교사 2", name: "" },
-      { role: "복음교리 A반 교사 3", name: "" },
-      { role: "복음교리 B반 교사 1", name: "" },
-      { role: "복음교리 B반 교사 2", name: "" },
-      { role: "복음교리 B반 교사 3", name: "" },
-      { role: "복음교리 C반 교사 1", name: "" },
-      { role: "복음교리 C반 교사 2", name: "" },
-      { role: "복음교리 C반 교사 3", name: "" },
-      { role: "청소년 교사 1", name: "" },
-      { role: "청소년 교사 2", name: "" },
-      { role: "청소년 교사 3", name: "" },
+      { role: "회장",              callingKey: "주일학교 회장" },
+      { role: "회장단 제1보좌",    callingKey: "주일학교 회장단 제1보좌" },
+      { role: "회장단 제2보좌",    callingKey: "주일학교 회장단 제2보좌" },
+      { role: "회장단 서기",       callingKey: "주일학교 회장단 서기" },
+      { role: "회장단 보조서기",   callingKey: "주일학교 회장단 보조서기" },
+      { role: "독신성인 교사 1",   callingKey: "독신성인 교사 1" },
+      { role: "독신성인 교사 2",   callingKey: "독신성인 교사 2" },
+      { role: "독신성인 교사 3",   callingKey: "독신성인 교사 3" },
+      { role: "독신성인 교사 4",   callingKey: "독신성인 교사 4" },
+      { role: "독신성인 교사 5",   callingKey: "독신성인 교사 5" },
+      { role: "복음교리 교사 1",   callingKey: "복음교리 교사 1" },
+      { role: "복음교리 교사 2",   callingKey: "복음교리 교사 2" },
+      { role: "복음교리 교사 3",   callingKey: "복음교리 교사 3" },
+      { role: "복음교리 교사 4",   callingKey: "복음교리 교사 4" },
+      { role: "복음교리 교사 5",   callingKey: "복음교리 교사 5" },
+      { role: "복음교리 A반 교사 1", callingKey: "복음교리 A반 교사 1" },
+      { role: "복음교리 A반 교사 2", callingKey: "복음교리 A반 교사 2" },
+      { role: "복음교리 A반 교사 3", callingKey: "복음교리 A반 교사 3" },
+      { role: "복음교리 B반 교사 1", callingKey: "복음교리 B반 교사 1" },
+      { role: "복음교리 B반 교사 2", callingKey: "복음교리 B반 교사 2" },
+      { role: "복음교리 B반 교사 3", callingKey: "복음교리 B반 교사 3" },
+      { role: "복음교리 C반 교사 1", callingKey: "복음교리 C반 교사 1" },
+      { role: "복음교리 C반 교사 2", callingKey: "복음교리 C반 교사 2" },
+      { role: "복음교리 C반 교사 3", callingKey: "복음교리 C반 교사 3" },
+      { role: "청소년 교사 1",     callingKey: "청소년 교사 1" },
+      { role: "청소년 교사 2",     callingKey: "청소년 교사 2" },
+      { role: "청소년 교사 3",     callingKey: "청소년 교사 3" },
     ],
   },
   {
     title: "초 등 회",
     color: "#D97706",
     entries: [
-      { role: "회장", name: "" },
-      { role: "회장단 제1보좌", name: "" },
-      { role: "회장단 제2보좌", name: "" },
-      { role: "회장단 서기", name: "" },
-      { role: "유아반 교사 1", name: "" },
-      { role: "유아반 교사 2", name: "" },
-      { role: "유아반 교사 3", name: "" },
-      { role: "해님반 교사 1", name: "" },
-      { role: "해님반 교사 2", name: "" },
-      { role: "해님반 교사 3", name: "" },
-      { role: "정의반 교사 1", name: "" },
-      { role: "정의반 교사 2", name: "" },
-      { role: "정의반 교사 3", name: "" },
-      { role: "용기반 교사 1", name: "" },
-      { role: "용기반 교사 2", name: "" },
-      { role: "용기반 교사 3", name: "" },
+      { role: "회장",           callingKey: "초등회 회장" },
+      { role: "회장단 제1보좌", callingKey: "초등회 회장단 제1보좌" },
+      { role: "회장단 제2보좌", callingKey: "초등회 회장단 제2보좌" },
+      { role: "회장단 서기",    callingKey: "초등회 회장단 서기" },
+      { role: "유아반 교사 1",  callingKey: "유아반 교사 1" },
+      { role: "유아반 교사 2",  callingKey: "유아반 교사 2" },
+      { role: "유아반 교사 3",  callingKey: "유아반 교사 3" },
+      { role: "해님반 교사 1",  callingKey: "해님반 교사 1" },
+      { role: "해님반 교사 2",  callingKey: "해님반 교사 2" },
+      { role: "해님반 교사 3",  callingKey: "해님반 교사 3" },
+      { role: "정의반 교사 1",  callingKey: "정의반 교사 1" },
+      { role: "정의반 교사 2",  callingKey: "정의반 교사 2" },
+      { role: "정의반 교사 3",  callingKey: "정의반 교사 3" },
+      { role: "용기반 교사 1",  callingKey: "용기반 교사 1" },
+      { role: "용기반 교사 2",  callingKey: "용기반 교사 2" },
+      { role: "용기반 교사 3",  callingKey: "용기반 교사 3" },
     ],
   },
   {
     title: "와 드 선 교 사",
     color: "#DC2626",
-    entries: Array.from({ length: 10 }, (_, i) => ({ role: `선교사 ${i + 1}`, name: "" })),
+    entries: Array.from({ length: 10 }, (_, i) => ({
+      role: `선교사 ${i + 1}`,
+      callingKey: `와드 선교사 ${i + 1}`,
+    })),
   },
   {
     title: "성전·가족 역사",
     color: "#7C3AED",
     entries: [
-      { role: "지도자", name: "" },
-      { role: "상담자 1", name: "" },
-      { role: "상담자 2", name: "" },
-      { role: "상담자 3", name: "" },
-      { role: "상담자 4", name: "" },
-      { role: "상담자 5", name: "" },
+      { role: "지도자",   callingKey: "성전 및 가족 역사 지도자" },
+      { role: "상담자 1", callingKey: "성전 및 가족 역사 상담자 1" },
+      { role: "상담자 2", callingKey: "성전 및 가족 역사 상담자 2" },
+      { role: "상담자 3", callingKey: "성전 및 가족 역사 상담자 3" },
+      { role: "상담자 4", callingKey: "성전 및 가족 역사 상담자 4" },
+      { role: "상담자 5", callingKey: "성전 및 가족 역사 상담자 5" },
     ],
   },
   {
     title: "독신 대표 · 음악",
     color: "#475569",
     entries: [
-      { role: "독신 형제대표", name: "" },
-      { role: "독신 자매대표", name: "" },
-      { role: "음악 위원장", name: "" },
-      { role: "지휘자 1", name: "" },
-      { role: "지휘자 2", name: "" },
-      { role: "지휘자 3", name: "" },
-      { role: "지휘자 4", name: "" },
-      { role: "지휘자 5", name: "" },
-      { role: "반주자 1", name: "" },
-      { role: "반주자 2", name: "" },
-      { role: "반주자 3", name: "" },
-      { role: "반주자 4", name: "" },
-      { role: "반주자 5", name: "" },
+      { role: "독신 형제대표", callingKey: "와드 독신 형제대표" },
+      { role: "독신 자매대표", callingKey: "와드 독신 자매대표" },
+      { role: "음악 위원장",   callingKey: "음악 위원장" },
+      { role: "지휘자 1",      callingKey: "지휘자 1" },
+      { role: "지휘자 2",      callingKey: "지휘자 2" },
+      { role: "지휘자 3",      callingKey: "지휘자 3" },
+      { role: "지휘자 4",      callingKey: "지휘자 4" },
+      { role: "지휘자 5",      callingKey: "지휘자 5" },
+      { role: "반주자 1",      callingKey: "반주자 1" },
+      { role: "반주자 2",      callingKey: "반주자 2" },
+      { role: "반주자 3",      callingKey: "반주자 3" },
+      { role: "반주자 4",      callingKey: "반주자 4" },
+      { role: "반주자 5",      callingKey: "반주자 5" },
     ],
   },
   {
     title: "기 타 부 름",
     color: "#64748B",
     entries: [
-      { role: "와드 취업 전문가", name: "" },
-      { role: "와드 방역 책임자", name: "" },
-      { role: "건물대표", name: "" },
-      { role: "와드 통역 담당자", name: "" },
+      { role: "취업 전문가",  callingKey: "와드 취업 전문가" },
+      { role: "방역 책임자",  callingKey: "와드 방역 책임자" },
+      { role: "건물대표",     callingKey: "건물대표" },
+      { role: "통역 담당자",  callingKey: "와드 통역 담당자" },
     ],
   },
 ];
 
 // ───────────────────────────────────────────────────────────
-// Component
+// Constants
 // ───────────────────────────────────────────────────────────
 
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 3;
+
+// ───────────────────────────────────────────────────────────
+// Main Component
+// ───────────────────────────────────────────────────────────
 
 const OrgChartPage = () => {
   const [scale, setScale] = useState(1);
@@ -214,6 +226,8 @@ const OrgChartPage = () => {
   const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const { data: callingMap = {}, isLoading } = useCallingMembers();
 
   // Fit content to container on mount
   useEffect(() => {
@@ -227,8 +241,7 @@ const OrgChartPage = () => {
       setScale(s);
       setOffset({ x: 0, y: 0 });
     };
-    // slight delay so DOM has rendered
-    const t = setTimeout(fit, 100);
+    const t = setTimeout(fit, 150);
     return () => clearTimeout(t);
   }, []);
 
@@ -259,16 +272,19 @@ const OrgChartPage = () => {
       <div className="sticky top-0 z-10 bg-card border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-xl font-bold text-foreground">조직도</h1>
-          <p className="text-xs text-muted-foreground">마우스 휠: 확대/축소 · 드래그: 이동</p>
+          <p className="text-xs text-muted-foreground">
+            마우스 휠: 확대/축소 · 드래그: 이동
+            {isLoading && <span className="ml-2 text-primary">회원 데이터 로딩 중...</span>}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setScale(s => Math.min(MAX_SCALE, s * 1.2)); }}
+            onClick={() => setScale(s => Math.min(MAX_SCALE, s * 1.2))}
             className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
           >＋</button>
           <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
           <button
-            onClick={() => { setScale(s => Math.max(MIN_SCALE, s * 0.8)); }}
+            onClick={() => setScale(s => Math.max(MIN_SCALE, s * 0.8))}
             className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
           >－</button>
           <button
@@ -282,7 +298,7 @@ const OrgChartPage = () => {
       <div
         ref={containerRef}
         className="flex-1 overflow-hidden relative bg-muted/30"
-        style={{ cursor: isPanning ? "grabbing" : scale > 0.99 ? "grab" : "default" }}
+        style={{ cursor: isPanning ? "grabbing" : "grab" }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -311,26 +327,34 @@ const OrgChartPage = () => {
           {/* ── 감독 + 건물 대표 ── */}
           <div className="flex justify-center gap-6 mb-3">
             {TOP_SECTION.map((e) => (
-              <TopCard key={e.role} role={e.role} name={e.name} />
+              <TopCard
+                key={e.role}
+                role={e.role}
+                name={e.callingKey ? (callingMap[e.callingKey] ?? "") : ""}
+              />
             ))}
           </div>
 
           {/* ── 1보좌 ~ 보조서기 row ── */}
           <div className="flex justify-center gap-3 mb-6">
             {BISHOP_ROW.map((e) => (
-              <BishopCard key={e.role} role={e.role} name={e.name} />
+              <BishopCard
+                key={e.role}
+                role={e.role}
+                name={e.callingKey ? (callingMap[e.callingKey] ?? "") : ""}
+              />
             ))}
           </div>
 
-          {/* ── 메인 섹션 그리드 ── */}
+          {/* ── 메인 섹션 그리드 (5열 × 2행) ── */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 200px)", gap: 12 }}>
             {SECTIONS.slice(0, 5).map((sec) => (
-              <SectionColumn key={sec.title} sec={sec} />
+              <SectionColumn key={sec.title} sec={sec} callingMap={callingMap} />
             ))}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 200px)", gap: 12, marginTop: 12 }}>
             {SECTIONS.slice(5).map((sec) => (
-              <SectionColumn key={sec.title} sec={sec} />
+              <SectionColumn key={sec.title} sec={sec} callingMap={callingMap} />
             ))}
           </div>
         </div>
@@ -347,7 +371,9 @@ const TopCard = ({ role, name }: { role: string; name: string }) => (
     borderRadius: 4, overflow: "hidden", fontSize: 13, fontWeight: 700,
   }}>
     <span style={{ background: "#f97316", color: "#fff", padding: "4px 10px" }}>{role}</span>
-    <span style={{ padding: "4px 12px", color: "#1e293b" }}>{name}</span>
+    <span style={{ padding: "4px 12px", color: "#1e293b", minWidth: 64, textAlign: "center" }}>
+      {name || <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 11 }}>미배정</span>}
+    </span>
   </div>
 );
 
@@ -357,13 +383,19 @@ const BishopCard = ({ role, name }: { role: string; name: string }) => (
     borderRadius: 4, overflow: "hidden", fontSize: 12, background: "#fff",
   }}>
     <span style={{ background: "#1e40af", color: "#fff", padding: "3px 8px", fontWeight: 700 }}>{role}</span>
-    <span style={{ padding: "3px 10px", color: "#1e293b", fontWeight: name ? 600 : 400 }}>
+    <span style={{ padding: "3px 10px", color: "#1e293b", fontWeight: name ? 600 : 400, minWidth: 52, textAlign: "center" }}>
       {name || <span style={{ color: "#94a3b8", fontSize: 11 }}>미배정</span>}
     </span>
   </div>
 );
 
-const SectionColumn = ({ sec }: { sec: OrgSection }) => (
+const SectionColumn = ({
+  sec,
+  callingMap,
+}: {
+  sec: OrgSection;
+  callingMap: Record<string, string>;
+}) => (
   <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11 }}>
     {/* Header */}
     <div style={{
@@ -373,18 +405,21 @@ const SectionColumn = ({ sec }: { sec: OrgSection }) => (
       {sec.title}
     </div>
     {/* Rows */}
-    {sec.entries.map((e, i) => (
-      <div key={i} style={{
-        display: "flex", alignItems: "center",
-        borderTop: i === 0 ? "none" : "1px solid #f1f5f9",
-        padding: "3px 6px", gap: 4,
-      }}>
-        <span style={{ color: "#64748b", flexShrink: 0, minWidth: 80, fontSize: 10 }}>{e.role}</span>
-        <span style={{ fontWeight: e.name ? 600 : 400, color: e.name ? "#1e293b" : "#cbd5e1", fontSize: 11 }}>
-          {e.name || "미배정"}
-        </span>
-      </div>
-    ))}
+    {sec.entries.map((e, i) => {
+      const memberName = e.callingKey ? (callingMap[e.callingKey] ?? "") : "";
+      return (
+        <div key={i} style={{
+          display: "flex", alignItems: "center",
+          borderTop: i === 0 ? "none" : "1px solid #f1f5f9",
+          padding: "3px 6px", gap: 4,
+        }}>
+          <span style={{ color: "#64748b", flexShrink: 0, minWidth: 90, fontSize: 10 }}>{e.role}</span>
+          <span style={{ fontWeight: memberName ? 600 : 400, color: memberName ? "#1e293b" : "#cbd5e1", fontSize: 11 }}>
+            {memberName || "미배정"}
+          </span>
+        </div>
+      );
+    })}
   </div>
 );
 
