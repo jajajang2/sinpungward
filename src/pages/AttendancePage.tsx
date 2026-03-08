@@ -45,10 +45,10 @@ const AttendancePage = () => {
   const fetchData = async () => {
     setLoading(true);
     const [mRes, aRes] = await Promise.all([
-      supabase.from('members').select('id, name').order('name'),
+      supabase.from('members').select('id, name, created_at, updated_at').order('name'),
       supabase.from('attendance').select('*'),
     ]);
-    if (mRes.data) setMembers(mRes.data);
+    if (mRes.data) setMembers(mRes.data as Member[]);
     if (aRes.data) {
       const map: Record<string, Record<string, boolean>> = {};
       (aRes.data as AttendanceRecord[]).forEach(r => {

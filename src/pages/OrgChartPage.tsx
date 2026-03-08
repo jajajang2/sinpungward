@@ -44,8 +44,8 @@ const OrgChartPage = () => {
     ]);
 
     const positions = posRes.data || [];
-    const memberData = (memRes.data || []) as (Member & { member_church_info?: { current_calling?: string } })[];
-    setMembers(memberData as Member[]);
+    const memberData = ((memRes.data || []) as unknown) as (Member & { member_church_info?: { current_calling?: string } })[];
+    setMembers(memberData as unknown as Member[]);
 
     // Match members to positions by calling keyword
     const enriched = positions.map(pos => {
