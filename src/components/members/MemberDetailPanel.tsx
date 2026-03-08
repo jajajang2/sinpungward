@@ -68,11 +68,24 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
 
     // Save church info
     if (churchInfo) {
+      const toNull = (v: string | null | undefined) => (v === '' || v == null) ? null : v;
+      const payload = {
+        member_id: memberId,
+        record_number: toNull(churchInfo.record_number),
+        baptism_date: toNull(churchInfo.baptism_date),
+        priesthood: toNull(churchInfo.priesthood),
+        current_calling: toNull(churchInfo.current_calling),
+        previous_callings: toNull(churchInfo.previous_callings),
+        ministry_target: toNull(churchInfo.ministry_target),
+        temple_recommend: churchInfo.temple_recommend ?? false,
+        sunday_school_class: toNull(churchInfo.sunday_school_class),
+        missionary_work: toNull(churchInfo.missionary_work),
+      };
       const existing = await supabase.from('member_church_info').select('id').eq('member_id', memberId).maybeSingle();
       if (existing.data) {
-        await supabase.from('member_church_info').update({ ...churchInfo }).eq('member_id', memberId);
+        await supabase.from('member_church_info').update(payload).eq('member_id', memberId);
       } else {
-        await supabase.from('member_church_info').insert({ ...churchInfo, member_id: memberId });
+        await supabase.from('member_church_info').insert(payload);
       }
     }
 
