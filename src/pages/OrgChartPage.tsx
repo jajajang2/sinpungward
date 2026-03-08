@@ -6,8 +6,8 @@ import { useCallingMembers } from "@/hooks/useCallingMembers";
 // ───────────────────────────────────────────────────────────
 
 interface OrgEntry {
-  role: string;       // display text
-  callingKey?: string; // matches current_calling in DB
+  role: string;
+  callingKey?: string;
 }
 
 interface OrgSection {
@@ -17,7 +17,7 @@ interface OrgSection {
 }
 
 // ───────────────────────────────────────────────────────────
-// Static data — role = display label, callingKey = DB value
+// Static data
 // ───────────────────────────────────────────────────────────
 
 const TOP_SECTION: OrgEntry[] = [
@@ -33,7 +33,8 @@ const BISHOP_ROW: OrgEntry[] = [
   { role: "보조 서기", callingKey: "와드 보조 서기" },
 ];
 
-const SECTIONS: OrgSection[] = [
+// Sections grouped by row
+const SECTIONS_ROW1: OrgSection[] = [
   {
     title: "장 로 정 원 회",
     color: "#2563EB",
@@ -48,7 +49,6 @@ const SECTIONS: OrgSection[] = [
       { role: "교사 3",        callingKey: "장로정원회 교사 3" },
       { role: "교사 4",        callingKey: "장로정원회 교사 4" },
       { role: "교사 5",        callingKey: "장로정원회 교사 5" },
-      { role: "선교 담당자",   callingKey: "와드 선교 담당자" },
     ],
   },
   {
@@ -135,6 +135,9 @@ const SECTIONS: OrgSection[] = [
       { role: "청소년 교사 3",     callingKey: "청소년 교사 3" },
     ],
   },
+];
+
+const SECTIONS_ROW2: OrgSection[] = [
   {
     title: "초 등 회",
     color: "#D97706",
@@ -158,12 +161,15 @@ const SECTIONS: OrgSection[] = [
     ],
   },
   {
-    title: "와 드 선 교 사",
+    title: "와드 선교",
     color: "#DC2626",
-    entries: Array.from({ length: 10 }, (_, i) => ({
-      role: `선교사 ${i + 1}`,
-      callingKey: `와드 선교사 ${i + 1}`,
-    })),
+    entries: [
+      { role: "선교 담당자", callingKey: "와드 선교 담당자" },
+      ...Array.from({ length: 10 }, (_, i) => ({
+        role: `선교사 ${i + 1}`,
+        callingKey: `와드 선교사 ${i + 1}`,
+      })),
+    ],
   },
   {
     title: "성전·가족 역사",
@@ -178,11 +184,17 @@ const SECTIONS: OrgSection[] = [
     ],
   },
   {
-    title: "독신 대표 · 음악",
+    title: "와드 독신 대표",
     color: "#475569",
     entries: [
       { role: "독신 형제대표", callingKey: "와드 독신 형제대표" },
       { role: "독신 자매대표", callingKey: "와드 독신 자매대표" },
+    ],
+  },
+  {
+    title: "음 악 위 원 회",
+    color: "#64748B",
+    entries: [
       { role: "음악 위원장",   callingKey: "음악 위원장" },
       { role: "지휘자 1",      callingKey: "지휘자 1" },
       { role: "지휘자 2",      callingKey: "지휘자 2" },
@@ -196,9 +208,12 @@ const SECTIONS: OrgSection[] = [
       { role: "반주자 5",      callingKey: "반주자 5" },
     ],
   },
+];
+
+const SECTIONS_ROW3: OrgSection[] = [
   {
     title: "기 타 부 름",
-    color: "#64748B",
+    color: "#94A3B8",
     entries: [
       { role: "취업 전문가",  callingKey: "와드 취업 전문가" },
       { role: "방역 책임자",  callingKey: "와드 방역 책임자" },
@@ -207,10 +222,6 @@ const SECTIONS: OrgSection[] = [
     ],
   },
 ];
-
-// ───────────────────────────────────────────────────────────
-// Constants
-// ───────────────────────────────────────────────────────────
 
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 3;
@@ -223,27 +234,31 @@ const OrgChartPage = () => {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [hideEmpty, setHideEmpty] = useState(false);
   const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const fittedRef = useRef(false);
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
 
-  // Fit content to container on mount
+  // Fit content to container once data is loaded
   useEffect(() => {
+    if (isLoading || fittedRef.current) return;
     const fit = () => {
       if (!containerRef.current || !contentRef.current) return;
-      const cw = containerRef.current.clientWidth;
-      const ch = containerRef.current.clientHeight;
+      const cw = containerRef.current.clientWidth - 48;
+      const ch = containerRef.current.clientHeight - 48;
       const nw = contentRef.current.scrollWidth;
       const nh = contentRef.current.scrollHeight;
       const s = Math.min(cw / nw, ch / nh, 1);
-      setScale(s);
-      setOffset({ x: 0, y: 0 });
+      setScale(Math.max(s, MIN_SCALE));
+      setOffset({ x: 24, y: 24 });
+      fittedRef.current = true;
     };
-    const t = setTimeout(fit, 150);
+    const t = setTimeout(fit, 200);
     return () => clearTimeout(t);
-  }, []);
+  }, [isLoading]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -266,6 +281,25 @@ const OrgChartPage = () => {
 
   const handleMouseUp = useCallback(() => setIsPanning(false), []);
 
+  const filterEntries = (entries: OrgEntry[]) =>
+    hideEmpty ? entries.filter(e => e.callingKey && callingMap[e.callingKey]) : entries;
+
+  const filterSection = (sec: OrgSection): OrgSection => ({
+    ...sec,
+    entries: filterEntries(sec.entries),
+  });
+
+  const visibleRow1 = SECTIONS_ROW1.map(filterSection).filter(s => !hideEmpty || s.entries.length > 0);
+  const visibleRow2 = SECTIONS_ROW2.map(filterSection).filter(s => !hideEmpty || s.entries.length > 0);
+  const visibleRow3 = SECTIONS_ROW3.map(filterSection).filter(s => !hideEmpty || s.entries.length > 0);
+
+  const topVisible = hideEmpty
+    ? TOP_SECTION.filter(e => e.callingKey && callingMap[e.callingKey])
+    : TOP_SECTION;
+  const bishopVisible = hideEmpty
+    ? BISHOP_ROW.filter(e => e.callingKey && callingMap[e.callingKey])
+    : BISHOP_ROW;
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
@@ -277,20 +311,32 @@ const OrgChartPage = () => {
             {isLoading && <span className="ml-2 text-primary">회원 데이터 로딩 중...</span>}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setScale(s => Math.min(MAX_SCALE, s * 1.2))}
-            className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
-          >＋</button>
-          <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
-          <button
-            onClick={() => setScale(s => Math.max(MIN_SCALE, s * 0.8))}
-            className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
-          >－</button>
-          <button
-            onClick={() => { setScale(1); setOffset({ x: 0, y: 0 }); }}
-            className="px-2 py-1 rounded border border-border text-xs hover:bg-muted ml-1"
-          >초기화</button>
+        <div className="flex items-center gap-3">
+          {/* Hide empty toggle */}
+          <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={hideEmpty}
+              onChange={e => setHideEmpty(e.target.checked)}
+              className="w-3.5 h-3.5 accent-primary"
+            />
+            미배정 숨김
+          </label>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setScale(s => Math.min(MAX_SCALE, s * 1.2))}
+              className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
+            >＋</button>
+            <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
+            <button
+              onClick={() => setScale(s => Math.max(MIN_SCALE, s * 0.8))}
+              className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
+            >－</button>
+            <button
+              onClick={() => { fittedRef.current = false; setScale(1); setOffset({ x: 0, y: 0 }); }}
+              className="px-2 py-1 rounded border border-border text-xs hover:bg-muted ml-1"
+            >초기화</button>
+          </div>
         </div>
       </div>
 
@@ -325,38 +371,57 @@ const OrgChartPage = () => {
           </div>
 
           {/* ── 감독 + 건물 대표 ── */}
-          <div className="flex justify-center gap-6 mb-3">
-            {TOP_SECTION.map((e) => (
-              <TopCard
-                key={e.role}
-                role={e.role}
-                name={e.callingKey ? (callingMap[e.callingKey] ?? "") : ""}
-              />
-            ))}
-          </div>
+          {topVisible.length > 0 && (
+            <div className="flex justify-center gap-6 mb-3">
+              {topVisible.map((e) => (
+                <TopCard
+                  key={e.role}
+                  role={e.role}
+                  name={e.callingKey ? (callingMap[e.callingKey] ?? "") : ""}
+                />
+              ))}
+            </div>
+          )}
 
-          {/* ── 1보좌 ~ 보조서기 row ── */}
-          <div className="flex justify-center gap-3 mb-6">
-            {BISHOP_ROW.map((e) => (
-              <BishopCard
-                key={e.role}
-                role={e.role}
-                name={e.callingKey ? (callingMap[e.callingKey] ?? "") : ""}
-              />
-            ))}
-          </div>
+          {/* ── 감독단 보좌 row ── */}
+          {bishopVisible.length > 0 && (
+            <div className="flex justify-center gap-3 mb-6">
+              {bishopVisible.map((e) => (
+                <BishopCard
+                  key={e.role}
+                  role={e.role}
+                  name={e.callingKey ? (callingMap[e.callingKey] ?? "") : ""}
+                />
+              ))}
+            </div>
+          )}
 
-          {/* ── 메인 섹션 그리드 (5열 × 2행) ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 200px)", gap: 12 }}>
-            {SECTIONS.slice(0, 5).map((sec) => (
-              <SectionColumn key={sec.title} sec={sec} callingMap={callingMap} />
-            ))}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 200px)", gap: 12, marginTop: 12 }}>
-            {SECTIONS.slice(5).map((sec) => (
-              <SectionColumn key={sec.title} sec={sec} callingMap={callingMap} />
-            ))}
-          </div>
+          {/* ── Row 1: 장로/상호부조/아론/청녀/주일학교 ── */}
+          {visibleRow1.length > 0 && (
+            <div style={{ display: "flex", gap: 12, marginBottom: 12, alignItems: "flex-start" }}>
+              {visibleRow1.map((sec) => (
+                <SectionColumn key={sec.title} sec={sec} callingMap={callingMap} hideEmpty={hideEmpty} />
+              ))}
+            </div>
+          )}
+
+          {/* ── Row 2: 초등회/와드선교/성전/독신/음악 ── */}
+          {visibleRow2.length > 0 && (
+            <div style={{ display: "flex", gap: 12, marginBottom: 12, alignItems: "flex-start" }}>
+              {visibleRow2.map((sec) => (
+                <SectionColumn key={sec.title} sec={sec} callingMap={callingMap} hideEmpty={hideEmpty} />
+              ))}
+            </div>
+          )}
+
+          {/* ── Row 3: 기타부름 ── */}
+          {visibleRow3.length > 0 && (
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              {visibleRow3.map((sec) => (
+                <SectionColumn key={sec.title} sec={sec} callingMap={callingMap} hideEmpty={hideEmpty} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -392,35 +457,43 @@ const BishopCard = ({ role, name }: { role: string; name: string }) => (
 const SectionColumn = ({
   sec,
   callingMap,
+  hideEmpty,
 }: {
   sec: OrgSection;
   callingMap: Record<string, string>;
-}) => (
-  <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11 }}>
-    {/* Header */}
-    <div style={{
-      background: sec.color, color: "#fff", textAlign: "center",
-      padding: "5px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em",
-    }}>
-      {sec.title}
+  hideEmpty: boolean;
+}) => {
+  const rows = hideEmpty
+    ? sec.entries.filter(e => e.callingKey && callingMap[e.callingKey])
+    : sec.entries;
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11, width: 200, flexShrink: 0 }}>
+      <div style={{
+        background: sec.color, color: "#fff", textAlign: "center",
+        padding: "5px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em",
+      }}>
+        {sec.title}
+      </div>
+      {rows.map((e, i) => {
+        const memberName = e.callingKey ? (callingMap[e.callingKey] ?? "") : "";
+        return (
+          <div key={i} style={{
+            display: "flex", alignItems: "center",
+            borderTop: i === 0 ? "none" : "1px solid #f1f5f9",
+            padding: "3px 6px", gap: 4,
+          }}>
+            <span style={{ color: "#64748b", flexShrink: 0, minWidth: 90, fontSize: 10 }}>{e.role}</span>
+            <span style={{ fontWeight: memberName ? 600 : 400, color: memberName ? "#1e293b" : "#cbd5e1", fontSize: 11 }}>
+              {memberName || "미배정"}
+            </span>
+          </div>
+        );
+      })}
     </div>
-    {/* Rows */}
-    {sec.entries.map((e, i) => {
-      const memberName = e.callingKey ? (callingMap[e.callingKey] ?? "") : "";
-      return (
-        <div key={i} style={{
-          display: "flex", alignItems: "center",
-          borderTop: i === 0 ? "none" : "1px solid #f1f5f9",
-          padding: "3px 6px", gap: 4,
-        }}>
-          <span style={{ color: "#64748b", flexShrink: 0, minWidth: 90, fontSize: 10 }}>{e.role}</span>
-          <span style={{ fontWeight: memberName ? 600 : 400, color: memberName ? "#1e293b" : "#cbd5e1", fontSize: 11 }}>
-            {memberName || "미배정"}
-          </span>
-        </div>
-      );
-    })}
-  </div>
-);
+  );
+};
 
 export default OrgChartPage;
