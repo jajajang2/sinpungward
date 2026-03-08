@@ -56,7 +56,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       email: member.email,
       address: member.address,
       occupation: member.occupation,
-      is_special_care: (member as any).is_special_care ?? false,
+      is_special_care: member.is_special_care ?? false,
     }).eq('id', memberId);
 
     // Save family
