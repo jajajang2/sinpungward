@@ -453,67 +453,94 @@ export default function OrgChartPage() {
             );
           })}
 
-          {/* ── Special Care Members separator + section ── */}
-          {specialCareMembers.length > 0 && (() => {
-            // Find the bottom-most section to place separator below it
-            const allSectionYs = ALL_SECTIONS.map(s => {
-              const pos = positions[s.id] ?? { x: 0, y: 0 };
-              return pos.y + calcHeight(s, hideEmpty, callingMap);
-            });
-            const maxBottom = Math.max(...allSectionYs, 300);
-            const sepY = maxBottom + 60;
-            const secY = sepY + 40;
-            const SPECIAL_W = 260;
-
+          {/* ── Special Care Members section (draggable) ── */}
+          {(() => {
+            const SPECIAL_COLOR = "#DC2626";
+            const SPECIAL_W = 280;
+            const pos = positions[SPECIAL_SECTION_ID] ?? { x: 0, y: 900 };
+            const isDragging = draggingId === SPECIAL_SECTION_ID;
             return (
               <>
-                {/* horizontal separator line */}
+                {/* Dashed separator line — horizontal across canvas at pos.y - 50 */}
                 <div style={{
                   position: "absolute",
-                  top: sepY,
-                  left: -100,
-                  width: 2000,
+                  top: pos.y - 50,
+                  left: -200,
+                  width: 3000,
                   borderTop: "2px dashed #e2e8f0",
                   pointerEvents: "none",
                 }} />
                 <div style={{
                   position: "absolute",
-                  top: sepY - 10,
-                  left: 0,
-                  width: 200,
-                  textAlign: "center",
+                  top: pos.y - 62,
+                  left: 20,
                   fontSize: 10,
                   color: "#94a3b8",
                   pointerEvents: "none",
-                  background: "#fff",
-                  padding: "0 8px",
+                  background: "#f8fafc",
+                  padding: "1px 8px",
+                  borderRadius: 4,
+                  letterSpacing: "0.1em",
                 }}>
                   ─── 특별관리 구역 ───
                 </div>
 
-                {/* Special care section card */}
-                <div style={{
-                  position: "absolute",
-                  top: secY,
-                  left: 0,
-                  width: SPECIAL_W,
-                }}>
+                {/* Draggable special care card */}
+                <div
+                  style={{
+                    position: "absolute",
+                    left: pos.x, top: pos.y,
+                    width: SPECIAL_W,
+                    zIndex: isDragging ? 100 : 1,
+                    cursor: editMode ? (isDragging ? "grabbing" : "grab") : "default",
+                    filter: isDragging ? "drop-shadow(0 8px 20px rgba(0,0,0,0.25))" : "none",
+                    transition: isDragging ? "none" : "filter 0.15s",
+                  }}
+                  onMouseDown={e => onSectionMouseDown(e, SPECIAL_SECTION_ID)}
+                >
+                  {editMode && (
+                    <div style={{ position: "absolute", top: -18, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "#94a3b8" }}>
+                      ⠿ 드래그
+                    </div>
+                  )}
                   <div style={{
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 6,
-                    overflow: "hidden",
-                    background: "#fff",
-                    fontSize: 11,
+                    border: editMode ? `2px dashed ${SPECIAL_COLOR}` : `1.5px solid #fca5a5`,
+                    borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11,
                   }}>
-                    <div style={{ background: "#DC2626", color: "#fff", textAlign: "center", padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em" }}>
+                    <div style={{ background: SPECIAL_COLOR, color: "#fff", textAlign: "center", padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em" }}>
                       ★ 특별관리회원
                     </div>
-                    {specialCareMembers.map((m, i) => (
-                      <div key={m.id} style={{ display: "flex", alignItems: "center", borderTop: i === 0 ? "none" : "1px solid #f1f5f9", padding: "4px 8px", gap: 6 }}>
-                        <span style={{ color: "#DC2626", fontSize: 9, flexShrink: 0 }}>●</span>
-                        <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 11 }}>{m.name}</span>
-                      </div>
-                    ))}
+                    {specialCareMembers.length === 0 ? (
+                      <div style={{ padding: "10px 8px", color: "#cbd5e1", fontSize: 10, textAlign: "center" }}>특별관리회원 없음</div>
+                    ) : specialCareMembers.map((m, i) => {
+                      const getAge = (bd?: string) => {
+                        if (!bd) return null;
+                        const today = new Date();
+                        const b = new Date(bd);
+                        let age = today.getFullYear() - b.getFullYear();
+                        if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) age--;
+                        return age;
+                      };
+                      const age = getAge(m.birth_date);
+                      return (
+                        <div key={m.id} style={{ borderTop: i === 0 ? "none" : "1px solid #f1f5f9", padding: "5px 8px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ color: SPECIAL_COLOR, fontSize: 9, flexShrink: 0 }}>●</span>
+                            <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 12 }}>{m.name}</span>
+                            {m.gender && <span style={{ fontSize: 9, color: "#94a3b8", background: "#f1f5f9", borderRadius: 3, padding: "1px 4px" }}>{m.gender}</span>}
+                            {age !== null && <span style={{ fontSize: 9, color: "#94a3b8" }}>{age}세</span>}
+                          </div>
+                          {m.phone && (
+                            <div style={{ paddingLeft: 15, fontSize: 10, color: "#64748b", marginTop: 1 }}>📞 {m.phone}</div>
+                          )}
+                          {m.address && (
+                            <div style={{ paddingLeft: 15, fontSize: 10, color: "#64748b", marginTop: 1, maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              📍 {m.address}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </>
