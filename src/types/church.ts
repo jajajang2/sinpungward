@@ -9,6 +9,7 @@ export interface Member {
   occupation?: string;
   photo_url?: string;
   notes?: string;
+  is_special_care?: boolean;
   created_at: string;
   updated_at: string;
   // joined relations
