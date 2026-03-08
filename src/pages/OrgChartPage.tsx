@@ -205,7 +205,21 @@ function resolveCollisions(
   return result;
 }
 
-const STORAGE_KEY = "orgchart-freepos-v2";
+const STORAGE_KEY = "orgchart-freepos-v3";
+const SPECIAL_SECTION_ID = "__special_care__";
+
+function defaultPositions(): PositionMap {
+  const pos: PositionMap = {};
+  pos["bishop"] = { x: 400, y: 50 };
+  const rest = ALL_SECTIONS.filter(s => s.id !== "bishop");
+  rest.forEach((sec, i) => {
+    pos[sec.id] = { x: (i % 5) * (SECTION_W + GAP), y: 220 + Math.floor(i / 5) * 320 };
+  });
+  // special care below everything
+  pos[SPECIAL_SECTION_ID] = { x: 0, y: 900 };
+  return pos;
+}
+
 function loadPositions(): PositionMap {
   try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : defaultPositions(); }
   catch { return defaultPositions(); }
@@ -225,7 +239,7 @@ export default function OrgChartPage() {
   const [hideEmpty, setHideEmpty] = useState(true);
   const [positions, setPositions] = useState<PositionMap>(loadPositions);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [specialCareMembers, setSpecialCareMembers] = useState<{ id: string; name: string }[]>([]);
+  const [specialCareMembers, setSpecialCareMembers] = useState<SpecialMember[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
@@ -234,10 +248,13 @@ export default function OrgChartPage() {
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
 
-  // Fetch special care members
+  // Fetch special care members with full info
   useEffect(() => {
-    supabase.from("members").select("id, name").eq("is_special_care", true).order("name")
-      .then(({ data }) => setSpecialCareMembers(data ?? []));
+    supabase.from("members")
+      .select("id, name, phone, birth_date, gender, address")
+      .eq("is_special_care", true)
+      .order("name")
+      .then(({ data }) => setSpecialCareMembers((data as SpecialMember[]) ?? []));
   }, []);
 
   const clientToCanvas = useCallback((cx: number, cy: number) => {
