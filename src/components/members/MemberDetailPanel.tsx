@@ -382,8 +382,8 @@ const CallingCombobox = ({ value, onChange }: { value: string; onChange: (v: str
                   <CommandItem
                     key={item}
                     value={item}
-                    onSelect={(v) => {
-                      onChange(v === value ? '' : v);
+                    onSelect={() => {
+                      onChange(item === value ? '' : item);
                       setOpen(false);
                     }}
                     className="text-xs"
