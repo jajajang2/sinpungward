@@ -2,12 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Member, AttendanceRecord } from "@/types/church";
 import { useToast } from "@/hooks/use-toast";
+import { ChevronRight, Users } from "lucide-react";
 
-// Get all Sundays from a start date (2 months back) to 3 months forward
+// ── Date helpers ──────────────────────────────────────────────
 function getSundays(from: Date, to: Date): Date[] {
   const sundays: Date[] = [];
   const d = new Date(from);
-  // Find the first Sunday on or after `from`
   while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
   while (d <= to) {
     sundays.push(new Date(d));
@@ -20,22 +20,216 @@ function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const AttendancePage = () => {
-  const { toast } = useToast();
-  const [members, setMembers] = useState<Member[]>([]);
-  const [attendance, setAttendance] = useState<Record<string, Record<string, boolean>>>({});
-  const [loading, setLoading] = useState(true);
+// ── Group definitions ────────────────────────────────────────
+interface AttendanceGroup {
+  id: string;
+  label: string;
+  description: string;
+  filter: (m: Member & { church_info?: { current_calling?: string } }) => boolean;
+}
+
+const getAge = (birthDate?: string): number | null => {
+  if (!birthDate) return null;
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+};
+
+const GROUPS: AttendanceGroup[] = [
+  {
+    id: "all",
+    label: "전체회원",
+    description: "모든 회원",
+    filter: () => true,
+  },
+  {
+    id: "elders",
+    label: "장로정원회",
+    description: "19세 이상 남성",
+    filter: (m) => {
+      const age = getAge(m.birth_date);
+      return m.gender === "남" && age !== null && age >= 19;
+    },
+  },
+  {
+    id: "rs",
+    label: "상호부조회",
+    description: "19세 이상 여성",
+    filter: (m) => {
+      const age = getAge(m.birth_date);
+      return m.gender === "여" && age !== null && age >= 19;
+    },
+  },
+  {
+    id: "singles",
+    label: "독신 (미혼)",
+    description: "미혼 성인",
+    filter: (m) => {
+      const age = getAge(m.birth_date);
+      return age !== null && age >= 19;
+      // Note: In a real scenario, marital status would be needed. 
+      // For now, filtering by age 19+ matches "singles" context broadly.
+      // This can be refined with a marital status field later.
+    },
+  },
+  {
+    id: "ym",
+    label: "청남",
+    description: "11세 ~ 19세 남성",
+    filter: (m) => {
+      const age = getAge(m.birth_date);
+      return m.gender === "남" && age !== null && age >= 11 && age < 19;
+    },
+  },
+  {
+    id: "yw",
+    label: "청녀",
+    description: "11세 ~ 19세 여성",
+    filter: (m) => {
+      const age = getAge(m.birth_date);
+      return m.gender === "여" && age !== null && age >= 11 && age < 19;
+    },
+  },
+  {
+    id: "primary",
+    label: "초등회",
+    description: "0세 ~ 11세",
+    filter: (m) => {
+      const age = getAge(m.birth_date);
+      return age !== null && age < 11;
+    },
+  },
+];
+
+// ── Attendance table sub-component ───────────────────────────
+interface AttendanceTableProps {
+  members: Member[];
+  sundays: Date[];
+  attendance: Record<string, Record<string, boolean>>;
+  currentWeekIdx: number;
+  onToggle: (memberId: string, dateStr: string) => void;
+}
+
+const AttendanceTable = ({ members, sundays, attendance, currentWeekIdx, onToggle }: AttendanceTableProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const scrollStartLeft = useRef(0);
 
-  const today = new Date();
-  const from = new Date(today); from.setMonth(from.getMonth() - 2);
-  const to = new Date(today); to.setMonth(to.getMonth() + 1);
-  const sundays = getSundays(from, to);
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, []);
 
-  // Find index of this week's Sunday (nearest past or today)
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    scrollStartLeft.current = scrollRef.current?.scrollLeft || 0;
+  }, []);
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollRef.current) return;
+    scrollRef.current.scrollLeft = scrollStartLeft.current - (e.clientX - dragStartX.current);
+  }, []);
+
+  const onMouseUp = useCallback(() => { isDragging.current = false; }, []);
+
+  const formatDate = (d: Date) => ({ month: d.getMonth() + 1, day: d.getDate() });
+
+  const getCountForDate = (dateStr: string) =>
+    members.filter(m => attendance[m.id]?.[dateStr] === true).length;
+
+  return (
+    <div
+      ref={scrollRef}
+      className="flex-1 overflow-auto attendance-scroll select-none"
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+    >
+      <table className="border-collapse text-sm" style={{ minWidth: "max-content" }}>
+        <thead className="sticky top-0 z-10">
+          <tr className="bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))]">
+            <th className="sticky left-0 z-20 bg-[hsl(var(--sidebar-bg))] text-left px-4 py-3 font-semibold text-sm min-w-[140px] border-r border-[hsl(var(--sidebar-border))]">
+              이름
+            </th>
+            {sundays.map((s, i) => {
+              const { month, day } = formatDate(s);
+              const dateStr = toDateStr(s);
+              const isCurrentWeek = i === currentWeekIdx;
+              return (
+                <th
+                  key={dateStr}
+                  className={`w-16 px-1 py-2 text-center text-xs font-medium border-r border-[hsl(var(--sidebar-border))/30] ${isCurrentWeek ? "bg-[hsl(var(--gold))] text-white" : ""}`}
+                >
+                  <div className="font-semibold">{month}/{day}</div>
+                  <div className="text-[10px] opacity-70 font-normal">{getCountForDate(dateStr)}명</div>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {members.map((member, mi) => (
+            <tr
+              key={member.id}
+              className={`border-b border-border ${mi % 2 === 0 ? "bg-card" : "bg-[hsl(var(--table-row-hover))]"} hover:bg-accent/40`}
+            >
+              <td className="sticky left-0 z-10 bg-inherit px-4 py-2.5 font-medium text-foreground min-w-[140px] border-r border-border">
+                {member.name}
+              </td>
+              {sundays.map((s, i) => {
+                const dateStr = toDateStr(s);
+                const isPresent = attendance[member.id]?.[dateStr] === true;
+                const isCurrentWeek = i === currentWeekIdx;
+                return (
+                  <td
+                    key={dateStr}
+                    className={`w-16 px-1 py-2 text-center border-r border-border/50 ${isCurrentWeek ? "bg-[hsl(var(--gold-light))]" : ""}`}
+                    onMouseDown={e => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isPresent}
+                      onChange={() => onToggle(member.id, dateStr)}
+                      className="w-4 h-4 accent-primary cursor-pointer"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+          {members.length === 0 && (
+            <tr>
+              <td colSpan={sundays.length + 1} className="text-center py-12 text-muted-foreground">
+                해당 그룹에 회원이 없습니다.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// ── Main Page ─────────────────────────────────────────────────
+const AttendancePage = () => {
+  const { toast } = useToast();
+  const [members, setMembers] = useState<Member[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, Record<string, boolean>>>({});
+  const [loading, setLoading] = useState(true);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+
+  // Last 1 month of Sundays only
+  const today = new Date();
+  const from = new Date(today); from.setMonth(from.getMonth() - 1);
+  const sundays = getSundays(from, today);
+
   const todaySundayIdx = sundays.findIndex(s => {
     const next = new Date(s); next.setDate(next.getDate() + 7);
     return s <= today && today < next;
@@ -45,8 +239,8 @@ const AttendancePage = () => {
   const fetchData = async () => {
     setLoading(true);
     const [mRes, aRes] = await Promise.all([
-      supabase.from('members').select('id, name, created_at, updated_at').order('name'),
-      supabase.from('attendance').select('*'),
+      supabase.from("members").select("id, name, gender, birth_date, created_at, updated_at").order("name"),
+      supabase.from("attendance").select("*"),
     ]);
     if (mRes.data) setMembers(mRes.data as Member[]);
     if (aRes.data) {
@@ -60,157 +254,91 @@ const AttendancePage = () => {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // Scroll to current week on load
-  useEffect(() => {
-    if (!loading && scrollRef.current) {
-      const cellWidth = 64; // px
-      const nameColWidth = 140;
-      const scrollTo = nameColWidth + currentWeekIdx * cellWidth - 200;
-      scrollRef.current.scrollLeft = Math.max(0, scrollTo);
-    }
-  }, [loading, currentWeekIdx]);
+  useEffect(() => { fetchData(); }, []);
 
   const toggleAttendance = async (memberId: string, dateStr: string) => {
     const current = attendance[memberId]?.[dateStr] ?? false;
     const newVal = !current;
-
     setAttendance(prev => ({
       ...prev,
-      [memberId]: { ...(prev[memberId] || {}), [dateStr]: newVal }
+      [memberId]: { ...(prev[memberId] || {}), [dateStr]: newVal },
     }));
-
-    const { error } = await supabase.from('attendance').upsert(
+    const { error } = await supabase.from("attendance").upsert(
       { member_id: memberId, attendance_date: dateStr, is_present: newVal },
-      { onConflict: 'member_id,attendance_date' }
+      { onConflict: "member_id,attendance_date" }
     );
     if (error) {
-      toast({ title: '저장 오류', description: error.message, variant: 'destructive' });
+      toast({ title: "저장 오류", description: error.message, variant: "destructive" });
       setAttendance(prev => ({
         ...prev,
-        [memberId]: { ...(prev[memberId] || {}), [dateStr]: current }
+        [memberId]: { ...(prev[memberId] || {}), [dateStr]: current },
       }));
     }
   };
 
-  // Mouse drag scroll
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    isDragging.current = true;
-    dragStartX.current = e.clientX;
-    scrollStartLeft.current = scrollRef.current?.scrollLeft || 0;
-  }, []);
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging.current || !scrollRef.current) return;
-    const dx = e.clientX - dragStartX.current;
-    scrollRef.current.scrollLeft = scrollStartLeft.current - dx;
-  }, []);
-
-  const onMouseUp = useCallback(() => { isDragging.current = false; }, []);
-
-  const formatDate = (d: Date) => {
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
-    return { month, day };
-  };
-
-  // Count attendance per Sunday
-  const getCountForDate = (dateStr: string) => {
-    return members.filter(m => attendance[m.id]?.[dateStr] === true).length;
-  };
+  const selectedGroup = GROUPS.find(g => g.id === selectedGroupId) ?? null;
+  const filteredMembers = selectedGroup ? members.filter(selectedGroup.filter) : [];
 
   if (loading) {
     return <div className="flex items-center justify-center h-full text-muted-foreground p-8">불러오는 중...</div>;
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border px-6 py-4">
-        <h1 className="text-xl font-bold text-foreground">출석부</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          마우스로 드래그하거나 터치로 좌우 스크롤하세요 · 총 {members.length}명
-        </p>
-      </div>
-
-      {/* Table */}
-      <div className="flex-1 overflow-hidden flex">
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-auto attendance-scroll select-none"
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-        >
-          <table className="border-collapse text-sm" style={{ minWidth: 'max-content' }}>
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))]">
-                <th className="sticky left-0 z-20 bg-[hsl(var(--sidebar-bg))] text-left px-4 py-3 font-semibold text-sm min-w-[140px] border-r border-[hsl(var(--sidebar-border))]">
-                  이름
-                </th>
-                {sundays.map((s, i) => {
-                  const { month, day } = formatDate(s);
-                  const dateStr = toDateStr(s);
-                  const isCurrentWeek = i === currentWeekIdx;
-                  return (
-                    <th
-                      key={dateStr}
-                      className={`w-16 px-1 py-2 text-center text-xs font-medium border-r border-[hsl(var(--sidebar-border))/30] ${
-                        isCurrentWeek ? 'bg-[hsl(var(--gold))] text-white' : ''
-                      }`}
-                    >
-                      <div className="font-semibold">{month}/{day}</div>
-                      <div className="text-[10px] opacity-70 font-normal">{getCountForDate(dateStr)}명</div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member, mi) => (
-                <tr
-                  key={member.id}
-                  className={`border-b border-border ${mi % 2 === 0 ? 'bg-card' : 'bg-[hsl(var(--table-row-hover))]'} hover:bg-accent/40`}
-                >
-                  <td className="sticky left-0 z-10 bg-inherit px-4 py-2.5 font-medium text-foreground min-w-[140px] border-r border-border">
-                    {member.name}
-                  </td>
-                  {sundays.map((s, i) => {
-                    const dateStr = toDateStr(s);
-                    const isPresent = attendance[member.id]?.[dateStr] === true;
-                    const isCurrentWeek = i === currentWeekIdx;
-                    return (
-                      <td
-                        key={dateStr}
-                        className={`w-16 px-1 py-2 text-center border-r border-border/50 ${isCurrentWeek ? 'bg-[hsl(var(--gold-light))]' : ''}`}
-                        onMouseDown={e => e.stopPropagation()}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isPresent}
-                          onChange={() => toggleAttendance(member.id, dateStr)}
-                          className="w-4 h-4 accent-primary cursor-pointer"
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-              {members.length === 0 && (
-                <tr>
-                  <td colSpan={sundays.length + 1} className="text-center py-12 text-muted-foreground">
-                    회원기록양식에서 먼저 회원을 추가해주세요.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+    <div className="flex h-screen overflow-hidden">
+      {/* ── Left panel: group list ── */}
+      <div className={`flex flex-col shrink-0 border-r border-border bg-card transition-all duration-200 ${selectedGroupId ? "w-52" : "flex-1 max-w-xs"}`}>
+        <div className="px-4 py-4 border-b border-border">
+          <h1 className="text-lg font-bold text-foreground">출석부</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
+        </div>
+        <div className="flex-1 overflow-y-auto py-2">
+          {GROUPS.map(group => {
+            const count = members.filter(group.filter).length;
+            const isSelected = selectedGroupId === group.id;
+            return (
+              <button
+                key={group.id}
+                onClick={() => setSelectedGroupId(isSelected ? null : group.id)}
+                className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-accent/50 border-b border-border/50 ${isSelected ? "bg-primary/10 border-l-2 border-l-primary" : ""}`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{group.label}</p>
+                    <p className="text-xs text-muted-foreground">{group.description} · {count}명</p>
+                  </div>
+                </div>
+                <ChevronRight className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isSelected ? "rotate-90 text-primary" : ""}`} />
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      {/* ── Right panel: attendance table ── */}
+      {selectedGroupId ? (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-border bg-card shrink-0 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+            <h2 className="text-sm font-semibold text-foreground">{selectedGroup?.label}</h2>
+            <span className="text-xs text-muted-foreground">· {filteredMembers.length}명 · 최근 1개월</span>
+          </div>
+          <AttendanceTable
+            members={filteredMembers}
+            sundays={sundays}
+            attendance={attendance}
+            currentWeekIdx={currentWeekIdx}
+            onToggle={toggleAttendance}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
+          <Users className="w-12 h-12 opacity-20" />
+          <p className="text-sm">왼쪽에서 그룹을 선택하세요</p>
+        </div>
+      )}
     </div>
   );
 };
