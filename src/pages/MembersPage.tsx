@@ -83,39 +83,53 @@ const MembersPage = () => {
   const allInitials = groups.map(g => g.label);
 
   return (
-    <div className="flex h-screen">
-      {/* Main list area */}
-      <div className={`flex flex-col flex-1 min-w-0 overflow-hidden ${selectedMember ? 'hidden md:flex' : 'flex'}`}>
+    <div className="flex h-screen overflow-hidden">
+      {/* Main list area — 상세 패널이 열리면 왼쪽 패널은 고정 너비 */}
+      <div
+        className={`flex flex-col overflow-hidden shrink-0 transition-all duration-200 ${
+          selectedMember ? 'w-[420px] min-w-[420px]' : 'flex-1 w-full'
+        }`}
+      >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-card border-b border-border px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">회원기록양식</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
+        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="shrink-0">
+              <h1 className="text-lg font-bold text-foreground whitespace-nowrap">회원기록양식</h1>
+              <p className="text-xs text-muted-foreground">총 {members.length}명</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="이름 또는 전화번호 검색..."
+                  placeholder="이름/전화번호 검색..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-8 w-52"
+                  className="pl-7 w-36 h-8 text-xs"
                 />
               </div>
-              <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
-                <Upload className="w-4 h-4 mr-1.5" />
-                Excel 가져오기
-              </Button>
-              <Button size="sm" onClick={() => setShowAdd(true)}>
-                <Plus className="w-4 h-4 mr-1.5" />
-                회원 추가
-              </Button>
+              {!selectedMember && (
+                <>
+                  <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowImport(true)}>
+                    <Upload className="w-3.5 h-3.5 mr-1" />
+                    Excel
+                  </Button>
+                  <Button size="sm" className="h-8 text-xs" onClick={() => setShowAdd(true)}>
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    회원 추가
+                  </Button>
+                </>
+              )}
+              {selectedMember && (
+                <Button size="sm" className="h-8 text-xs" onClick={() => setShowAdd(true)}>
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  추가
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Initial filter tabs */}
-          <div className="flex items-center gap-1 mt-3 flex-wrap">
+          <div className="flex items-center gap-1 mt-2 flex-wrap">
             <button
               onClick={() => setActiveInitial(null)}
               className={`px-2 py-0.5 text-xs rounded font-medium transition-colors ${!activeInitial ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
@@ -131,7 +145,7 @@ const MembersPage = () => {
         </div>
 
         {/* Member list */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
           {loading ? (
             <div className="flex items-center justify-center h-32 text-muted-foreground">불러오는 중...</div>
           ) : filtered.length === 0 ? (
@@ -147,18 +161,20 @@ const MembersPage = () => {
               .filter(g => !activeInitial || g.label === activeInitial)
               .map(group => (
                 <div key={group.label}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="w-8 h-8 rounded-full bg-[hsl(var(--table-header))] text-primary font-bold text-sm flex items-center justify-center">{group.label}</span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-7 h-7 rounded-full bg-[hsl(var(--table-header))] text-primary font-bold text-xs flex items-center justify-center shrink-0">{group.label}</span>
                     <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-muted-foreground">{group.members.length}명</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{group.members.length}명</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {/* 패널 열렸을 때는 1열, 닫혔을 때는 반응형 그리드 */}
+                  <div className={`grid gap-2 ${selectedMember ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
                     {group.members.map(member => (
                       <MemberCard
                         key={member.id}
                         member={member}
                         isSelected={selectedMember?.id === member.id}
                         onClick={() => setSelectedMember(member)}
+                        compact={!!selectedMember}
                       />
                     ))}
                   </div>
@@ -168,9 +184,9 @@ const MembersPage = () => {
         </div>
       </div>
 
-      {/* Detail panel */}
+      {/* Detail panel — flex-1 로 나머지 공간 차지 */}
       {selectedMember && (
-        <div className="w-full md:w-[480px] lg:w-[560px] border-l border-border flex flex-col bg-card overflow-hidden">
+        <div className="flex-1 min-w-0 border-l border-border flex flex-col bg-card overflow-hidden">
           <MemberDetailPanel
             memberId={selectedMember.id}
             onClose={() => setSelectedMember(null)}
