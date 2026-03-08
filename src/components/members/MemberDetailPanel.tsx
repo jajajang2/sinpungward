@@ -199,6 +199,23 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
             </div>
           </div>
 
+          {/* 저장 버튼 아래 특별관리회원 체크 */}
+          <div className="border-t border-border pt-4">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <input
+                type="checkbox"
+                id="special-care"
+                checked={(member as any).is_special_care ?? false}
+                onChange={e => setMember(m => m ? { ...m, is_special_care: e.target.checked } as any : m)}
+                className="w-4 h-4 accent-amber-600"
+              />
+              <div>
+                <Label htmlFor="special-care" className="text-sm font-semibold cursor-pointer text-amber-800">특별관리회원</Label>
+                <p className="text-xs text-amber-600">체크 시 조직도 특별관리회원 섹션에 표시됩니다</p>
+              </div>
+            </div>
+          </div>
+
           {/* Family */}
           <div>
             <div className="flex items-center justify-between mb-2">
