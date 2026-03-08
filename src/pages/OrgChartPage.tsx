@@ -224,6 +224,7 @@ export default function OrgChartPage() {
   const [hideEmpty, setHideEmpty] = useState(true);
   const [positions, setPositions] = useState<PositionMap>(loadPositions);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [specialCareMembers, setSpecialCareMembers] = useState<{ id: string; name: string }[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
@@ -231,6 +232,12 @@ export default function OrgChartPage() {
   const dragStart = useRef({ mouseX: 0, mouseY: 0, secX: 0, secY: 0 });
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
+
+  // Fetch special care members
+  useEffect(() => {
+    supabase.from("members").select("id, name").eq("is_special_care", true).order("name")
+      .then(({ data }) => setSpecialCareMembers(data ?? []));
+  }, []);
 
   const clientToCanvas = useCallback((cx: number, cy: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -282,7 +289,6 @@ export default function OrgChartPage() {
 
   const onMouseUp = useCallback(() => {
     if (draggingId) {
-      // resolve collisions: push overlapping sections down
       setPositions(p => resolveCollisions(p, ALL_SECTIONS, hideEmpty, callingMap, draggingId));
     }
     isPanning.current = false;
