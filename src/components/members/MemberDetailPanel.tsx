@@ -21,6 +21,18 @@ interface MemberDetailPanelProps {
   onUpdated: () => void;
 }
 
+// 한국 2촌 관계 목록
+const RELATIONSHIP_OPTIONS = [
+  { group: "배우자", items: ["배우자 (남편)", "배우자 (아내)"] },
+  { group: "자녀", items: ["아들", "딸"] },
+  { group: "부모", items: ["아버지", "어머니"] },
+  { group: "형제자매", items: ["형", "오빠", "남동생", "언니", "누나", "여동생"] },
+  { group: "조부모 / 손자녀", items: ["할아버지", "할머니", "외할아버지", "외할머니", "손자", "손녀", "외손자", "외손녀"] },
+  { group: "친가 2촌", items: ["큰아버지", "작은아버지", "고모", "사촌 형", "사촌 오빠", "사촌 남동생", "사촌 언니", "사촌 누나", "사촌 여동생"] },
+  { group: "외가 2촌", items: ["외삼촌", "이모", "외사촌 형", "외사촌 오빠", "외사촌 남동생", "외사촌 언니", "외사촌 누나", "외사촌 여동생"] },
+  { group: "시가 / 처가", items: ["시아버지", "시어머니", "장인어른", "장모님", "시누이", "시동생 (형제)", "처남", "처제", "형수", "제수", "올케"] },
+];
+
 const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelProps) => {
   const { toast } = useToast();
   const [member, setMember] = useState<Member | null>(null);
@@ -29,18 +41,22 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
   const [notes, setNotes] = useState<MemberNote[]>([]);
   const [saving, setSaving] = useState(false);
   const [newNote, setNewNote] = useState({ note_date: new Date().toISOString().split('T')[0], content: '', author: '' });
+  // Member list for family name combobox
+  const [memberList, setMemberList] = useState<{ id: string; name: string }[]>([]);
 
   const fetchData = async () => {
-    const [mRes, fRes, cRes, nRes] = await Promise.all([
+    const [mRes, fRes, cRes, nRes, allMRes] = await Promise.all([
       supabase.from('members').select('*').eq('id', memberId).single(),
       supabase.from('member_family').select('*').eq('member_id', memberId).order('sort_order'),
       supabase.from('member_church_info').select('*').eq('member_id', memberId).maybeSingle(),
       supabase.from('member_notes').select('*').eq('member_id', memberId).order('note_date', { ascending: false }),
+      supabase.from('members').select('id, name').order('name'),
     ]);
     if (mRes.data) setMember(mRes.data);
     setFamily(fRes.data || []);
     setChurchInfo(cRes.data || null);
     setNotes(nRes.data || []);
+    setMemberList(allMRes.data || []);
   };
 
   useEffect(() => { fetchData(); }, [memberId]);
@@ -59,7 +75,6 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       is_special_care: member.is_special_care ?? false,
     }).eq('id', memberId);
 
-    // Save family
     await supabase.from('member_family').delete().eq('member_id', memberId);
     if (family.filter(f => f.name).length > 0) {
       await supabase.from('member_family').insert(
@@ -67,7 +82,6 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       );
     }
 
-    // Save church info
     if (churchInfo) {
       const toNull = (v: string | null | undefined) => (v === '' || v == null) ? null : v;
       const payload = {
@@ -118,7 +132,13 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
   if (!member) return <div className="flex items-center justify-center h-full text-muted-foreground">불러오는 중...</div>;
 
   const age = member.birth_date
-    ? new Date().getFullYear() - new Date(member.birth_date).getFullYear()
+    ? (() => {
+        const today = new Date();
+        const b = new Date(member.birth_date!);
+        let a = today.getFullYear() - b.getFullYear();
+        if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) a--;
+        return a;
+      })()
     : null;
 
   return (
@@ -126,7 +146,6 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       {/* Panel header */}
       <div className="px-5 py-4 border-b border-border bg-[hsl(var(--table-header))]">
         <div className="flex items-start justify-between gap-3">
-          {/* Photo + name */}
           <div className="flex items-center gap-4">
             <PhotoUpload
               memberId={memberId}
@@ -142,12 +161,11 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
               <h2 className="font-bold text-foreground text-lg">{member.name}</h2>
               <p className="text-xs text-muted-foreground">
                 {member.gender && `${member.gender}성`}
-                {age && ` · ${age}세`}
+                {age != null && ` · ${age}세`}
                 {churchInfo?.current_calling && ` · ${churchInfo.current_calling}`}
               </p>
             </div>
           </div>
-          {/* Actions */}
           <div className="flex items-center gap-1.5 shrink-0">
             <Button size="sm" variant="ghost" className="text-destructive" onClick={deleteMember}><Trash2 className="w-4 h-4" /></Button>
             <Button size="sm" onClick={saveMember} disabled={saving}><Save className="w-4 h-4 mr-1" />{saving ? '저장 중' : '저장'}</Button>
@@ -157,13 +175,14 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       </div>
 
       <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
-        <TabsList className="mx-5 mt-3 grid grid-cols-3 w-auto">
-          <TabsTrigger value="basic">기본정보</TabsTrigger>
-          <TabsTrigger value="church">교회정보</TabsTrigger>
-          <TabsTrigger value="notes">구체적 정보</TabsTrigger>
+        <TabsList className="mx-5 mt-3 grid grid-cols-4 w-auto">
+          <TabsTrigger value="basic" className="text-xs">기본정보</TabsTrigger>
+          <TabsTrigger value="family" className="text-xs">가족정보</TabsTrigger>
+          <TabsTrigger value="church" className="text-xs">교회정보</TabsTrigger>
+          <TabsTrigger value="notes" className="text-xs">구체적 정보</TabsTrigger>
         </TabsList>
 
-        {/* Basic Info */}
+        {/* ── 기본정보 ── */}
         <TabsContent value="basic" className="flex-1 overflow-y-auto px-5 pb-5 space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 space-y-1">
@@ -199,7 +218,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
             </div>
           </div>
 
-          {/* 특별관리회원 체크 */}
+          {/* 특별관리회원 */}
           <div className="border-t border-border pt-4">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-[hsl(var(--table-header))] border border-border">
               <input
@@ -215,48 +234,72 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
               </div>
             </div>
           </div>
+        </TabsContent>
 
-          {/* Family */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs font-semibold">가족 정보</Label>
-              <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => setFamily(f => [...f, { id: '', member_id: memberId, name: '', relationship: '', phone: '', sort_order: f.length }])}>
-                <Plus className="w-3 h-3 mr-1" />추가
-              </Button>
+        {/* ── 가족정보 ── */}
+        <TabsContent value="family" className="flex-1 overflow-y-auto px-5 pb-5 mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-muted-foreground">가족 구성원을 추가하세요</p>
+            <Button
+              size="sm" variant="outline" className="h-7 text-xs"
+              onClick={() => setFamily(f => [...f, { id: '', member_id: memberId, name: '', relationship: '', phone: '', sort_order: f.length }])}
+            >
+              <Plus className="w-3 h-3 mr-1" />추가
+            </Button>
+          </div>
+
+          {family.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+              <p className="text-sm">가족 정보가 없습니다</p>
+              <p className="text-xs">위 추가 버튼을 눌러 가족을 등록하세요</p>
             </div>
-            <div className="space-y-2">
+          ) : (
+            <div className="space-y-3">
               {family.map((fam, i) => (
-                <div key={i} className="grid grid-cols-3 gap-2 items-center p-2 bg-muted rounded-lg">
-                  <Input
-                    placeholder="이름"
-                    value={fam.name || ''}
-                    onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
-                    className="h-7 text-xs"
-                  />
-                  <Input
-                    placeholder="관계 (처, 자)"
-                    value={fam.relationship || ''}
-                    onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, relationship: e.target.value } : x))}
-                    className="h-7 text-xs"
-                  />
-                  <div className="flex gap-1">
-                    <Input
-                      placeholder="휴대폰"
-                      value={fam.phone || ''}
-                      onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))}
-                      className="h-7 text-xs"
-                    />
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0 text-destructive" onClick={() => setFamily(f => f.filter((_, j) => j !== i))}>
+                <div key={i} className="p-3 bg-muted/60 rounded-lg border border-border space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">가족 {i + 1}</span>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => setFamily(f => f.filter((_, j) => j !== i))}>
                       <X className="w-3 h-3" />
                     </Button>
+                  </div>
+
+                  {/* 이름: 회원 선택 or 수기 */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">이름</Label>
+                    <FamilyNameCombobox
+                      value={fam.name || ''}
+                      memberList={memberList}
+                      onChange={v => setFamily(f => f.map((x, j) => j === i ? { ...x, name: v } : x))}
+                    />
+                  </div>
+
+                  {/* 관계 */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">관계</Label>
+                    <RelationshipSelect
+                      value={fam.relationship || ''}
+                      onChange={v => setFamily(f => f.map((x, j) => j === i ? { ...x, relationship: v } : x))}
+                    />
+                  </div>
+
+                  {/* 핸드폰 */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">핸드폰 번호</Label>
+                    <Input
+                      placeholder="010-0000-0000"
+                      value={fam.phone || ''}
+                      onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))}
+                      className="h-8 text-xs"
+                    />
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </TabsContent>
 
-        {/* Church Info */}
+        {/* ── 교회정보 ── */}
         <TabsContent value="church" className="flex-1 overflow-y-auto px-5 pb-5 space-y-3 mt-4">
           {(() => {
             const ci = churchInfo || { id: '', member_id: memberId, record_number: '', baptism_date: '', priesthood: '', current_calling: '', previous_callings: '', ministry_target: '', temple_recommend: false, sunday_school_class: '', missionary_work: '' };
@@ -277,10 +320,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">현재 부름</Label>
-                  <CallingCombobox
-                    value={ci.current_calling || ''}
-                    onChange={v => update('current_calling', v)}
-                  />
+                  <CallingCombobox value={ci.current_calling || ''} onChange={v => update('current_calling', v)} />
                 </div>
                 <div className="col-span-2 space-y-1">
                   <Label className="text-xs">이전 부름 이력</Label>
@@ -313,9 +353,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
           })()}
         </TabsContent>
 
-        {/* Notes (구체적 정보) */}
+        {/* ── 구체적 정보 ── */}
         <TabsContent value="notes" className="flex-1 overflow-y-auto px-5 pb-5 mt-4 space-y-4">
-          {/* Add note */}
           <div className="p-3 bg-muted rounded-lg space-y-2">
             <p className="text-xs font-semibold text-foreground">새 기록 추가</p>
             <div className="grid grid-cols-2 gap-2">
@@ -335,7 +374,6 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
             <Button size="sm" className="w-full h-7 text-xs" onClick={addNote}>기록 추가</Button>
           </div>
 
-          {/* Notes list */}
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-xs">
               <thead>
@@ -367,6 +405,128 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+// ── Family Name Combobox (회원리스트 선택 or 수기입력) ─────────────
+const FamilyNameCombobox = ({
+  value,
+  memberList,
+  onChange,
+}: {
+  value: string;
+  memberList: { id: string; name: string }[];
+  onChange: (v: string) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+
+  // sync when external value changes
+  useEffect(() => { setInputValue(value); }, [value]);
+
+  const filtered = memberList.filter(m =>
+    inputValue ? m.name.toLowerCase().includes(inputValue.toLowerCase()) : true
+  ).slice(0, 20);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div className="relative">
+          <Input
+            value={inputValue}
+            onChange={e => {
+              setInputValue(e.target.value);
+              onChange(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder="이름 입력 또는 회원 선택..."
+            className="h-8 text-xs pr-7"
+          />
+          <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+        </div>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="start">
+        <Command>
+          <CommandList className="max-h-52">
+            {filtered.length === 0 ? (
+              <CommandEmpty>
+                <button
+                  className="w-full text-left px-3 py-2 text-xs text-primary hover:bg-accent"
+                  onClick={() => { onChange(inputValue); setOpen(false); }}
+                >
+                  "{inputValue}" 직접 입력
+                </button>
+              </CommandEmpty>
+            ) : (
+              <CommandGroup heading="회원 목록">
+                {filtered.map(m => (
+                  <CommandItem
+                    key={m.id}
+                    value={m.name}
+                    onSelect={() => {
+                      setInputValue(m.name);
+                      onChange(m.name);
+                      setOpen(false);
+                    }}
+                    className="text-xs"
+                  >
+                    <Check className={cn("mr-2 h-3 w-3 shrink-0", value === m.name ? "opacity-100" : "opacity-0")} />
+                    {m.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+// ── Relationship Select (한국 2촌 가족관계) ────────────────────────
+const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between h-8 font-normal text-xs"
+        >
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {value || "관계 선택..."}
+          </span>
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="관계 검색..." className="text-xs" />
+          <CommandList className="max-h-56">
+            <CommandEmpty>검색 결과 없음</CommandEmpty>
+            {RELATIONSHIP_OPTIONS.map(({ group, items }) => (
+              <CommandGroup key={group} heading={group}>
+                {items.map(rel => (
+                  <CommandItem
+                    key={rel}
+                    value={rel}
+                    onSelect={() => { onChange(rel === value ? '' : rel); setOpen(false); }}
+                    className="text-xs"
+                  >
+                    <Check className={cn("mr-2 h-3 w-3 shrink-0", value === rel ? "opacity-100" : "opacity-0")} />
+                    {rel}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
 
