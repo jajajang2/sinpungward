@@ -1,0 +1,67 @@
+import { NavLink } from "react-router-dom";
+import { Users, Calendar, GitBranch, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { to: "/members", label: "회원기록양식", icon: Users },
+  { to: "/attendance", label: "출석부", icon: Calendar },
+  { to: "/orgchart", label: "조직도", icon: GitBranch },
+];
+
+const AppSidebar = () => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <aside
+      className={cn(
+        "flex flex-col min-h-screen bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] transition-all duration-300 relative shrink-0",
+        collapsed ? "w-14" : "w-[220px]"
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-5 border-b border-[hsl(var(--sidebar-border))]">
+        <div className="w-8 h-8 rounded-full bg-[hsl(var(--gold))] flex items-center justify-center shrink-0">
+          <span className="text-white text-xs font-bold">⛪</span>
+        </div>
+        {!collapsed && (
+          <div className="overflow-hidden">
+            <p className="text-sm font-bold leading-tight truncate">교회 관리</p>
+            <p className="text-xs opacity-60 truncate">Church Manager</p>
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 px-2 py-4 space-y-1">
+        {navItems.map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-[hsl(var(--sidebar-active))] text-white"
+                  : "text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover))]"
+              )
+            }
+          >
+            <Icon className="w-5 h-5 shrink-0" />
+            {!collapsed && <span className="truncate">{label}</span>}
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* Collapse toggle */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[hsl(var(--primary))] text-white flex items-center justify-center shadow-md hover:bg-[hsl(var(--primary))/90] z-10"
+      >
+        {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+      </button>
+    </aside>
+  );
+};
+
+export default AppSidebar;
