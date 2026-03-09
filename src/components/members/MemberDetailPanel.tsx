@@ -94,6 +94,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
         previous_callings: toNull(churchInfo.previous_callings),
         ministry_target: toNull(churchInfo.ministry_target),
         temple_recommend: churchInfo.temple_recommend ?? false,
+        bishop_interview_date: toNull(churchInfo.bishop_interview_date),
+        stake_president_interview_date: toNull(churchInfo.stake_president_interview_date),
         sunday_school_class: toNull(churchInfo.sunday_school_class),
         missionary_work: toNull(churchInfo.missionary_work),
       };
