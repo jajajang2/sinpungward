@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import RichTextEditor from "@/components/meeting/RichTextEditor";
 
 interface MeetingMinute {
   id: string;
@@ -20,7 +19,7 @@ interface MeetingMinute {
   updated_at: string;
 }
 
-const CATEGORIES = ["전체", "와드평의회", "감독단회의", "상호부조회", "제사장정원회", "장로정원회", "청남", "청녀", "초등회", "기타"];
+const CATEGORIES = ["전체", "와드평의회", "감독단회의"];
 
 const emptyForm = (): Omit<MeetingMinute, "id" | "created_at" | "updated_at"> => ({
   title: "",
@@ -161,7 +160,7 @@ export default function MeetingMinutesPage() {
   return (
     <div className="flex h-screen">
       {/* Left Sidebar */}
-      <aside className="w-[220px] shrink-0 flex flex-col border-r bg-muted/30">
+      <aside className="w-[200px] shrink-0 flex flex-col border-r bg-muted/30">
         <div className="px-4 py-4 border-b">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">카테고리</p>
           <div className="space-y-0.5">
@@ -280,9 +279,6 @@ export default function MeetingMinutesPage() {
                               {m.meeting_date}
                             </span>
                           </div>
-                          {m.content && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{m.content}</p>
-                          )}
                         </div>
                       </div>
                     </button>
@@ -307,15 +303,16 @@ export default function MeetingMinutesPage() {
                   <p className="text-sm">{selectedMinute.attendees}</p>
                 </div>
               )}
-              <div className="prose prose-sm max-w-none">
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedMinute.content}</p>
-              </div>
+              <div
+                className="prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: selectedMinute.content }}
+              />
             </div>
           )}
 
           {/* Form */}
           {showForm && (
-            <div className="max-w-2xl mx-auto px-8 py-8 space-y-5">
+            <div className="max-w-3xl mx-auto px-8 py-8 space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs">회의 날짜</Label>
@@ -344,11 +341,10 @@ export default function MeetingMinutesPage() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">회의 내용</Label>
-                <Textarea
-                  placeholder="회의 내용을 입력하세요..."
+                <RichTextEditor
                   value={form.content}
-                  onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-                  className="min-h-[300px] resize-none"
+                  onChange={(val) => setForm((f) => ({ ...f, content: val }))}
+                  placeholder="회의 내용을 입력하세요..."
                 />
               </div>
             </div>
