@@ -315,8 +315,21 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
         {/* ── 교회정보 ── */}
         <TabsContent value="church" className="flex-1 overflow-y-auto px-5 pb-5 space-y-3 mt-4">
           {(() => {
-            const ci = churchInfo || { id: '', member_id: memberId, record_number: '', baptism_date: '', priesthood: '', current_calling: '', previous_callings: '', ministry_target: '', temple_recommend: false, sunday_school_class: '', missionary_work: '' };
+            const ci = churchInfo || { id: '', member_id: memberId, record_number: '', baptism_date: '', priesthood: '', current_calling: '', previous_callings: '', ministry_target: '', temple_recommend: false, bishop_interview_date: '', stake_president_interview_date: '', sunday_school_class: '', missionary_work: '' };
             const update = (field: string, value: string | boolean) => setChurchInfo(c => ({ ...(c || ci), [field]: value }));
+
+            // 성전추천서 재갱신일: 스테이크 회장 접견일 + 2년
+            const renewalDate = (() => {
+              if (!ci.stake_president_interview_date) return null;
+              const d = new Date(ci.stake_president_interview_date);
+              d.setFullYear(d.getFullYear() + 2);
+              return d;
+            })();
+            const today = new Date();
+            const daysUntilRenewal = renewalDate
+              ? Math.ceil((renewalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+              : null;
+
             return (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -351,15 +364,66 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                   <Label className="text-xs">선교사업</Label>
                   <Input value={ci.missionary_work || ''} onChange={e => update('missionary_work', e.target.value)} />
                 </div>
-                <div className="space-y-1 flex items-center gap-2 pt-4">
-                  <input
-                    type="checkbox"
-                    id="temple"
-                    checked={ci.temple_recommend || false}
-                    onChange={e => update('temple_recommend', e.target.checked)}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  <Label htmlFor="temple" className="text-xs cursor-pointer">성전추천서 보유</Label>
+
+                {/* ── 성전추천서 ── */}
+                <div className="col-span-2 border-t border-border pt-3 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="temple"
+                      checked={ci.temple_recommend || false}
+                      onChange={e => update('temple_recommend', e.target.checked)}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <Label htmlFor="temple" className="text-sm font-semibold cursor-pointer">성전추천서 보유</Label>
+                  </div>
+
+                  {ci.temple_recommend && (
+                    <div className="pl-6 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">감독 접견일자</Label>
+                          <Input
+                            type="date"
+                            value={ci.bishop_interview_date || ''}
+                            onChange={e => update('bishop_interview_date', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">스테이크 회장 접견일자</Label>
+                          <Input
+                            type="date"
+                            value={ci.stake_president_interview_date || ''}
+                            onChange={e => update('stake_president_interview_date', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {renewalDate && (
+                        <div className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs border ${
+                          daysUntilRenewal !== null && daysUntilRenewal <= 0
+                            ? 'bg-destructive/10 border-destructive/30 text-destructive'
+                            : daysUntilRenewal !== null && daysUntilRenewal <= 90
+                            ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400'
+                            : 'bg-muted border-border text-muted-foreground'
+                        }`}>
+                          <span className="text-base leading-none mt-0.5">
+                            {daysUntilRenewal !== null && daysUntilRenewal <= 0 ? '⚠️' : daysUntilRenewal !== null && daysUntilRenewal <= 90 ? '🔔' : '✅'}
+                          </span>
+                          <div>
+                            <p className="font-semibold">
+                              재갱신일: {renewalDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </p>
+                            <p>
+                              {daysUntilRenewal !== null && daysUntilRenewal <= 0
+                                ? `만료됨 (${Math.abs(daysUntilRenewal)}일 경과)`
+                                : `${daysUntilRenewal}일 후 갱신 필요`}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
