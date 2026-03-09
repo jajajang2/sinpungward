@@ -7,7 +7,7 @@ import { Pencil, Save, RotateCcw } from "lucide-react";
 // ───────────────────────────────────────────────────────────
 interface OrgEntry { role: string; callingKey?: string; }
 interface OrgSection { id: string; title: string; color: string; entries: OrgEntry[]; }
-interface SpecialMember { id: string; name: string; phone?: string; birth_date?: string; gender?: string; address?: string; }
+
 type PositionMap = { [id: string]: { x: number; y: number } };
 
 // ───────────────────────────────────────────────────────────
