@@ -1,16 +1,38 @@
 import { NavLink } from "react-router-dom";
-import { Users, Calendar, GitBranch, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Calendar, GitBranch, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const mainNavItems = [
   { to: "/members", label: "회원기록양식", icon: Users },
   { to: "/attendance", label: "출석부", icon: Calendar },
   { to: "/orgchart", label: "조직도", icon: GitBranch },
 ];
 
+const extraNavItems = [
+  { to: "/minutes", label: "회의록", icon: BookOpen },
+];
+
 const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+
+  const renderNavLink = ({ to, label, icon: Icon }: { to: string; label: string; icon: React.ElementType }) => (
+    <NavLink
+      key={to}
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+          isActive
+            ? "bg-[hsl(var(--sidebar-active))] text-white"
+            : "text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover))]"
+        )
+      }
+    >
+      <Icon className="w-5 h-5 shrink-0" />
+      {!collapsed && <span className="truncate">{label}</span>}
+    </NavLink>
+  );
 
   return (
     <aside
@@ -34,23 +56,12 @@ const AppSidebar = () => {
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 space-y-1">
-        {navItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-[hsl(var(--sidebar-active))] text-white"
-                  : "text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover))]"
-              )
-            }
-          >
-            <Icon className="w-5 h-5 shrink-0" />
-            {!collapsed && <span className="truncate">{label}</span>}
-          </NavLink>
-        ))}
+        {mainNavItems.map(renderNavLink)}
+
+        {/* Divider */}
+        <div className={cn("my-2 border-t border-[hsl(var(--sidebar-border))]", collapsed && "mx-1")} />
+
+        {extraNavItems.map(renderNavLink)}
       </nav>
 
       {/* Collapse toggle */}

@@ -7,6 +7,7 @@ import Layout from "./components/Layout";
 import MembersPage from "./pages/MembersPage";
 import AttendancePage from "./pages/AttendancePage";
 import OrgChartPage from "./pages/OrgChartPage";
+import MeetingMinutesPage from "./pages/MeetingMinutesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/members" element={<MembersPage />} />
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/orgchart" element={<OrgChartPage />} />
+            <Route path="/minutes" element={<MeetingMinutesPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
