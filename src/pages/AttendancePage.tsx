@@ -239,7 +239,7 @@ const AttendancePage = () => {
   const fetchData = async () => {
     setLoading(true);
     const [mRes, aRes] = await Promise.all([
-      supabase.from("members").select("id, name, gender, birth_date, created_at, updated_at").order("name"),
+      supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
       supabase.from("attendance").select("*"),
     ]);
     if (mRes.data) setMembers(mRes.data as Member[]);
