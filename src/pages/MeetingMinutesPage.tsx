@@ -106,8 +106,10 @@ export default function MeetingMinutesPage() {
       return;
     }
     setSaving(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
     if (isCreating) {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("meeting_minutes")
         .insert([form])
         .select()
@@ -116,12 +118,12 @@ export default function MeetingMinutesPage() {
         toast({ title: "저장 실패", description: error.message, variant: "destructive" });
       } else {
         toast({ title: "회의록이 저장되었습니다" });
-        setMinutes((prev) => [data, ...prev]);
-        setSelectedMinute(data);
+        setMinutes((prev) => [data as MeetingMinute, ...prev]);
+        setSelectedMinute(data as MeetingMinute);
         setIsCreating(false);
       }
     } else if (isEditing && selectedMinute) {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("meeting_minutes")
         .update({ ...form, updated_at: new Date().toISOString() })
         .eq("id", selectedMinute.id)
@@ -131,8 +133,8 @@ export default function MeetingMinutesPage() {
         toast({ title: "저장 실패", description: error.message, variant: "destructive" });
       } else {
         toast({ title: "회의록이 수정되었습니다" });
-        setMinutes((prev) => prev.map((m) => (m.id === data.id ? data : m)));
-        setSelectedMinute(data);
+        setMinutes((prev) => prev.map((m) => (m.id === (data as MeetingMinute).id ? data as MeetingMinute : m)));
+        setSelectedMinute(data as MeetingMinute);
         setIsEditing(false);
       }
     }
@@ -140,7 +142,8 @@ export default function MeetingMinutesPage() {
   }
 
   async function handleDelete(id: string) {
-    const { error } = await supabase.from("meeting_minutes").delete().eq("id", id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("meeting_minutes").delete().eq("id", id);
     if (error) {
       toast({ title: "삭제 실패", description: error.message, variant: "destructive" });
     } else {
