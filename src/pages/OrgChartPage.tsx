@@ -1,14 +1,12 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useCallingMembers } from "@/hooks/useCallingMembers";
 import { Pencil, Save, RotateCcw } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 // ───────────────────────────────────────────────────────────
 // Types
 // ───────────────────────────────────────────────────────────
 interface OrgEntry { role: string; callingKey?: string; }
 interface OrgSection { id: string; title: string; color: string; entries: OrgEntry[]; }
-interface SpecialMember { id: string; name: string; phone?: string; birth_date?: string; gender?: string; address?: string; }
 type PositionMap = { [id: string]: { x: number; y: number } };
 
 // ───────────────────────────────────────────────────────────
@@ -145,24 +143,17 @@ const ALL_SECTIONS: OrgSection[] = [
 // Layout helpers
 // ───────────────────────────────────────────────────────────
 const SECTION_W = 182;
-const SPECIAL_W = 280;
 const HEADER_H = 29;
 const ROW_H = 22;
-const SPECIAL_ROW_H = 52;
 const EMPTY_H = 28;
 const GAP = 10;
-const SPECIAL_SECTION_ID = "__special_care__";
-const STORAGE_KEY = "orgchart-freepos-v3";
+const STORAGE_KEY = "orgchart-freepos-v4";
 
 function calcHeight(sec: OrgSection, hideEmpty: boolean, callingMap: Record<string, string>): number {
   const rows = hideEmpty
     ? sec.entries.filter(e => e.callingKey && callingMap[e.callingKey]).length
     : sec.entries.length;
   return HEADER_H + (rows > 0 ? rows * ROW_H : EMPTY_H) + 2;
-}
-
-function calcSpecialHeight(count: number): number {
-  return HEADER_H + (count > 0 ? count * SPECIAL_ROW_H : EMPTY_H) + 2;
 }
 
 function defaultPositions(): PositionMap {
@@ -172,7 +163,6 @@ function defaultPositions(): PositionMap {
   rest.forEach((sec, i) => {
     pos[sec.id] = { x: (i % 5) * (SECTION_W + GAP), y: 220 + Math.floor(i / 5) * 320 };
   });
-  pos[SPECIAL_SECTION_ID] = { x: 20, y: 1100 };
   return pos;
 }
 
@@ -187,21 +177,17 @@ function resolveCollisions(
   sections: OrgSection[],
   hideEmpty: boolean,
   callingMap: Record<string, string>,
-  specialCount: number,
   draggedId: string
 ): PositionMap {
   const result = { ...positions };
   const heights: Record<string, number> = {};
   sections.forEach(s => { heights[s.id] = calcHeight(s, hideEmpty, callingMap); });
-  heights[SPECIAL_SECTION_ID] = calcSpecialHeight(specialCount);
 
-  const allIds = [...sections.map(s => s.id), SPECIAL_SECTION_ID];
+  const allIds = sections.map(s => s.id);
 
   const overlaps = (a: { x: number; y: number }, aw: number, ah: number, b: { x: number; y: number }, bw: number, bh: number) =>
     !(a.x + aw + GAP <= b.x || b.x + bw + GAP <= a.x ||
       a.y + ah + GAP <= b.y || b.y + bh + GAP <= a.y);
-
-  const getW = (id: string) => id === SPECIAL_SECTION_ID ? SPECIAL_W : SECTION_W;
 
   for (let iter = 0; iter < 30; iter++) {
     let changed = false;
@@ -212,7 +198,7 @@ function resolveCollisions(
         const lower = ids[i];
         if (lower === draggedId) continue;
         if (!result[upper] || !result[lower]) continue;
-        if (overlaps(result[upper], getW(upper), heights[upper] || 100, result[lower], getW(lower), heights[lower] || 100)) {
+        if (overlaps(result[upper], SECTION_W, heights[upper] || 100, result[lower], SECTION_W, heights[lower] || 100)) {
           const newY = result[upper].y + (heights[upper] || 100) + GAP;
           if (result[lower].y < newY) {
             result[lower] = { ...result[lower], y: newY };
@@ -224,15 +210,6 @@ function resolveCollisions(
     if (!changed) break;
   }
   return result;
-}
-
-function getAge(bd?: string): number | null {
-  if (!bd) return null;
-  const today = new Date();
-  const b = new Date(bd);
-  let age = today.getFullYear() - b.getFullYear();
-  if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) age--;
-  return age;
 }
 
 const MIN_SCALE = 0.15;
@@ -248,7 +225,6 @@ export default function OrgChartPage() {
   const [hideEmpty, setHideEmpty] = useState(true);
   const [positions, setPositions] = useState<PositionMap>(loadPositions);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [specialCareMembers, setSpecialCareMembers] = useState<SpecialMember[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
@@ -256,14 +232,6 @@ export default function OrgChartPage() {
   const dragStart = useRef({ mouseX: 0, mouseY: 0, secX: 0, secY: 0 });
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
-
-  useEffect(() => {
-    supabase.from("members")
-      .select("id, name, phone, birth_date, gender, address")
-      .eq("is_special_care", true)
-      .order("name")
-      .then(({ data }) => setSpecialCareMembers((data as SpecialMember[]) ?? []));
-  }, []);
 
   const clientToCanvas = useCallback((cx: number, cy: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -315,17 +283,14 @@ export default function OrgChartPage() {
 
   const onMouseUp = useCallback(() => {
     if (draggingId) {
-      setPositions(p => resolveCollisions(p, ALL_SECTIONS, hideEmpty, callingMap, specialCareMembers.length, draggingId));
+      setPositions(p => resolveCollisions(p, ALL_SECTIONS, hideEmpty, callingMap, draggingId));
     }
     isPanning.current = false;
     setDraggingId(null);
-  }, [draggingId, hideEmpty, callingMap, specialCareMembers.length]);
+  }, [draggingId, hideEmpty, callingMap]);
 
   const handleSave = () => { savePositions(positions); setEditMode(false); };
   const handleReset = () => { const d = defaultPositions(); setPositions(d); savePositions(d); };
-
-  // Special section pos — ensure it has a default if not saved yet
-  const specialPos = positions[SPECIAL_SECTION_ID] ?? { x: 20, y: 1100 };
 
   return (
     <div className="flex flex-col h-screen">
@@ -457,93 +422,6 @@ export default function OrgChartPage() {
               </div>
             );
           })}
-
-          {/* ── Special Care Members separator line ── */}
-          <div style={{
-            position: "absolute",
-            top: specialPos.y - 50,
-            left: -200,
-            width: 3000,
-            borderTop: "2px dashed #e2e8f0",
-            pointerEvents: "none",
-          }} />
-          <div style={{
-            position: "absolute",
-            top: specialPos.y - 62,
-            left: 20,
-            fontSize: 10,
-            color: "#94a3b8",
-            pointerEvents: "none",
-            background: "#f8fafc",
-            padding: "1px 8px",
-            borderRadius: 4,
-            letterSpacing: "0.1em",
-          }}>
-            ─── 특별관리 구역 ───
-          </div>
-
-          {/* ── Special Care section (draggable) ── */}
-          {(() => {
-            const SPECIAL_COLOR = "#DC2626";
-            const isDragging = draggingId === SPECIAL_SECTION_ID;
-            return (
-              <div
-                style={{
-                  position: "absolute",
-                  left: specialPos.x, top: specialPos.y,
-                  width: SPECIAL_W,
-                  zIndex: isDragging ? 100 : 1,
-                  cursor: editMode ? (isDragging ? "grabbing" : "grab") : "default",
-                  filter: isDragging ? "drop-shadow(0 8px 20px rgba(0,0,0,0.25))" : "none",
-                  transition: isDragging ? "none" : "filter 0.15s",
-                }}
-                onMouseDown={e => onSectionMouseDown(e, SPECIAL_SECTION_ID)}
-              >
-                {editMode && (
-                  <div style={{ position: "absolute", top: -18, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "#94a3b8" }}>
-                    ⠿ 드래그
-                  </div>
-                )}
-                <div style={{
-                  border: editMode ? `2px dashed ${SPECIAL_COLOR}` : `1.5px solid #fca5a5`,
-                  borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11,
-                }}>
-                  <div style={{ background: SPECIAL_COLOR, color: "#fff", textAlign: "center", padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em" }}>
-                    ★ 특별관리회원
-                  </div>
-                  {specialCareMembers.length === 0 ? (
-                    <div style={{ padding: "10px 8px", color: "#cbd5e1", fontSize: 10, textAlign: "center" }}>특별관리회원 없음</div>
-                  ) : specialCareMembers.map((m, i) => {
-                    const age = getAge(m.birth_date);
-                    return (
-                      <div key={m.id} style={{ borderTop: i === 0 ? "none" : "1px solid #f1f5f9", padding: "6px 8px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ color: SPECIAL_COLOR, fontSize: 9, flexShrink: 0 }}>●</span>
-                          <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 12 }}>{m.name}</span>
-                          {m.gender && (
-                            <span style={{ fontSize: 9, color: "#fff", background: m.gender === "남" ? "#3b82f6" : "#ec4899", borderRadius: 3, padding: "1px 4px" }}>
-                              {m.gender}
-                            </span>
-                          )}
-                          {age !== null && <span style={{ fontSize: 9, color: "#94a3b8" }}>{age}세</span>}
-                        </div>
-                        {m.phone && (
-                          <div style={{ paddingLeft: 15, fontSize: 10, color: "#64748b", marginTop: 2 }}>
-                            📞 {m.phone}
-                          </div>
-                        )}
-                        {m.address && (
-                          <div style={{ paddingLeft: 15, fontSize: 10, color: "#64748b", marginTop: 1, maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            📍 {m.address}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()}
         </div>
       </div>
     </div>
