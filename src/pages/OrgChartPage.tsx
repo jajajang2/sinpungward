@@ -144,13 +144,10 @@ const ALL_SECTIONS: OrgSection[] = [
 // Layout helpers
 // ───────────────────────────────────────────────────────────
 const SECTION_W = 182;
-const SPECIAL_W = 280;
 const HEADER_H = 29;
 const ROW_H = 22;
-const SPECIAL_ROW_H = 52;
 const EMPTY_H = 28;
 const GAP = 10;
-const SPECIAL_SECTION_ID = "__special_care__";
 const STORAGE_KEY = "orgchart-freepos-v3";
 
 function calcHeight(sec: OrgSection, hideEmpty: boolean, callingMap: Record<string, string>): number {
@@ -160,10 +157,6 @@ function calcHeight(sec: OrgSection, hideEmpty: boolean, callingMap: Record<stri
   return HEADER_H + (rows > 0 ? rows * ROW_H : EMPTY_H) + 2;
 }
 
-function calcSpecialHeight(count: number): number {
-  return HEADER_H + (count > 0 ? count * SPECIAL_ROW_H : EMPTY_H) + 2;
-}
-
 function defaultPositions(): PositionMap {
   const pos: PositionMap = {};
   pos["bishop"] = { x: 400, y: 50 };
@@ -171,7 +164,6 @@ function defaultPositions(): PositionMap {
   rest.forEach((sec, i) => {
     pos[sec.id] = { x: (i % 5) * (SECTION_W + GAP), y: 220 + Math.floor(i / 5) * 320 };
   });
-  pos[SPECIAL_SECTION_ID] = { x: 20, y: 1100 };
   return pos;
 }
 
