@@ -87,7 +87,7 @@ export default function RichTextEditor({
   // Sync external value changes (e.g. when switching records)
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || "", false);
+      editor.commands.setContent(value || "", { emitUpdate: false });
     }
   }, [value, editor]);
 
