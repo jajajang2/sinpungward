@@ -38,6 +38,8 @@ export interface MemberChurchInfo {
   previous_callings?: string;
   ministry_target?: string;
   temple_recommend: boolean;
+  bishop_interview_date?: string;
+  stake_president_interview_date?: string;
   sunday_school_class?: string;
   missionary_work?: string;
 }

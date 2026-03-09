@@ -52,6 +52,7 @@ export type Database = {
       member_church_info: {
         Row: {
           baptism_date: string | null
+          bishop_interview_date: string | null
           created_at: string
           current_calling: string | null
           id: string
@@ -61,12 +62,14 @@ export type Database = {
           previous_callings: string | null
           priesthood: string | null
           record_number: string | null
+          stake_president_interview_date: string | null
           sunday_school_class: string | null
           temple_recommend: boolean | null
           updated_at: string
         }
         Insert: {
           baptism_date?: string | null
+          bishop_interview_date?: string | null
           created_at?: string
           current_calling?: string | null
           id?: string
@@ -76,12 +79,14 @@ export type Database = {
           previous_callings?: string | null
           priesthood?: string | null
           record_number?: string | null
+          stake_president_interview_date?: string | null
           sunday_school_class?: string | null
           temple_recommend?: boolean | null
           updated_at?: string
         }
         Update: {
           baptism_date?: string | null
+          bishop_interview_date?: string | null
           created_at?: string
           current_calling?: string | null
           id?: string
@@ -91,6 +96,7 @@ export type Database = {
           previous_callings?: string | null
           priesthood?: string | null
           record_number?: string | null
+          stake_president_interview_date?: string | null
           sunday_school_class?: string | null
           temple_recommend?: boolean | null
           updated_at?: string
