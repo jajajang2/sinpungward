@@ -187,6 +187,7 @@ export type Database = {
           gender: string | null
           id: string
           is_special_care: boolean
+          marital_status: string | null
           name: string
           notes: string | null
           occupation: string | null
@@ -202,6 +203,7 @@ export type Database = {
           gender?: string | null
           id?: string
           is_special_care?: boolean
+          marital_status?: string | null
           name: string
           notes?: string | null
           occupation?: string | null
@@ -217,6 +219,7 @@ export type Database = {
           gender?: string | null
           id?: string
           is_special_care?: boolean
+          marital_status?: string | null
           name?: string
           notes?: string | null
           occupation?: string | null
