@@ -49,6 +49,39 @@ export type Database = {
           },
         ]
       }
+      meeting_minutes: {
+        Row: {
+          attendees: string | null
+          category: string
+          content: string
+          created_at: string
+          id: string
+          meeting_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attendees?: string | null
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          meeting_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attendees?: string | null
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          meeting_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       member_church_info: {
         Row: {
           baptism_date: string | null
