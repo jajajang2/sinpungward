@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Member, MemberFamily, MemberChurchInfo, MemberNote } from "@/types/church";
 import { Button } from "@/components/ui/button";
@@ -33,16 +33,40 @@ const RELATIONSHIP_OPTIONS = [
   { group: "시가 / 처가", items: ["시아버지", "시어머니", "장인어른", "장모님", "시누이", "시동생 (형제)", "처남", "처제", "형수", "제수", "올케"] },
 ];
 
+// 나이 계산
+function calcAge(birth?: string | null): number | null {
+  if (!birth) return null;
+  const today = new Date();
+  const b = new Date(birth);
+  let a = today.getFullYear() - b.getFullYear();
+  if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) a--;
+  return a;
+}
+
+// FamilyRow: DB 가족 + UI 전용 자동완성 필드
+interface FamilyRow extends MemberFamily {
+  _birth_date?: string | null;
+  _current_calling?: string | null;
+  _linked_member_id?: string;
+}
+
+// 회원 목록 타입
+interface MemberListItem {
+  id: string;
+  name: string;
+  birth_date?: string | null;
+  current_calling?: string | null;
+}
+
 const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelProps) => {
   const { toast } = useToast();
   const [member, setMember] = useState<Member | null>(null);
-  const [family, setFamily] = useState<MemberFamily[]>([]);
+  const [family, setFamily] = useState<FamilyRow[]>([]);
   const [churchInfo, setChurchInfo] = useState<MemberChurchInfo | null>(null);
   const [notes, setNotes] = useState<MemberNote[]>([]);
   const [saving, setSaving] = useState(false);
   const [newNote, setNewNote] = useState({ note_date: new Date().toISOString().split('T')[0], content: '', author: '' });
-  // Member list for family name combobox
-  const [memberList, setMemberList] = useState<{ id: string; name: string }[]>([]);
+  const [memberList, setMemberList] = useState<MemberListItem[]>([]);
 
   const fetchData = async () => {
     const [mRes, fRes, cRes, nRes, allMRes] = await Promise.all([
@@ -50,13 +74,32 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       supabase.from('member_family').select('*').eq('member_id', memberId).order('sort_order'),
       supabase.from('member_church_info').select('*').eq('member_id', memberId).maybeSingle(),
       supabase.from('member_notes').select('*').eq('member_id', memberId).order('note_date', { ascending: false }),
-      supabase.from('members').select('id, name').order('name'),
+      supabase.from('members').select('id, name, birth_date, member_church_info(current_calling)').order('name'),
     ]);
     if (mRes.data) setMember(mRes.data);
-    setFamily(fRes.data || []);
+
+    // 회원 목록 flatten
+    const allMembers: MemberListItem[] = ((allMRes.data as any[]) || []).map((m: any) => ({
+      id: m.id,
+      name: m.name,
+      birth_date: m.birth_date ?? null,
+      current_calling: m.member_church_info?.current_calling ?? null,
+    }));
+    setMemberList(allMembers);
+
+    // 가족 데이터: 이름이 회원 목록에 있으면 생년월일·부름 자동 채우기
+    const familyRows: FamilyRow[] = ((fRes.data as any[]) || []).map((f: any) => {
+      const linked = allMembers.find(m => m.name === f.name);
+      return {
+        ...f,
+        _birth_date: linked?.birth_date ?? null,
+        _current_calling: linked?.current_calling ?? null,
+        _linked_member_id: linked?.id,
+      };
+    });
+    setFamily(familyRows);
     setChurchInfo(cRes.data || null);
-    setNotes(nRes.data || []);
-    setMemberList(allMRes.data || []);
+    setNotes((nRes.data as any[]) || []);
   };
 
   useEffect(() => { fetchData(); }, [memberId]);
@@ -79,7 +122,13 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
     await supabase.from('member_family').delete().eq('member_id', memberId);
     if (family.filter(f => f.name).length > 0) {
       await supabase.from('member_family').insert(
-        family.filter(f => f.name).map((f, i) => ({ member_id: memberId, name: f.name, relationship: f.relationship, phone: f.phone, sort_order: i }))
+        family.filter(f => f.name).map((f, i) => ({
+          member_id: memberId,
+          name: f.name,
+          relationship: f.relationship,
+          phone: f.phone,
+          sort_order: i,
+        }))
       );
     }
 
@@ -134,15 +183,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
 
   if (!member) return <div className="flex items-center justify-center h-full text-muted-foreground">불러오는 중...</div>;
 
-  const age = member.birth_date
-    ? (() => {
-        const today = new Date();
-        const b = new Date(member.birth_date!);
-        let a = today.getFullYear() - b.getFullYear();
-        if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) a--;
-        return a;
-      })()
-    : null;
+  const age = calcAge(member.birth_date);
 
   return (
     <div className="flex flex-col h-full">
@@ -257,7 +298,17 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
             <p className="text-xs text-muted-foreground">가족 구성원을 추가하세요</p>
             <Button
               size="sm" variant="outline" className="h-7 text-xs"
-              onClick={() => setFamily(f => [...f, { id: '', member_id: memberId, name: '', relationship: '', phone: '', sort_order: f.length }])}
+              onClick={() => setFamily(f => [...f, {
+                id: '',
+                member_id: memberId,
+                name: '',
+                relationship: '',
+                phone: '',
+                sort_order: f.length,
+                _birth_date: null,
+                _current_calling: null,
+                _linked_member_id: undefined,
+              }])}
             >
               <Plus className="w-3 h-3 mr-1" />추가
             </Button>
@@ -269,47 +320,78 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
               <p className="text-xs">위 추가 버튼을 눌러 가족을 등록하세요</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {family.map((fam, i) => (
-                <div key={i} className="p-3 bg-muted/60 rounded-lg border border-border space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground">가족 {i + 1}</span>
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => setFamily(f => f.filter((_, j) => j !== i))}>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-
-                  {/* 이름: 회원 선택 or 수기 */}
-                  <div className="space-y-1">
-                    <Label className="text-xs">이름</Label>
-                    <FamilyNameCombobox
-                      value={fam.name || ''}
-                      memberList={memberList}
-                      onChange={v => setFamily(f => f.map((x, j) => j === i ? { ...x, name: v } : x))}
-                    />
-                  </div>
-
-                  {/* 관계 */}
-                  <div className="space-y-1">
-                    <Label className="text-xs">관계</Label>
-                    <RelationshipSelect
-                      value={fam.relationship || ''}
-                      onChange={v => setFamily(f => f.map((x, j) => j === i ? { ...x, relationship: v } : x))}
-                    />
-                  </div>
-
-                  {/* 핸드폰 */}
-                  <div className="space-y-1">
-                    <Label className="text-xs">핸드폰 번호</Label>
-                    <Input
-                      placeholder="010-0000-0000"
-                      value={fam.phone || ''}
-                      onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, phone: e.target.value } : x))}
-                      className="h-8 text-xs"
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-xs min-w-[520px]">
+                <thead>
+                  <tr className="bg-[hsl(var(--table-header))] border-b border-border">
+                    <th className="px-3 py-2 text-left font-semibold w-36">이름</th>
+                    <th className="px-2 py-2 text-left font-semibold w-32">관계</th>
+                    <th className="px-3 py-2 text-left font-semibold w-32">생년월일 (나이)</th>
+                    <th className="px-3 py-2 text-left font-semibold">현재 부름</th>
+                    <th className="px-2 py-2 w-7"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {family.map((fam, i) => {
+                    const famAge = calcAge(fam._birth_date);
+                    return (
+                      <tr key={i} className="border-t border-border hover:bg-muted/30">
+                        {/* 이름 */}
+                        <td className="px-2 py-1.5 align-top">
+                          <FamilyNameCombobox
+                            value={fam.name || ''}
+                            memberList={memberList}
+                            onChange={(name, linked) => {
+                              setFamily(f => f.map((x, j) => j === i ? {
+                                ...x,
+                                name,
+                                _birth_date: linked?.birth_date ?? (linked ? null : x._birth_date),
+                                _current_calling: linked?.current_calling ?? (linked ? null : x._current_calling),
+                                _linked_member_id: linked?.id ?? x._linked_member_id,
+                              } : x));
+                            }}
+                          />
+                        </td>
+                        {/* 관계 */}
+                        <td className="px-2 py-1.5 align-top">
+                          <RelationshipSelect
+                            value={fam.relationship || ''}
+                            onChange={v => setFamily(f => f.map((x, j) => j === i ? { ...x, relationship: v } : x))}
+                          />
+                        </td>
+                        {/* 생년월일 (나이) */}
+                        <td className="px-3 py-2 align-middle">
+                          {fam._birth_date ? (
+                            <span className="text-foreground whitespace-nowrap">
+                              {fam._birth_date}
+                              {famAge != null && <span className="text-muted-foreground ml-1">({famAge}세)</span>}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        {/* 현재 부름 */}
+                        <td className="px-3 py-2 align-middle">
+                          {fam._current_calling ? (
+                            <span className="text-foreground">{fam._current_calling}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        {/* 삭제 */}
+                        <td className="px-2 py-2 align-middle">
+                          <button
+                            onClick={() => setFamily(f => f.filter((_, j) => j !== i))}
+                            className="text-destructive hover:text-destructive/70"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </TabsContent>
@@ -320,7 +402,6 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
             const ci = churchInfo || { id: '', member_id: memberId, record_number: '', baptism_date: '', priesthood: '', current_calling: '', previous_callings: '', ministry_target: '', temple_recommend: false, bishop_interview_date: '', stake_president_interview_date: '', sunday_school_class: '', missionary_work: '' };
             const update = (field: string, value: string | boolean) => setChurchInfo(c => ({ ...(c || ci), [field]: value }));
 
-            // 성전추천서 재갱신일: 스테이크 회장 접견일 + 2년
             const renewalDate = (() => {
               if (!ci.stake_president_interview_date) return null;
               const d = new Date(ci.stake_president_interview_date);
@@ -487,83 +568,105 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
   );
 };
 
-// ── Family Name Combobox (회원리스트 선택 or 수기입력) ─────────────
+// ── Family Name Combobox ──────────────────────────────────────
 const FamilyNameCombobox = ({
   value,
   memberList,
   onChange,
 }: {
   value: string;
-  memberList: { id: string; name: string }[];
-  onChange: (v: string) => void;
+  memberList: MemberListItem[];
+  onChange: (name: string, linked?: MemberListItem) => void;
 }) => {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
 
-  // sync when external value changes
   useEffect(() => { setInputValue(value); }, [value]);
 
   const filtered = memberList.filter(m =>
     inputValue ? m.name.toLowerCase().includes(inputValue.toLowerCase()) : true
-  ).slice(0, 20);
+  ).slice(0, 30);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div className="relative">
-          <Input
-            value={inputValue}
-            onChange={e => {
-              setInputValue(e.target.value);
-              onChange(e.target.value);
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-            placeholder="이름 입력 또는 회원 선택..."
-            className="h-8 text-xs pr-7"
-          />
-          <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-        </div>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-0" align="start">
-        <Command>
-          <CommandList className="max-h-52">
-            {filtered.length === 0 ? (
-              <CommandEmpty>
-                <button
-                  className="w-full text-left px-3 py-2 text-xs text-primary hover:bg-accent"
-                  onClick={() => { onChange(inputValue); setOpen(false); }}
-                >
-                  "{inputValue}" 직접 입력
-                </button>
-              </CommandEmpty>
-            ) : (
-              <CommandGroup heading="회원 목록">
-                {filtered.map(m => (
-                  <CommandItem
-                    key={m.id}
-                    value={m.name}
-                    onSelect={() => {
-                      setInputValue(m.name);
-                      onChange(m.name);
-                      setOpen(false);
-                    }}
-                    className="text-xs"
+    <div className="relative">
+      <div className="relative">
+        <Input
+          value={inputValue}
+          onChange={e => {
+            setInputValue(e.target.value);
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="이름 검색..."
+          className="h-7 text-xs pr-6"
+        />
+        <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+      </div>
+
+      {open && (
+        <>
+          {/* 바깥 클릭 닫기 오버레이 (z-40) */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+
+          {/* 드롭다운 (z-50) */}
+          <div
+            className="absolute left-0 top-full mt-1 z-50 w-52 rounded-md border border-border bg-popover shadow-md overflow-hidden"
+            onMouseDown={e => e.preventDefault()} // blur 방지
+          >
+            <div className="max-h-48 overflow-y-auto">
+              {filtered.length === 0 && !inputValue ? (
+                <div className="px-3 py-3 text-xs text-muted-foreground text-center">이름을 입력하세요</div>
+              ) : filtered.length === 0 ? (
+                <div className="px-3 py-2">
+                  <button
+                    className="w-full text-left text-xs text-primary hover:underline"
+                    onClick={() => { onChange(inputValue); setOpen(false); }}
                   >
-                    <Check className={cn("mr-2 h-3 w-3 shrink-0", value === m.name ? "opacity-100" : "opacity-0")} />
-                    {m.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                    "{inputValue}" 직접 입력
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border">
+                    회원 목록
+                  </div>
+                  {filtered.map(m => (
+                    <button
+                      key={m.id}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground transition-colors",
+                        value === m.name && "bg-accent/50"
+                      )}
+                      onClick={() => {
+                        setInputValue(m.name);
+                        onChange(m.name, m);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check className={cn("w-3 h-3 shrink-0", value === m.name ? "opacity-100 text-primary" : "opacity-0")} />
+                      {m.name}
+                    </button>
+                  ))}
+                  {inputValue && !memberList.find(m => m.name === inputValue) && (
+                    <button
+                      className="w-full px-3 py-1.5 text-xs text-left text-primary hover:bg-accent border-t border-border"
+                      onClick={() => { onChange(inputValue); setOpen(false); }}
+                    >
+                      "{inputValue}" 직접 입력
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 
-// ── Relationship Select (한국 2촌 가족관계) ────────────────────────
+// ── Relationship Select ───────────────────────────────────────
 const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
   const [open, setOpen] = useState(false);
 
@@ -574,15 +677,15 @@ const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: 
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between h-8 font-normal text-xs"
+          className="w-full justify-between h-7 font-normal text-xs px-2"
         >
           <span className={cn("truncate", !value && "text-muted-foreground")}>
             {value || "관계 선택..."}
           </span>
-          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0" align="start">
+      <PopoverContent className="w-56 p-0" align="start">
         <Command>
           <CommandInput placeholder="관계 검색..." className="text-xs" />
           <CommandList className="max-h-56">
