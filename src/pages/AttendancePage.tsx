@@ -69,10 +69,7 @@ const GROUPS: AttendanceGroup[] = [
     description: "미혼 성인",
     filter: (m) => {
       const age = getAge(m.birth_date);
-      return age !== null && age >= 19;
-      // Note: In a real scenario, marital status would be needed. 
-      // For now, filtering by age 19+ matches "singles" context broadly.
-      // This can be refined with a marital status field later.
+      return age !== null && age >= 19 && m.marital_status === "미혼";
     },
   },
   {
@@ -239,7 +236,7 @@ const AttendancePage = () => {
   const fetchData = async () => {
     setLoading(true);
     const [mRes, aRes] = await Promise.all([
-      supabase.from("members").select("id, name, gender, birth_date, created_at, updated_at").order("name"),
+      supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
       supabase.from("attendance").select("*"),
     ]);
     if (mRes.data) setMembers(mRes.data as Member[]);

@@ -10,6 +10,7 @@ export interface Member {
   photo_url?: string;
   notes?: string;
   is_special_care?: boolean;
+  marital_status?: '기혼' | '미혼' | '이혼' | '사별';
   created_at: string;
   updated_at: string;
   // joined relations
