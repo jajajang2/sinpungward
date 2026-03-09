@@ -49,14 +49,15 @@ export default function MeetingMinutesPage() {
 
   async function fetchMinutes() {
     setLoading(true);
-    const { data, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from("meeting_minutes")
       .select("*")
       .order("meeting_date", { ascending: false });
     if (error) {
       toast({ title: "불러오기 실패", description: error.message, variant: "destructive" });
     } else {
-      setMinutes(data || []);
+      setMinutes((data as MeetingMinute[]) || []);
     }
     setLoading(false);
   }
