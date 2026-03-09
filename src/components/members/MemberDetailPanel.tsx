@@ -201,6 +201,18 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
               <Input type="date" value={member.birth_date || ''} onChange={e => setMember(m => m ? { ...m, birth_date: e.target.value } : m)} />
             </div>
             <div className="space-y-1">
+              <Label className="text-xs">혼인 여부</Label>
+              <Select value={member.marital_status || ''} onValueChange={v => setMember(m => m ? { ...m, marital_status: v as '기혼' | '미혼' | '이혼' | '사별' } : m)}>
+                <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="미혼">미혼</SelectItem>
+                  <SelectItem value="기혼">기혼</SelectItem>
+                  <SelectItem value="이혼">이혼</SelectItem>
+                  <SelectItem value="사별">사별</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <Label className="text-xs">휴대폰</Label>
               <Input value={member.phone || ''} onChange={e => setMember(m => m ? { ...m, phone: e.target.value } : m)} />
             </div>
