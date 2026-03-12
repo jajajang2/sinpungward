@@ -234,7 +234,7 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
               {COLUMNS.map(col => (
                 <span key={col} className={`px-2 py-0.5 rounded text-xs font-medium ${
                   col === '이름' ? 'bg-primary text-primary-foreground' :
-                  col === '부름' ? 'bg-blue-500 text-white' :
+                  col === '부름' ? 'bg-secondary text-secondary-foreground ring-1 ring-primary/30' :
                   'bg-accent text-accent-foreground'
                 }`}>{col}</span>
               ))}
