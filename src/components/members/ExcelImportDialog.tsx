@@ -240,7 +240,7 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
               ))}
             </div>
             <p className="text-muted-foreground text-xs mt-2">
-              <span className="text-blue-500 font-medium">부름</span> 열에 값이 있으면 교회정보의 현재 부름에 자동 저장되며, 조직도에 즉시 반영됩니다.
+              <span className="text-primary font-medium">부름</span> 열에 값이 있으면 교회정보의 현재 부름에 자동 저장되며, 조직도에 즉시 반영됩니다.
             </p>
           </div>
 
