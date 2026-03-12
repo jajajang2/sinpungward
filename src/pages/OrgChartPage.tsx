@@ -1,13 +1,12 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useCallingMembers } from "@/hooks/useCallingMembers";
-import { Pencil, Save, RotateCcw } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
 // ───────────────────────────────────────────────────────────
 // Types
 // ───────────────────────────────────────────────────────────
 interface OrgEntry { role: string; callingKey?: string; }
 interface OrgSection { id: string; title: string; color: string; entries: OrgEntry[]; }
-type PositionMap = { [id: string]: { x: number; y: number } };
 
 // ───────────────────────────────────────────────────────────
 // All sections
@@ -139,158 +138,130 @@ const ALL_SECTIONS: OrgSection[] = [
   ]},
 ];
 
-// ───────────────────────────────────────────────────────────
-// Layout helpers
-// ───────────────────────────────────────────────────────────
-const SECTION_W = 182;
-const HEADER_H = 29;
-const ROW_H = 22;
-const EMPTY_H = 28;
-const GAP = 10;
-const STORAGE_KEY = "orgchart-freepos-v4";
+// Row layout: bishop alone on row 0, then 5 columns per row
+const ROW_LAYOUT: string[][] = [
+  ["bishop"],
+  ["elders", "rs", "aaronic", "yw", "primary"],
+  ["ss", "singles", "mission", "seminary", "other"],
+];
 
-function calcHeight(sec: OrgSection, hideEmpty: boolean, callingMap: Record<string, string>): number {
-  const rows = hideEmpty
-    ? sec.entries.filter(e => e.callingKey && callingMap[e.callingKey]).length
-    : sec.entries.length;
-  return HEADER_H + (rows > 0 ? rows * ROW_H : EMPTY_H) + 2;
-}
-
-function defaultPositions(): PositionMap {
-  const pos: PositionMap = {};
-  pos["bishop"] = { x: 400, y: 50 };
-  const rest = ALL_SECTIONS.filter(s => s.id !== "bishop");
-  rest.forEach((sec, i) => {
-    pos[sec.id] = { x: (i % 5) * (SECTION_W + GAP), y: 220 + Math.floor(i / 5) * 320 };
-  });
-  return pos;
-}
-
-function loadPositions(): PositionMap {
-  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : defaultPositions(); }
-  catch { return defaultPositions(); }
-}
-function savePositions(p: PositionMap) { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
-
-function resolveCollisions(
-  positions: PositionMap,
-  sections: OrgSection[],
-  hideEmpty: boolean,
-  callingMap: Record<string, string>,
-  draggedId: string
-): PositionMap {
-  const result = { ...positions };
-  const heights: Record<string, number> = {};
-  sections.forEach(s => { heights[s.id] = calcHeight(s, hideEmpty, callingMap); });
-
-  const allIds = sections.map(s => s.id);
-
-  const overlaps = (a: { x: number; y: number }, aw: number, ah: number, b: { x: number; y: number }, bw: number, bh: number) =>
-    !(a.x + aw + GAP <= b.x || b.x + bw + GAP <= a.x ||
-      a.y + ah + GAP <= b.y || b.y + bh + GAP <= a.y);
-
-  for (let iter = 0; iter < 30; iter++) {
-    let changed = false;
-    const ids = allIds.filter(id => result[id]).sort((a, b) => (result[a]?.y ?? 0) - (result[b]?.y ?? 0));
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = 0; j < i; j++) {
-        const upper = ids[j];
-        const lower = ids[i];
-        if (lower === draggedId) continue;
-        if (!result[upper] || !result[lower]) continue;
-        if (overlaps(result[upper], SECTION_W, heights[upper] || 100, result[lower], SECTION_W, heights[lower] || 100)) {
-          const newY = result[upper].y + (heights[upper] || 100) + GAP;
-          if (result[lower].y < newY) {
-            result[lower] = { ...result[lower], y: newY };
-            changed = true;
-          }
-        }
-      }
-    }
-    if (!changed) break;
-  }
-  return result;
-}
-
-const MIN_SCALE = 0.15;
+const MIN_SCALE = 0.3;
 const MAX_SCALE = 3;
+
+// ───────────────────────────────────────────────────────────
+// Section Card Component
+// ───────────────────────────────────────────────────────────
+function SectionCard({ sec, hideEmpty, callingMap }: {
+  sec: OrgSection;
+  hideEmpty: boolean;
+  callingMap: Record<string, string>;
+}) {
+  const visibleEntries = hideEmpty
+    ? sec.entries.filter(e => e.callingKey && callingMap[e.callingKey])
+    : sec.entries;
+
+  return (
+    <div style={{
+      border: "1.5px solid #e2e8f0",
+      borderRadius: 6,
+      overflow: "hidden",
+      background: "#fff",
+      fontSize: 11,
+      width: 182,
+      flexShrink: 0,
+    }}>
+      <div style={{
+        background: sec.color,
+        color: "#fff",
+        textAlign: "center",
+        padding: "6px 4px",
+        fontWeight: 800,
+        fontSize: 12,
+        letterSpacing: "0.05em",
+      }}>
+        {sec.title}
+      </div>
+      {visibleEntries.length === 0 ? (
+        <div style={{ padding: "8px", color: "#cbd5e1", fontSize: 10, textAlign: "center" }}>
+          배정된 부름 없음
+        </div>
+      ) : visibleEntries.map((e, i) => {
+        const name = e.callingKey ? callingMap[e.callingKey] : undefined;
+        return (
+          <div key={i} style={{
+            display: "flex",
+            alignItems: "center",
+            borderTop: i === 0 ? "none" : "1px solid #f1f5f9",
+            padding: "3px 8px",
+            gap: 4,
+          }}>
+            <span style={{ color: "#64748b", flexShrink: 0, minWidth: 86, fontSize: 10 }}>{e.role}</span>
+            <span style={{ fontWeight: name ? 600 : 400, color: name ? "#1e293b" : "#cbd5e1", fontSize: 11 }}>
+              {name ?? "미배정"}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // ───────────────────────────────────────────────────────────
 // Main Component
 // ───────────────────────────────────────────────────────────
 export default function OrgChartPage() {
-  const [scale, setScale] = useState(0.65);
+  const [scale, setScale] = useState(0.7);
   const [offset, setOffset] = useState({ x: 40, y: 40 });
-  const [editMode, setEditMode] = useState(false);
   const [hideEmpty, setHideEmpty] = useState(true);
-  const [positions, setPositions] = useState<PositionMap>(loadPositions);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
-  const dragStart = useRef({ mouseX: 0, mouseY: 0, secX: 0, secY: 0 });
 
   const { data: callingMap = {}, isLoading } = useCallingMembers();
 
-  const clientToCanvas = useCallback((cx: number, cy: number) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-    return { x: (cx - rect.left - offset.x) / scale, y: (cy - rect.top - offset.y) / scale };
-  }, [offset, scale]);
-
+  // ── Zoom ──
   const onWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.08 : 0.93;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
     setScale(s => {
       const ns = Math.min(MAX_SCALE, Math.max(MIN_SCALE, s * factor));
-      setOffset(o => ({ x: mx - (mx - o.x) * (ns / s), y: my - (my - o.y) * (ns / s) }));
+      setOffset(o => ({
+        x: mx - (mx - o.x) * (ns / s),
+        y: my - (my - o.y) * (ns / s),
+      }));
       return ns;
     });
   }, []);
 
+  // ── Pan ──
   const onCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     isPanning.current = true;
     panStart.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
   }, [offset]);
 
-  const onSectionMouseDown = useCallback((e: React.MouseEvent, id: string) => {
-    if (!editMode) return;
-    e.stopPropagation();
-    const cp = clientToCanvas(e.clientX, e.clientY);
-    dragStart.current = { mouseX: cp.x, mouseY: cp.y, secX: positions[id]?.x ?? 0, secY: positions[id]?.y ?? 0 };
-    setDraggingId(id);
-  }, [editMode, clientToCanvas, positions]);
-
   const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (draggingId) {
-      const cp = clientToCanvas(e.clientX, e.clientY);
-      setPositions(p => ({
-        ...p,
-        [draggingId]: {
-          x: Math.max(0, dragStart.current.secX + cp.x - dragStart.current.mouseX),
-          y: Math.max(0, dragStart.current.secY + cp.y - dragStart.current.mouseY),
-        },
-      }));
-    } else if (isPanning.current) {
-      setOffset({ x: panStart.current.ox + e.clientX - panStart.current.x, y: panStart.current.oy + e.clientY - panStart.current.y });
+    if (isPanning.current) {
+      setOffset({
+        x: panStart.current.ox + e.clientX - panStart.current.x,
+        y: panStart.current.oy + e.clientY - panStart.current.y,
+      });
     }
-  }, [draggingId, clientToCanvas]);
+  }, []);
 
   const onMouseUp = useCallback(() => {
-    if (draggingId) {
-      setPositions(p => resolveCollisions(p, ALL_SECTIONS, hideEmpty, callingMap, draggingId));
-    }
     isPanning.current = false;
-    setDraggingId(null);
-  }, [draggingId, hideEmpty, callingMap]);
+  }, []);
 
-  const handleSave = () => { savePositions(positions); setEditMode(false); };
-  const handleReset = () => { const d = defaultPositions(); setPositions(d); savePositions(d); };
+  const resetView = () => {
+    setScale(0.7);
+    setOffset({ x: 40, y: 40 });
+  };
 
   return (
     <div className="flex flex-col h-screen">
@@ -299,7 +270,7 @@ export default function OrgChartPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground">조직도</h1>
           <p className="text-xs text-muted-foreground">
-            {editMode ? "섹션을 드래그하여 원하는 위치로 이동 후 저장" : "마우스 휠: 확대/축소 · 드래그: 이동"}
+            마우스 휠: 확대/축소 · 드래그: 이동
             {isLoading && <span className="ml-2 text-primary">로딩 중...</span>}
           </p>
         </div>
@@ -314,28 +285,27 @@ export default function OrgChartPage() {
             미배정 숨김 해제
           </label>
 
-          {editMode ? (
-            <>
-              <button onClick={handleReset} className="flex items-center gap-1 px-2.5 py-1.5 rounded border border-border text-xs hover:bg-muted text-muted-foreground">
-                <RotateCcw className="w-3 h-3" />초기화
-              </button>
-              <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90">
-                <Save className="w-3.5 h-3.5" />저장
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={() => setEditMode(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs hover:bg-muted">
-                <Pencil className="w-3.5 h-3.5" />편집
-              </button>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setScale(s => Math.min(MAX_SCALE, s * 1.2))} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">＋</button>
-                <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
-                <button onClick={() => setScale(s => Math.max(MIN_SCALE, s * 0.8))} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">－</button>
-                <button onClick={() => { setScale(0.65); setOffset({ x: 40, y: 40 }); }} className="px-2 py-1 rounded border border-border text-xs hover:bg-muted">초기화</button>
-              </div>
-            </>
-          )}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setScale(s => Math.min(MAX_SCALE, s * 1.2))}
+              className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(scale * 100)}%</span>
+            <button
+              onClick={() => setScale(s => Math.max(MIN_SCALE, s * 0.8))}
+              className="px-2 py-1 rounded border border-border text-xs hover:bg-muted"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={resetView}
+              className="flex items-center gap-1 px-2 py-1 rounded border border-border text-xs hover:bg-muted"
+            >
+              <RotateCcw className="w-3 h-3" />초기화
+            </button>
+          </div>
         </div>
       </div>
 
@@ -343,85 +313,58 @@ export default function OrgChartPage() {
       <div
         ref={containerRef}
         className="flex-1 overflow-hidden relative bg-muted/30"
-        style={{ cursor: draggingId ? "grabbing" : "grab" }}
+        style={{ cursor: isPanning.current ? "grabbing" : "grab" }}
         onWheel={onWheel}
         onMouseDown={onCanvasMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
       >
-        {editMode && (
-          <div className="absolute inset-0 pointer-events-none" style={{
-            backgroundImage: "radial-gradient(circle, #cbd5e1 1px, transparent 1px)",
-            backgroundSize: `${20 * scale}px ${20 * scale}px`,
-            backgroundPosition: `${offset.x % (20 * scale)}px ${offset.y % (20 * scale)}px`,
-          }} />
-        )}
-
+        {/* Transformed content */}
         <div style={{
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
           transformOrigin: "0 0",
-          position: "absolute", top: 0, left: 0,
+          position: "absolute",
+          top: 0,
+          left: 0,
           userSelect: "none",
         }}>
-          {/* title */}
-          <div style={{ position: "absolute", top: 0, left: 0, width: 1200, textAlign: "center", pointerEvents: "none" }}>
+          {/* Title */}
+          <div style={{ textAlign: "center", width: 1060, marginBottom: 20, pointerEvents: "none" }}>
             <h2 style={{ fontSize: 28, fontWeight: 900, letterSpacing: "0.3em", color: "#1e293b" }}>
               신 풍 와 드 조 직 도
             </h2>
           </div>
 
-          {/* all regular sections */}
-          {ALL_SECTIONS.map(sec => {
-            const pos = positions[sec.id] ?? { x: 0, y: 0 };
-            const visibleEntries = hideEmpty
-              ? sec.entries.filter(e => e.callingKey && callingMap[e.callingKey])
-              : sec.entries;
-            const isDragging = draggingId === sec.id;
-
-            return (
+          {/* Flow layout: rows of sections */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {ROW_LAYOUT.map((rowIds, rowIdx) => (
               <div
-                key={sec.id}
+                key={rowIdx}
                 style={{
-                  position: "absolute",
-                  left: pos.x, top: pos.y,
-                  width: SECTION_W,
-                  zIndex: isDragging ? 100 : 1,
-                  cursor: editMode ? (isDragging ? "grabbing" : "grab") : "default",
-                  filter: isDragging ? "drop-shadow(0 8px 20px rgba(0,0,0,0.2))" : "none",
-                  transition: isDragging ? "none" : "filter 0.15s",
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  // Center the bishop row
+                  justifyContent: rowIds.length === 1 ? "center" : "flex-start",
                 }}
-                onMouseDown={e => onSectionMouseDown(e, sec.id)}
               >
-                {editMode && (
-                  <div style={{ position: "absolute", top: -18, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "#94a3b8" }}>
-                    ⠿ 드래그
-                  </div>
-                )}
-                <div style={{
-                  border: editMode ? `2px dashed ${sec.color}` : "1.5px solid #e2e8f0",
-                  borderRadius: 6, overflow: "hidden", background: "#fff", fontSize: 11,
-                }}>
-                  <div style={{ background: sec.color, color: "#fff", textAlign: "center", padding: "6px 4px", fontWeight: 800, fontSize: 12, letterSpacing: "0.05em" }}>
-                    {sec.title}
-                  </div>
-                  {visibleEntries.length === 0 ? (
-                    <div style={{ padding: "8px", color: "#cbd5e1", fontSize: 10, textAlign: "center" }}>배정된 부름 없음</div>
-                  ) : visibleEntries.map((e, i) => {
-                    const name = e.callingKey ? callingMap[e.callingKey] : undefined;
-                    return (
-                      <div key={i} style={{ display: "flex", alignItems: "center", borderTop: i === 0 ? "none" : "1px solid #f1f5f9", padding: "3px 8px", gap: 4 }}>
-                        <span style={{ color: "#64748b", flexShrink: 0, minWidth: 86, fontSize: 10 }}>{e.role}</span>
-                        <span style={{ fontWeight: name ? 600 : 400, color: name ? "#1e293b" : "#cbd5e1", fontSize: 11 }}>
-                          {name ?? "미배정"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                {rowIds.map(id => {
+                  const sec = ALL_SECTIONS.find(s => s.id === id);
+                  if (!sec) return null;
+                  return (
+                    <SectionCard
+                      key={sec.id}
+                      sec={sec}
+                      hideEmpty={hideEmpty}
+                      callingMap={callingMap}
+                    />
+                  );
+                })}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
     </div>
