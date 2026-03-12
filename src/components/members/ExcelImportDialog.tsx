@@ -252,7 +252,7 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
             <FileSpreadsheet className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
             {fileName ? (
               <div className="flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <CheckCircle2 className="w-4 h-4 text-foreground/60" />
                 <p className="font-medium text-sm text-foreground">{fileName}</p>
                 {totalCount > 0 && (
                   <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
