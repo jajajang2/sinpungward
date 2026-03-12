@@ -20,6 +20,7 @@ interface ProcessedRow {
   생년월일: string;
   전화번호: string;
   이메일: string;
+  부름: string;
   비고: string;
   // raw values for DB insert
   _name: string;
@@ -27,6 +28,7 @@ interface ProcessedRow {
   _birth_date: string | null;
   _phone: string | null;
   _email: string | null;
+  _calling: string | null;
   _notes: string | null;
 }
 
@@ -40,13 +42,11 @@ function excelDateToString(serial: number): string {
 function parseDate(val: unknown): string | null {
   if (!val && val !== 0) return null;
 
-  // JS Date object (cellDates: true 옵션 사용 시)
   if (val instanceof Date) {
     if (isNaN(val.getTime())) return null;
     return val.toISOString().split('T')[0];
   }
 
-  // Excel serial number
   if (typeof val === 'number') {
     try {
       return excelDateToString(val);
@@ -55,7 +55,6 @@ function parseDate(val: unknown): string | null {
     }
   }
 
-  // String: "1986-01-21", "1986.01.21", "1986년 1월 21일" 등
   if (typeof val === 'string') {
     const cleaned = val
       .replace(/년\s*/g, '-')
@@ -64,10 +63,8 @@ function parseDate(val: unknown): string | null {
       .replace(/\./g, '-')
       .trim();
 
-    // Already ISO format
     if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned;
 
-    // Try parsing
     const d = new Date(cleaned);
     if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
   }
@@ -75,24 +72,24 @@ function parseDate(val: unknown): string | null {
   return null;
 }
 
-/** 전화번호를 문자열로 변환 (숫자형으로 저장된 경우 처리) */
+/** 전화번호를 문자열로 변환 */
 function parsePhone(val: unknown): string | null {
   if (!val) return null;
   const str = String(val).trim();
   if (!str) return null;
-  // 숫자만 있는 경우 010으로 시작하도록 처리
   return str;
 }
 
 /** Raw XLSX row → ProcessedRow */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function processRow(raw: Record<string, any>): ProcessedRow {
-  const name   = String(raw['이름']   || '').trim();
-  const gender = String(raw['성별']   || '').trim();
-  const birth  = parseDate(raw['생년월일']);
-  const phone  = parsePhone(raw['전화번호']);
-  const email  = String(raw['이메일'] || '').trim() || null;
-  const notes  = String(raw['비고']   || '').trim() || null;
+  const name    = String(raw['이름']   || '').trim();
+  const gender  = String(raw['성별']   || '').trim();
+  const birth   = parseDate(raw['생년월일']);
+  const phone   = parsePhone(raw['전화번호']);
+  const email   = String(raw['이메일'] || '').trim() || null;
+  const calling = String(raw['부름']   || '').trim() || null;
+  const notes   = String(raw['비고']   || '').trim() || null;
 
   return {
     이름:   name,
@@ -101,18 +98,20 @@ function processRow(raw: Record<string, any>): ProcessedRow {
     생년월일: birth || String(raw['생년월일'] || '-'),
     전화번호: phone || '-',
     이메일:  email || '-',
+    부름:   calling || '-',
     비고:   notes || '-',
     _name:       name,
     _gender:     gender === '남' || gender === '여' ? gender : null,
     _birth_date: birth,
     _phone:      phone,
     _email:      email,
+    _calling:    calling,
     _notes:      notes,
   };
 }
 
-const COLUMNS: (keyof Pick<ProcessedRow, '이름'|'성별'|'나이'|'생년월일'|'전화번호'|'이메일'|'비고'>)[] =
-  ['이름', '성별', '나이', '생년월일', '전화번호', '이메일', '비고'];
+const COLUMNS: (keyof Pick<ProcessedRow, '이름'|'성별'|'나이'|'생년월일'|'전화번호'|'이메일'|'부름'|'비고'>)[] =
+  ['이름', '성별', '나이', '생년월일', '전화번호', '이메일', '부름', '비고'];
 
 const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps) => {
   const { toast } = useToast();
@@ -126,7 +125,6 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
     const reader = new FileReader();
     reader.onload = (ev) => {
       const data = new Uint8Array(ev.target?.result as ArrayBuffer);
-      // cellDates: true → 날짜 셀을 JS Date 로 파싱
       const wb = XLSX.read(data, { type: 'array', cellDates: true });
       callback(wb);
     };
@@ -157,28 +155,62 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
       const sheet = wb.Sheets[wb.SheetNames[0]];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
-      const records = rawRows
+      const processed = rawRows
         .filter(r => r['이름'])
-        .map(r => {
-          const p = processRow(r);
-          return {
-            name:       p._name,
-            gender:     p._gender,
-            birth_date: p._birth_date,
-            phone:      p._phone,
-            email:      p._email,
-            notes:      p._notes,
-          };
-        });
+        .map(processRow);
 
-      const { error } = await supabase.from('members').insert(records);
-      setImporting(false);
-      if (error) {
-        toast({ title: '가져오기 실패', description: error.message, variant: 'destructive' });
-      } else {
-        toast({ title: '가져오기 완료', description: `${records.length}명의 회원이 추가되었습니다.` });
-        onImported();
+      // 1. Insert members
+      const memberRecords = processed.map(p => ({
+        name:       p._name,
+        gender:     p._gender,
+        birth_date: p._birth_date,
+        phone:      p._phone,
+        email:      p._email,
+        notes:      p._notes,
+      }));
+
+      const { data: insertedMembers, error: membersError } = await supabase
+        .from('members')
+        .insert(memberRecords)
+        .select('id, name');
+
+      if (membersError) {
+        setImporting(false);
+        toast({ title: '가져오기 실패', description: membersError.message, variant: 'destructive' });
+        return;
       }
+
+      // 2. Insert member_church_info for those with a calling
+      const churchInfoRecords = (insertedMembers ?? [])
+        .map((member, idx) => {
+          const calling = processed[idx]?._calling;
+          if (!calling) return null;
+          return { member_id: member.id, current_calling: calling };
+        })
+        .filter(Boolean) as { member_id: string; current_calling: string }[];
+
+      if (churchInfoRecords.length > 0) {
+        const { error: churchError } = await supabase
+          .from('member_church_info')
+          .insert(churchInfoRecords);
+
+        if (churchError) {
+          setImporting(false);
+          toast({
+            title: '회원 추가 완료, 부름 저장 실패',
+            description: churchError.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
+      setImporting(false);
+      toast({
+        title: '가져오기 완료',
+        description: `${processed.length}명의 회원이 추가되었습니다.${churchInfoRecords.length > 0 ? ` (부름 ${churchInfoRecords.length}건 저장)` : ''}`,
+      });
+      onImported();
     });
   };
 
@@ -200,9 +232,16 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
             <p className="text-muted-foreground text-xs mb-2">첫 번째 행은 반드시 아래 열 이름을 포함해야 합니다:</p>
             <div className="flex flex-wrap gap-1.5">
               {COLUMNS.map(col => (
-                <span key={col} className={`px-2 py-0.5 rounded text-xs font-medium ${col === '이름' ? 'bg-primary text-primary-foreground' : 'bg-accent text-accent-foreground'}`}>{col}</span>
+                <span key={col} className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  col === '이름' ? 'bg-primary text-primary-foreground' :
+                  col === '부름' ? 'bg-blue-500 text-white' :
+                  'bg-accent text-accent-foreground'
+                }`}>{col}</span>
               ))}
             </div>
+            <p className="text-muted-foreground text-xs mt-2">
+              <span className="text-blue-500 font-medium">부름</span> 열에 값이 있으면 교회정보의 현재 부름에 자동 저장되며, 조직도에 즉시 반영됩니다.
+            </p>
           </div>
 
           {/* Upload area */}
