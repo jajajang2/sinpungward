@@ -126,7 +126,25 @@ const MembersPage = () => {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
   const { toast } = useToast();
+
+  const handleDeleteAll = async () => {
+    try {
+      await supabase.from('member_notes').delete().neq('id', '');
+      await supabase.from('member_family').delete().neq('id', '');
+      await supabase.from('member_church_info').delete().neq('id', '');
+      await supabase.from('attendance').delete().neq('id', '');
+      await supabase.from('members').delete().neq('id', '');
+      toast({ title: '완료', description: '모든 회원 기록이 삭제되었습니다.' });
+      setSelectedMember(null);
+      setSelectedGroupId(null);
+      fetchMembers();
+    } catch {
+      toast({ title: '오류', description: '삭제 중 오류가 발생했습니다.', variant: 'destructive' });
+    }
+    setShowDeleteAll(false);
+  };
 
   const fetchMembers = async () => {
     setLoading(true);
