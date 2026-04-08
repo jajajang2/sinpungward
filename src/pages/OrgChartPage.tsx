@@ -167,7 +167,7 @@ function SectionCard({ sec, hideEmpty, callingMap }: {
       overflow: "hidden",
       background: "#fff",
       fontSize: 11,
-      width: 182,
+      width: 220,
       flexShrink: 0,
     }}>
       <div style={{
@@ -210,8 +210,8 @@ function SectionCard({ sec, hideEmpty, callingMap }: {
 // Main Component
 // ───────────────────────────────────────────────────────────
 export default function OrgChartPage() {
-  const [scale, setScale] = useState(0.7);
-  const [offset, setOffset] = useState({ x: 40, y: 40 });
+  const [scale, setScale] = useState(0.85);
+  const [offset, setOffset] = useState({ x: 10, y: 10 });
   const [hideEmpty, setHideEmpty] = useState(true);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -259,8 +259,8 @@ export default function OrgChartPage() {
   }, []);
 
   const resetView = () => {
-    setScale(0.7);
-    setOffset({ x: 40, y: 40 });
+    setScale(0.85);
+    setOffset({ x: 10, y: 10 });
   };
 
   return (
@@ -330,14 +330,14 @@ export default function OrgChartPage() {
           userSelect: "none",
         }}>
           {/* Title */}
-          <div style={{ textAlign: "center", width: 1060, marginBottom: 20, pointerEvents: "none" }}>
+          <div style={{ textAlign: "center", width: 1180, marginBottom: 16, pointerEvents: "none" }}>
             <h2 style={{ fontSize: 28, fontWeight: 900, letterSpacing: "0.3em", color: "#1e293b" }}>
               신 풍 와 드 조 직 도
             </h2>
           </div>
 
           {/* Flow layout: rows of sections */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {ROW_LAYOUT.map((rowIds, rowIdx) => (
               <div
                 key={rowIdx}
