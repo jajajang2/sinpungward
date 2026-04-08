@@ -166,12 +166,13 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
 
       // 1. Insert members
       const memberRecords = processed.map(p => ({
-        name:       p._name,
-        gender:     p._gender,
-        birth_date: p._birth_date,
-        phone:      p._phone,
-        email:      p._email,
-        notes:      p._notes,
+        name:          p._name,
+        gender:        p._gender,
+        birth_date:    p._birth_date,
+        phone:         p._phone,
+        email:         p._email,
+        marriage_date: p._marriage_date,
+        notes:         p._notes,
       }));
 
       const { data: insertedMembers, error: membersError } = await supabase

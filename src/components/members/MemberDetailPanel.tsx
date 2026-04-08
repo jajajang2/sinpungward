@@ -117,6 +117,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       occupation: member.occupation,
       is_special_care: member.is_special_care ?? false,
       marital_status: member.marital_status || null,
+      marriage_date: member.marriage_date || null,
     }).eq('id', memberId);
 
     await supabase.from('member_family').delete().eq('member_id', memberId);
