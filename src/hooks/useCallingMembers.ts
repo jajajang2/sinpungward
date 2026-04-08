@@ -18,8 +18,12 @@ export function useCallingMembers() {
 
       const map: CallingMemberMap = {};
       for (const row of data ?? []) {
-        if (row.current_calling && row.members && (row.members as { name: string }).name) {
-          map[row.current_calling] = (row.members as { name: string }).name;
+        const callings = row.current_calling as string[] | null;
+        const name = (row.members as { name: string })?.name;
+        if (callings && name) {
+          for (const c of callings) {
+            map[c] = name;
+          }
         }
       }
       return map;

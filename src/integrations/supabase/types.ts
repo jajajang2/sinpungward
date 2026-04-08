@@ -87,7 +87,7 @@ export type Database = {
           baptism_date: string | null
           bishop_interview_date: string | null
           created_at: string
-          current_calling: string | null
+          current_calling: string[] | null
           id: string
           member_id: string
           ministry_target: string | null
@@ -104,7 +104,7 @@ export type Database = {
           baptism_date?: string | null
           bishop_interview_date?: string | null
           created_at?: string
-          current_calling?: string | null
+          current_calling?: string[] | null
           id?: string
           member_id: string
           ministry_target?: string | null
@@ -121,7 +121,7 @@ export type Database = {
           baptism_date?: string | null
           bishop_interview_date?: string | null
           created_at?: string
-          current_calling?: string | null
+          current_calling?: string[] | null
           id?: string
           member_id?: string
           ministry_target?: string | null

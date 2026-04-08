@@ -25,7 +25,7 @@ interface AttendanceGroup {
   id: string;
   label: string;
   description: string;
-  filter: (m: Member & { church_info?: { current_calling?: string } }) => boolean;
+  filter: (m: Member & { church_info?: { current_calling?: string[] } }) => boolean;
 }
 
 const getAge = (birthDate?: string): number | null => {

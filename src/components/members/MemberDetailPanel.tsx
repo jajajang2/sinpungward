@@ -47,7 +47,7 @@ function calcAge(birth?: string | null): number | null {
 // FamilyRow: DB 가족 + UI 전용 자동완성 필드
 interface FamilyRow extends MemberFamily {
   _birth_date?: string | null;
-  _current_calling?: string | null;
+  _current_calling?: string[] | null;
   _linked_member_id?: string;
 }
 
@@ -56,7 +56,7 @@ interface MemberListItem {
   id: string;
   name: string;
   birth_date?: string | null;
-  current_calling?: string | null;
+  current_calling?: string[] | null;
 }
 
 const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelProps) => {
@@ -141,7 +141,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
         record_number: toNull(churchInfo.record_number),
         baptism_date: toNull(churchInfo.baptism_date),
         priesthood: toNull(churchInfo.priesthood),
-        current_calling: toNull(churchInfo.current_calling),
+        current_calling: churchInfo.current_calling && churchInfo.current_calling.length > 0 ? churchInfo.current_calling : null,
         previous_callings: toNull(churchInfo.previous_callings),
         ministry_target: toNull(churchInfo.ministry_target),
         temple_recommend: churchInfo.temple_recommend ?? false,
@@ -208,7 +208,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
               <p className="text-xs text-muted-foreground">
                 {member.gender && `${member.gender}성`}
                 {age != null && ` · ${age}세`}
-                {churchInfo?.current_calling && ` · ${churchInfo.current_calling}`}
+                {churchInfo?.current_calling?.length ? ` · ${churchInfo.current_calling.join(', ')}` : ''}
               </p>
             </div>
           </div>
@@ -378,8 +378,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                         </td>
                         {/* 현재 부름 */}
                         <td className="px-3 py-2 align-middle">
-                          {fam._current_calling ? (
-                            <span className="text-foreground">{fam._current_calling}</span>
+                          {fam._current_calling?.length ? (
+                            <span className="text-foreground">{(fam._current_calling as string[]).join(', ')}</span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
@@ -405,8 +405,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
         {/* ── 교회정보 ── */}
         <TabsContent value="church" className="flex-1 overflow-y-auto px-5 pb-5 space-y-3 mt-4">
           {(() => {
-            const ci = churchInfo || { id: '', member_id: memberId, record_number: '', baptism_date: '', priesthood: '', current_calling: '', previous_callings: '', ministry_target: '', temple_recommend: false, bishop_interview_date: '', stake_president_interview_date: '', sunday_school_class: '', missionary_work: '' };
-            const update = (field: string, value: string | boolean) => setChurchInfo(c => ({ ...(c || ci), [field]: value }));
+            const ci = churchInfo || { id: '', member_id: memberId, record_number: '', baptism_date: '', priesthood: '', current_calling: [] as string[], previous_callings: '', ministry_target: '', temple_recommend: false, bishop_interview_date: '', stake_president_interview_date: '', sunday_school_class: '', missionary_work: '' };
+            const update = (field: string, value: string | boolean | string[]) => setChurchInfo(c => ({ ...(c || ci), [field]: value }) as MemberChurchInfo);
 
             const renewalDate = (() => {
               if (!ci.stake_president_interview_date) return null;
@@ -433,9 +433,9 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                   <Label className="text-xs">신권직분</Label>
                   <Input value={ci.priesthood || ''} onChange={e => update('priesthood', e.target.value)} placeholder="대제사, 장로, 등" />
                 </div>
-                <div className="space-y-1">
+                <div className="col-span-2 space-y-1">
                   <Label className="text-xs">현재 부름</Label>
-                  <CallingCombobox value={ci.current_calling || ''} onChange={v => update('current_calling', v)} />
+                  <CallingMultiSelect value={ci.current_calling || []} onChange={v => update('current_calling', v)} />
                 </div>
                 <div className="col-span-2 space-y-1">
                   <Label className="text-xs">이전 부름 이력</Label>
@@ -718,57 +718,77 @@ const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: 
   );
 };
 
-// ── Calling Combobox ──────────────────────────────────────────
-const CallingCombobox = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+// ── Calling Multi-Select ──────────────────────────────────────
+const CallingMultiSelect = ({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) => {
   const [open, setOpen] = useState(false);
   const { data: callingMap = {} } = useCallingMembers();
 
+  const toggleItem = (item: string) => {
+    if (value.includes(item)) {
+      onChange(value.filter(v => v !== item));
+    } else {
+      onChange([...value, item]);
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between h-10 font-normal text-sm"
-        >
-          <span className={cn("truncate", !value && "text-muted-foreground")}>
-            {value || "부름 선택 또는 검색..."}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="부름 검색..." />
-          <CommandList className="max-h-64">
-            <CommandEmpty>검색 결과 없음</CommandEmpty>
-            {CALLING_GROUPS.map(({ group, items }) => (
-              <CommandGroup key={group} heading={group}>
-                {items.map((item) => {
-                  const isAssigned = item !== value && !!callingMap[item];
-                  return (
-                    <CommandItem
-                      key={item}
-                      value={item}
-                      onSelect={() => {
-                        onChange(item === value ? '' : item);
-                        setOpen(false);
-                      }}
-                      className={cn("text-xs", isAssigned && "text-muted-foreground/50")}
-                    >
-                      <Check className={cn("mr-2 h-3 w-3 shrink-0", value === item ? "opacity-100" : "opacity-0")} />
-                      {item}
-                      {isAssigned && <span className="ml-auto text-[10px] text-muted-foreground/40">({callingMap[item]})</span>}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            ))}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <div className="space-y-1.5">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-10 font-normal text-sm"
+          >
+            <span className={cn("truncate", !value.length && "text-muted-foreground")}>
+              {value.length > 0 ? `${value.length}개 부름 선택됨` : "부름 선택 또는 검색..."}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="부름 검색..." />
+            <CommandList className="max-h-64">
+              <CommandEmpty>검색 결과 없음</CommandEmpty>
+              {CALLING_GROUPS.map(({ group, items }) => (
+                <CommandGroup key={group} heading={group}>
+                  {items.map((item) => {
+                    const isSelected = value.includes(item);
+                    const isAssigned = !isSelected && !!callingMap[item];
+                    return (
+                      <CommandItem
+                        key={item}
+                        value={item}
+                        onSelect={() => toggleItem(item)}
+                        className={cn("text-xs", isAssigned && "text-muted-foreground/50")}
+                      >
+                        <Check className={cn("mr-2 h-3 w-3 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
+                        {item}
+                        {isAssigned && <span className="ml-auto text-[10px] text-muted-foreground/40">({callingMap[item]})</span>}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {value.map(v => (
+            <span key={v} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full">
+              {v}
+              <button onClick={() => onChange(value.filter(x => x !== v))} className="hover:text-destructive">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 

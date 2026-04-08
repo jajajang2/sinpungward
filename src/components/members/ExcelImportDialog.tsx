@@ -194,9 +194,9 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
         .map((member, idx) => {
           const calling = processed[idx]?._calling;
           if (!calling) return null;
-          return { member_id: member.id, current_calling: calling };
+          return { member_id: member.id, current_calling: [calling] };
         })
-        .filter(Boolean) as { member_id: string; current_calling: string }[];
+        .filter(Boolean) as { member_id: string; current_calling: string[] }[];
 
       if (churchInfoRecords.length > 0) {
         const { error: churchError } = await supabase
