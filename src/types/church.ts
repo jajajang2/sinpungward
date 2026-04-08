@@ -35,7 +35,7 @@ export interface MemberChurchInfo {
   record_number?: string;
   baptism_date?: string;
   priesthood?: string;
-  current_calling?: string;
+  current_calling?: string[];
   previous_callings?: string;
   ministry_target?: string;
   temple_recommend: boolean;
