@@ -257,6 +257,10 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
               </Select>
             </div>
             <div className="space-y-1">
+              <Label className="text-xs">결혼날짜</Label>
+              <Input type="date" value={member.marriage_date || ''} onChange={e => setMember(m => m ? { ...m, marriage_date: e.target.value } : m)} />
+            </div>
+            <div className="space-y-1">
               <Label className="text-xs">휴대폰</Label>
               <Input value={member.phone || ''} onChange={e => setMember(m => m ? { ...m, phone: e.target.value } : m)} />
             </div>

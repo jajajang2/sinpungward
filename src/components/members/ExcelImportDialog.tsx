@@ -21,6 +21,7 @@ interface ProcessedRow {
   전화번호: string;
   이메일: string;
   부름: string;
+  결혼날짜: string;
   비고: string;
   // raw values for DB insert
   _name: string;
@@ -29,6 +30,7 @@ interface ProcessedRow {
   _phone: string | null;
   _email: string | null;
   _calling: string | null;
+  _marriage_date: string | null;
   _notes: string | null;
 }
 
