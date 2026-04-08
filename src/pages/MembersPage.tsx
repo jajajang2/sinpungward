@@ -3,12 +3,22 @@ import { supabase } from "@/lib/supabase";
 import { Member } from "@/types/church";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Upload, Search, Users, ChevronRight, ArrowLeft } from "lucide-react";
+import { Plus, Upload, Search, Users, ChevronRight, ArrowLeft, Trash2 } from "lucide-react";
 import MemberCard from "@/components/members/MemberCard";
 import AddMemberDialog from "@/components/members/AddMemberDialog";
 import MemberDetailPanel from "@/components/members/MemberDetailPanel";
 import ExcelImportDialog from "@/components/members/ExcelImportDialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // ── Age helper ───────────────────────────────────────────────
 const getAge = (birthDate?: string): number | null => {
