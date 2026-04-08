@@ -67,16 +67,16 @@ const GROUPS: MemberGroup[] = [
   {
     id: "singles",
     label: "독신 (미혼)",
-    description: "미혼 성인",
+    description: "결혼날짜 없는 성인",
     filter: (m) => {
       const age = getAge(m.birth_date);
-      return age !== null && age >= 19 && m.marital_status === "미혼";
+      return age !== null && age >= 19 && !m.marriage_date;
     },
   },
   {
     id: "ym",
     label: "청남",
-    description: "11세 ~ 19세 남성",
+    description: "11세 ~ 18세 남성",
     filter: (m) => {
       const age = getAge(m.birth_date);
       return m.gender === "남" && age !== null && age >= 11 && age < 19;
@@ -85,7 +85,7 @@ const GROUPS: MemberGroup[] = [
   {
     id: "yw",
     label: "청녀",
-    description: "11세 ~ 19세 여성",
+    description: "11세 ~ 18세 여성",
     filter: (m) => {
       const age = getAge(m.birth_date);
       return m.gender === "여" && age !== null && age >= 11 && age < 19;
@@ -94,7 +94,7 @@ const GROUPS: MemberGroup[] = [
   {
     id: "primary",
     label: "초등회",
-    description: "0세 ~ 11세",
+    description: "0세 ~ 10세",
     filter: (m) => {
       const age = getAge(m.birth_date);
       return age !== null && age < 11;
