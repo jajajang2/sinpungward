@@ -227,6 +227,7 @@ export type Database = {
           id: string
           is_special_care: boolean
           marital_status: string | null
+          marriage_date: string | null
           name: string
           notes: string | null
           occupation: string | null
@@ -243,6 +244,7 @@ export type Database = {
           id?: string
           is_special_care?: boolean
           marital_status?: string | null
+          marriage_date?: string | null
           name: string
           notes?: string | null
           occupation?: string | null
@@ -259,6 +261,7 @@ export type Database = {
           id?: string
           is_special_care?: boolean
           marital_status?: string | null
+          marriage_date?: string | null
           name?: string
           notes?: string | null
           occupation?: string | null
