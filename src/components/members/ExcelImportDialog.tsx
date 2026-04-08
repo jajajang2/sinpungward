@@ -91,6 +91,7 @@ function processRow(raw: Record<string, any>): ProcessedRow {
   const phone   = parsePhone(raw['전화번호']);
   const email   = String(raw['이메일'] || '').trim() || null;
   const calling = String(raw['부름']   || '').trim() || null;
+  const marriageDate = parseDate(raw['결혼날짜']);
   const notes   = String(raw['비고']   || '').trim() || null;
 
   return {
@@ -101,6 +102,7 @@ function processRow(raw: Record<string, any>): ProcessedRow {
     전화번호: phone || '-',
     이메일:  email || '-',
     부름:   calling || '-',
+    결혼날짜: marriageDate || '-',
     비고:   notes || '-',
     _name:       name,
     _gender:     gender === '남' || gender === '여' ? gender : null,
@@ -108,6 +110,7 @@ function processRow(raw: Record<string, any>): ProcessedRow {
     _phone:      phone,
     _email:      email,
     _calling:    calling,
+    _marriage_date: marriageDate,
     _notes:      notes,
   };
 }
