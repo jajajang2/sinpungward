@@ -91,7 +91,9 @@ function processRow(raw: Record<string, any>): ProcessedRow {
   const phone   = parsePhone(raw['전화번호']);
   const email   = String(raw['이메일'] || '').trim() || null;
   const calling = String(raw['부름']   || '').trim() || null;
-  const marriageDate = parseDate(raw['결혼날짜']);
+  const marriageDateRaw = raw['결혼날짜'] ?? raw['결혼 날짜'] ?? raw['결혼일'];
+  console.log('[ExcelImport] 결혼날짜 raw keys:', Object.keys(raw), 'marriageDateRaw:', marriageDateRaw);
+  const marriageDate = parseDate(marriageDateRaw);
   const notes   = String(raw['비고']   || '').trim() || null;
 
   return {
