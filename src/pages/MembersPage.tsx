@@ -211,13 +211,15 @@ const MembersPage = () => {
     <div className="flex h-screen overflow-hidden">
       {/* ── Left panel: group list ── */}
       <div className={`flex flex-col shrink-0 border-r border-border bg-card transition-all duration-200 ${selectedGroupId ? 'w-52' : 'flex-1 max-w-xs'}`}>
-        <div className="px-4 py-4 border-b border-border flex items-center justify-between gap-2">
-          <div>
-            <h1 className="text-lg font-bold text-foreground">회원기록양식</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
+        <div className="px-4 py-4 border-b border-border">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-foreground truncate">회원기록양식</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
+            </div>
           </div>
           {!selectedGroupId && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 mt-3">
               <Button variant="destructive" size="sm" className="h-8 text-xs" onClick={() => setShowDeleteAll(true)}>
                 <Trash2 className="w-3.5 h-3.5 mr-1" />전체삭제
               </Button>
