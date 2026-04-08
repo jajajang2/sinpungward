@@ -145,7 +145,7 @@ const ROW_LAYOUT: string[][] = [
   ["ss", "singles", "mission", "seminary", "other"],
 ];
 
-const MIN_SCALE = 0.3;
+const MIN_SCALE = 0.2;
 const MAX_SCALE = 3;
 
 // ───────────────────────────────────────────────────────────
