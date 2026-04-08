@@ -131,11 +131,11 @@ const MembersPage = () => {
 
   const handleDeleteAll = async () => {
     try {
-      await supabase.from('member_notes').delete().neq('id', '');
-      await supabase.from('member_family').delete().neq('id', '');
-      await supabase.from('member_church_info').delete().neq('id', '');
-      await supabase.from('attendance').delete().neq('id', '');
-      await supabase.from('members').delete().neq('id', '');
+      await supabase.from('member_notes').delete().gte('created_at', '1970-01-01');
+      await supabase.from('member_family').delete().gte('created_at', '1970-01-01');
+      await supabase.from('member_church_info').delete().gte('created_at', '1970-01-01');
+      await supabase.from('attendance').delete().gte('created_at', '1970-01-01');
+      await supabase.from('members').delete().gte('created_at', '1970-01-01');
       toast({ title: '완료', description: '모든 회원 기록이 삭제되었습니다.' });
       setSelectedMember(null);
       setSelectedGroupId(null);
