@@ -3,12 +3,22 @@ import { supabase } from "@/lib/supabase";
 import { Member } from "@/types/church";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Upload, Search, Users, ChevronRight, ArrowLeft } from "lucide-react";
+import { Plus, Upload, Search, Users, ChevronRight, ArrowLeft, Trash2 } from "lucide-react";
 import MemberCard from "@/components/members/MemberCard";
 import AddMemberDialog from "@/components/members/AddMemberDialog";
 import MemberDetailPanel from "@/components/members/MemberDetailPanel";
 import ExcelImportDialog from "@/components/members/ExcelImportDialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // ── Age helper ───────────────────────────────────────────────
 const getAge = (birthDate?: string): number | null => {
@@ -116,7 +126,25 @@ const MembersPage = () => {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
   const { toast } = useToast();
+
+  const handleDeleteAll = async () => {
+    try {
+      await supabase.from('member_notes').delete().neq('id', '');
+      await supabase.from('member_family').delete().neq('id', '');
+      await supabase.from('member_church_info').delete().neq('id', '');
+      await supabase.from('attendance').delete().neq('id', '');
+      await supabase.from('members').delete().neq('id', '');
+      toast({ title: '완료', description: '모든 회원 기록이 삭제되었습니다.' });
+      setSelectedMember(null);
+      setSelectedGroupId(null);
+      fetchMembers();
+    } catch {
+      toast({ title: '오류', description: '삭제 중 오류가 발생했습니다.', variant: 'destructive' });
+    }
+    setShowDeleteAll(false);
+  };
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -190,6 +218,9 @@ const MembersPage = () => {
           </div>
           {!selectedGroupId && (
             <div className="flex items-center gap-1.5">
+              <Button variant="destructive" size="sm" className="h-8 text-xs" onClick={() => setShowDeleteAll(true)}>
+                <Trash2 className="w-3.5 h-3.5 mr-1" />전체삭제
+              </Button>
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowImport(true)}>
                 <Upload className="w-3.5 h-3.5 mr-1" />Excel
               </Button>
@@ -330,6 +361,22 @@ const MembersPage = () => {
           onImported={() => { fetchMembers(); setShowImport(false); }}
         />
       )}
+      <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>전체 기록 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              모든 회원 기록(가족정보, 교회정보, 메모, 출석 포함)이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              전체 삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
