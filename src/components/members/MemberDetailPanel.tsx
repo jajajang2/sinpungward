@@ -743,12 +743,11 @@ const CallingCombobox = ({ value, onChange }: { value: string; onChange: (v: str
           <CommandInput placeholder="부름 검색..." />
           <CommandList className="max-h-64">
             <CommandEmpty>검색 결과 없음</CommandEmpty>
-            {CALLING_GROUPS.map(({ group, items }) => {
-              const available = items.filter(item => item === value || !callingMap[item]);
-              if (available.length === 0) return null;
-              return (
-                <CommandGroup key={group} heading={group}>
-                  {available.map((item) => (
+            {CALLING_GROUPS.map(({ group, items }) => (
+              <CommandGroup key={group} heading={group}>
+                {items.map((item) => {
+                  const isAssigned = item !== value && !!callingMap[item];
+                  return (
                     <CommandItem
                       key={item}
                       value={item}
@@ -756,15 +755,16 @@ const CallingCombobox = ({ value, onChange }: { value: string; onChange: (v: str
                         onChange(item === value ? '' : item);
                         setOpen(false);
                       }}
-                      className="text-xs"
+                      className={cn("text-xs", isAssigned && "text-muted-foreground/50")}
                     >
                       <Check className={cn("mr-2 h-3 w-3 shrink-0", value === item ? "opacity-100" : "opacity-0")} />
                       {item}
+                      {isAssigned && <span className="ml-auto text-[10px] text-muted-foreground/40">({callingMap[item]})</span>}
                     </CommandItem>
-                  ))}
-                </CommandGroup>
-              );
-            })}
+                  );
+                })}
+              </CommandGroup>
+            ))}
           </CommandList>
         </Command>
       </PopoverContent>
