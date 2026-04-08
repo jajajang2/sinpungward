@@ -21,6 +21,7 @@ interface ProcessedRow {
   전화번호: string;
   이메일: string;
   부름: string;
+  결혼날짜: string;
   비고: string;
   // raw values for DB insert
   _name: string;
@@ -29,6 +30,7 @@ interface ProcessedRow {
   _phone: string | null;
   _email: string | null;
   _calling: string | null;
+  _marriage_date: string | null;
   _notes: string | null;
 }
 
@@ -89,6 +91,7 @@ function processRow(raw: Record<string, any>): ProcessedRow {
   const phone   = parsePhone(raw['전화번호']);
   const email   = String(raw['이메일'] || '').trim() || null;
   const calling = String(raw['부름']   || '').trim() || null;
+  const marriageDate = parseDate(raw['결혼날짜']);
   const notes   = String(raw['비고']   || '').trim() || null;
 
   return {
@@ -99,6 +102,7 @@ function processRow(raw: Record<string, any>): ProcessedRow {
     전화번호: phone || '-',
     이메일:  email || '-',
     부름:   calling || '-',
+    결혼날짜: marriageDate || '-',
     비고:   notes || '-',
     _name:       name,
     _gender:     gender === '남' || gender === '여' ? gender : null,
@@ -106,12 +110,13 @@ function processRow(raw: Record<string, any>): ProcessedRow {
     _phone:      phone,
     _email:      email,
     _calling:    calling,
+    _marriage_date: marriageDate,
     _notes:      notes,
   };
 }
 
-const COLUMNS: (keyof Pick<ProcessedRow, '이름'|'성별'|'나이'|'생년월일'|'전화번호'|'이메일'|'부름'|'비고'>)[] =
-  ['이름', '성별', '나이', '생년월일', '전화번호', '이메일', '부름', '비고'];
+const COLUMNS: (keyof Pick<ProcessedRow, '이름'|'성별'|'나이'|'생년월일'|'전화번호'|'이메일'|'부름'|'결혼날짜'|'비고'>)[] =
+  ['이름', '성별', '나이', '생년월일', '전화번호', '이메일', '부름', '결혼날짜', '비고'];
 
 const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps) => {
   const { toast } = useToast();
@@ -161,12 +166,13 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
 
       // 1. Insert members
       const memberRecords = processed.map(p => ({
-        name:       p._name,
-        gender:     p._gender,
-        birth_date: p._birth_date,
-        phone:      p._phone,
-        email:      p._email,
-        notes:      p._notes,
+        name:          p._name,
+        gender:        p._gender,
+        birth_date:    p._birth_date,
+        phone:         p._phone,
+        email:         p._email,
+        marriage_date: p._marriage_date,
+        notes:         p._notes,
       }));
 
       const { data: insertedMembers, error: membersError } = await supabase
