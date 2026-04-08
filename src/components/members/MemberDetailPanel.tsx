@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import PhotoUpload from "./PhotoUpload";
 import { CALLING_GROUPS } from "@/data/callings";
+import { useCallingMembers } from "@/hooks/useCallingMembers";
 
 interface MemberDetailPanelProps {
   memberId: string;
@@ -720,6 +721,7 @@ const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: 
 // ── Calling Combobox ──────────────────────────────────────────
 const CallingCombobox = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
   const [open, setOpen] = useState(false);
+  const { data: callingMap = {} } = useCallingMembers();
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -741,24 +743,28 @@ const CallingCombobox = ({ value, onChange }: { value: string; onChange: (v: str
           <CommandInput placeholder="부름 검색..." />
           <CommandList className="max-h-64">
             <CommandEmpty>검색 결과 없음</CommandEmpty>
-            {CALLING_GROUPS.map(({ group, items }) => (
-              <CommandGroup key={group} heading={group}>
-                {items.map((item) => (
-                  <CommandItem
-                    key={item}
-                    value={item}
-                    onSelect={() => {
-                      onChange(item === value ? '' : item);
-                      setOpen(false);
-                    }}
-                    className="text-xs"
-                  >
-                    <Check className={cn("mr-2 h-3 w-3 shrink-0", value === item ? "opacity-100" : "opacity-0")} />
-                    {item}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ))}
+            {CALLING_GROUPS.map(({ group, items }) => {
+              const available = items.filter(item => item === value || !callingMap[item]);
+              if (available.length === 0) return null;
+              return (
+                <CommandGroup key={group} heading={group}>
+                  {available.map((item) => (
+                    <CommandItem
+                      key={item}
+                      value={item}
+                      onSelect={() => {
+                        onChange(item === value ? '' : item);
+                        setOpen(false);
+                      }}
+                      className="text-xs"
+                    >
+                      <Check className={cn("mr-2 h-3 w-3 shrink-0", value === item ? "opacity-100" : "opacity-0")} />
+                      {item}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              );
+            })}
           </CommandList>
         </Command>
       </PopoverContent>
