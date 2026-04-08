@@ -347,7 +347,7 @@ export default function OrgChartPage() {
                   alignItems: "flex-start",
                   gap: 12,
                   // Center the bishop row
-                  justifyContent: rowIds.length === 1 ? "center" : "flex-start",
+                  justifyContent: "center",
                 }}
               >
                 {rowIds.map(id => {
