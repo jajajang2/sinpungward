@@ -115,8 +115,8 @@ function processRow(raw: Record<string, any>): ProcessedRow {
   };
 }
 
-const COLUMNS: (keyof Pick<ProcessedRow, '이름'|'성별'|'나이'|'생년월일'|'전화번호'|'이메일'|'부름'|'비고'>)[] =
-  ['이름', '성별', '나이', '생년월일', '전화번호', '이메일', '부름', '비고'];
+const COLUMNS: (keyof Pick<ProcessedRow, '이름'|'성별'|'나이'|'생년월일'|'전화번호'|'이메일'|'부름'|'결혼날짜'|'비고'>)[] =
+  ['이름', '성별', '나이', '생년월일', '전화번호', '이메일', '부름', '결혼날짜', '비고'];
 
 const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps) => {
   const { toast } = useToast();
