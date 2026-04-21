@@ -4,6 +4,7 @@ import { Member, AttendanceRecord } from "@/types/church";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronRight, ChevronLeft, Users } from "lucide-react";
+import { AttendanceStats } from "@/components/attendance/AttendanceStats";
 
 // ── Date helpers ──────────────────────────────────────────────
 function getSundays(from: Date, to: Date): Date[] {
