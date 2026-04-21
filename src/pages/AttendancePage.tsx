@@ -289,14 +289,14 @@ const AttendancePage = () => {
   // ── Mobile layout: 단일 패널 전환 ──
   if (isMobile) {
     return (
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col h-screen overflow-hidden">
         {!selectedGroupId ? (
           <>
             <div className="px-4 py-4 border-b border-border bg-card shrink-0">
               <h1 className="text-lg font-bold text-foreground">출석부</h1>
               <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
             </div>
-            <div>
+            <div className="flex-1 overflow-y-auto">
               {GROUPS.map(group => {
                 const count = members.filter(group.filter).length;
                 return (
@@ -319,12 +319,9 @@ const AttendancePage = () => {
                 );
               })}
             </div>
-            <div className="p-4">
-              <AttendanceStats members={members} attendance={attendance} records={records} />
-            </div>
           </>
         ) : (
-          <div className="flex flex-col h-screen overflow-hidden">
+          <>
             <div className="px-2 py-3 border-b border-border bg-card shrink-0 flex items-center gap-2">
               <button
                 onClick={() => setSelectedGroupId(null)}
@@ -345,7 +342,7 @@ const AttendancePage = () => {
               currentWeekIdx={currentWeekIdx}
               onToggle={toggleAttendance}
             />
-          </div>
+          </>
         )}
       </div>
     );
@@ -402,8 +399,9 @@ const AttendancePage = () => {
           />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-6">
-          <AttendanceStats members={members} attendance={attendance} records={records} />
+        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
+          <Users className="w-12 h-12 opacity-20" />
+          <p className="text-sm">왼쪽에서 그룹을 선택하세요</p>
         </div>
       )}
     </div>
