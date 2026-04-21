@@ -385,7 +385,7 @@ const AttendancePage = () => {
         </div>
       </div>
 
-      {/* ── Right panel: attendance table ── */}
+      {/* ── Right panel: attendance table or stats ── */}
       {selectedGroupId ? (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-border bg-card shrink-0 flex items-center gap-2">
@@ -402,9 +402,8 @@ const AttendancePage = () => {
           />
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
-          <Users className="w-12 h-12 opacity-20" />
-          <p className="text-sm">왼쪽에서 그룹을 선택하세요</p>
+        <div className="flex-1 overflow-y-auto p-6">
+          <AttendanceStats members={members} attendance={attendance} records={records} />
         </div>
       )}
     </div>
