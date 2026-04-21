@@ -222,6 +222,7 @@ const AttendancePage = () => {
   const isMobile = useIsMobile();
   const [members, setMembers] = useState<Member[]>([]);
   const [attendance, setAttendance] = useState<Record<string, Record<string, boolean>>>({});
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
@@ -244,8 +245,10 @@ const AttendancePage = () => {
     ]);
     if (mRes.data) setMembers(mRes.data as Member[]);
     if (aRes.data) {
+      const recs = aRes.data as AttendanceRecord[];
+      setRecords(recs);
       const map: Record<string, Record<string, boolean>> = {};
-      (aRes.data as AttendanceRecord[]).forEach(r => {
+      recs.forEach(r => {
         if (!map[r.member_id]) map[r.member_id] = {};
         map[r.member_id][r.attendance_date] = r.is_present;
       });
