@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Member, AttendanceRecord } from "@/types/church";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, Users } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ChevronRight, ChevronLeft, Users } from "lucide-react";
 
 // ── Date helpers ──────────────────────────────────────────────
 function getSundays(from: Date, to: Date): Date[] {
@@ -217,6 +218,7 @@ const AttendanceTable = ({ members, sundays, attendance, currentWeekIdx, onToggl
 // ── Main Page ─────────────────────────────────────────────────
 const AttendancePage = () => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [members, setMembers] = useState<Member[]>([]);
   const [attendance, setAttendance] = useState<Record<string, Record<string, boolean>>>({});
   const [loading, setLoading] = useState(true);
@@ -278,6 +280,68 @@ const AttendancePage = () => {
 
   if (loading) {
     return <div className="flex items-center justify-center h-full text-muted-foreground p-8">불러오는 중...</div>;
+  }
+
+  // ── Mobile layout: 단일 패널 전환 ──
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden">
+        {!selectedGroupId ? (
+          <>
+            <div className="px-4 py-4 border-b border-border bg-card shrink-0">
+              <h1 className="text-lg font-bold text-foreground">출석부</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {GROUPS.map(group => {
+                const count = members.filter(group.filter).length;
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => setSelectedGroupId(group.id)}
+                    className="w-full flex items-center justify-between px-4 py-4 text-left transition-colors active:bg-accent border-b border-border/50"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-muted">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-base font-medium truncate text-foreground">{group.label}</p>
+                        <p className="text-xs text-muted-foreground">{group.description} · {count}명</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="px-2 py-3 border-b border-border bg-card shrink-0 flex items-center gap-2">
+              <button
+                onClick={() => setSelectedGroupId(null)}
+                className="p-2 -ml-1 rounded-md active:bg-accent"
+                aria-label="뒤로"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-sm font-semibold text-foreground truncate">{selectedGroup?.label}</h2>
+                <p className="text-xs text-muted-foreground">{filteredMembers.length}명 · 최근 1개월</p>
+              </div>
+            </div>
+            <AttendanceTable
+              members={filteredMembers}
+              sundays={sundays}
+              attendance={attendance}
+              currentWeekIdx={currentWeekIdx}
+              onToggle={toggleAttendance}
+            />
+          </>
+        )}
+      </div>
+    );
   }
 
   return (
