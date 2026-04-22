@@ -2,25 +2,27 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// PWA 서비스워커: 미리보기/iframe 환경에서는 등록하지 않음
-const isInIframe = (() => {
-  try {
-    return window.self !== window.top;
-  } catch (e) {
-    return true;
-  }
-})();
+const SW_CLEANUP_FLAG = "sw-cleanup-v1";
 
-const isPreviewHost =
-  window.location.hostname.includes("id-preview--") ||
-  window.location.hostname.includes("lovableproject.com");
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.getRegistrations().then(async (registrations) => {
+      const cacheKeys = "caches" in window ? await caches.keys() : [];
+      const shouldReload =
+        (registrations.length > 0 || cacheKeys.length > 0) && !sessionStorage.getItem(SW_CLEANUP_FLAG);
 
-if (isPreviewHost || isInIframe) {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then((regs) => {
-      regs.forEach((r) => r.unregister());
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+
+      if ("caches" in window) {
+        await Promise.all(cacheKeys.map((cacheKey) => caches.delete(cacheKey)));
+      }
+
+      if (shouldReload) {
+        sessionStorage.setItem(SW_CLEANUP_FLAG, "done");
+        window.location.reload();
+      }
     });
-  }
+  });
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
