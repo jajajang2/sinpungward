@@ -4,9 +4,8 @@ import { Member, AttendanceRecord } from "@/types/church";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronRight, ChevronLeft, Users } from "lucide-react";
+import { AttendanceStats } from "@/components/attendance/AttendanceStats";
 
-
-// ── Date helpers ──────────────────────────────────────────────
 function getSundays(from: Date, to: Date): Date[] {
   const sundays: Date[] = [];
   const d = new Date(from);
@@ -19,10 +18,9 @@ function getSundays(from: Date, to: Date): Date[] {
 }
 
 function toDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// ── Group definitions ────────────────────────────────────────
 interface AttendanceGroup {
   id: string;
   label: string;
@@ -103,7 +101,6 @@ const GROUPS: AttendanceGroup[] = [
   },
 ];
 
-// ── Attendance table sub-component ───────────────────────────
 interface AttendanceTableProps {
   members: Member[];
   sundays: Date[];
@@ -135,12 +132,14 @@ const AttendanceTable = ({ members, sundays, attendance, currentWeekIdx, onToggl
     scrollRef.current.scrollLeft = scrollStartLeft.current - (e.clientX - dragStartX.current);
   }, []);
 
-  const onMouseUp = useCallback(() => { isDragging.current = false; }, []);
+  const onMouseUp = useCallback(() => {
+    isDragging.current = false;
+  }, []);
 
   const formatDate = (d: Date) => ({ month: d.getMonth() + 1, day: d.getDate() });
 
   const getCountForDate = (dateStr: string) =>
-    members.filter(m => attendance[m.id]?.[dateStr] === true).length;
+    members.filter((m) => attendance[m.id]?.[dateStr] === true).length;
 
   return (
     <div
@@ -190,7 +189,7 @@ const AttendanceTable = ({ members, sundays, attendance, currentWeekIdx, onToggl
                   <td
                     key={dateStr}
                     className={`w-16 px-1 py-2 text-center border-r border-border/50 ${isCurrentWeek ? "bg-[hsl(var(--gold-light))]" : ""}`}
-                    onMouseDown={e => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
                   >
                     <input
                       type="checkbox"
@@ -216,7 +215,6 @@ const AttendanceTable = ({ members, sundays, attendance, currentWeekIdx, onToggl
   );
 };
 
-// ── Main Page ─────────────────────────────────────────────────
 const AttendancePage = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -226,13 +224,14 @@ const AttendancePage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
-  // Last 1 month of Sundays only
   const today = new Date();
-  const from = new Date(today); from.setMonth(from.getMonth() - 1);
+  const from = new Date(today);
+  from.setMonth(from.getMonth() - 1);
   const sundays = getSundays(from, today);
 
-  const todaySundayIdx = sundays.findIndex(s => {
-    const next = new Date(s); next.setDate(next.getDate() + 7);
+  const todaySundayIdx = sundays.findIndex((s) => {
+    const next = new Date(s);
+    next.setDate(next.getDate() + 7);
     return s <= today && today < next;
   });
   const currentWeekIdx = todaySundayIdx >= 0 ? todaySundayIdx : sundays.length - 1;
@@ -248,7 +247,7 @@ const AttendancePage = () => {
       const recs = aRes.data as AttendanceRecord[];
       setRecords(recs);
       const map: Record<string, Record<string, boolean>> = {};
-      recs.forEach(r => {
+      recs.forEach((r) => {
         if (!map[r.member_id]) map[r.member_id] = {};
         map[r.member_id][r.attendance_date] = r.is_present;
       });
@@ -257,153 +256,192 @@ const AttendancePage = () => {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const toggleAttendance = async (memberId: string, dateStr: string) => {
     const current = attendance[memberId]?.[dateStr] ?? false;
     const newVal = !current;
-    setAttendance(prev => ({
+
+    setAttendance((prev) => ({
       ...prev,
       [memberId]: { ...(prev[memberId] || {}), [dateStr]: newVal },
     }));
+
+    setRecords((prev) => {
+      const existingIndex = prev.findIndex(
+        (record) => record.member_id === memberId && record.attendance_date === dateStr,
+      );
+
+      if (existingIndex >= 0) {
+        return prev.map((record, index) =>
+          index === existingIndex ? { ...record, is_present: newVal } : record,
+        );
+      }
+
+      return [
+        ...prev,
+        {
+          id: `${memberId}-${dateStr}`,
+          member_id: memberId,
+          attendance_date: dateStr,
+          is_present: newVal,
+        },
+      ];
+    });
+
     const { error } = await supabase.from("attendance").upsert(
       { member_id: memberId, attendance_date: dateStr, is_present: newVal },
-      { onConflict: "member_id,attendance_date" }
+      { onConflict: "member_id,attendance_date" },
     );
+
     if (error) {
       toast({ title: "저장 오류", description: error.message, variant: "destructive" });
-      setAttendance(prev => ({
+      setAttendance((prev) => ({
         ...prev,
         [memberId]: { ...(prev[memberId] || {}), [dateStr]: current },
       }));
+      setRecords((prev) =>
+        prev.map((record) =>
+          record.member_id === memberId && record.attendance_date === dateStr
+            ? { ...record, is_present: current }
+            : record,
+        ),
+      );
     }
   };
 
-  const selectedGroup = GROUPS.find(g => g.id === selectedGroupId) ?? null;
+  const selectedGroup = GROUPS.find((g) => g.id === selectedGroupId) ?? null;
   const filteredMembers = selectedGroup ? members.filter(selectedGroup.filter) : [];
 
   if (loading) {
     return <div className="flex items-center justify-center h-full text-muted-foreground p-8">불러오는 중...</div>;
   }
 
-  // ── Mobile layout: 단일 패널 전환 ──
-  if (isMobile) {
-    return (
-      <div className="flex flex-col h-screen overflow-hidden">
-        {!selectedGroupId ? (
-          <>
-            <div className="px-4 py-4 border-b border-border bg-card shrink-0">
-              <h1 className="text-lg font-bold text-foreground">출석부</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {GROUPS.map(group => {
-                const count = members.filter(group.filter).length;
-                return (
-                  <button
-                    key={group.id}
-                    onClick={() => setSelectedGroupId(group.id)}
-                    className="w-full flex items-center justify-between px-4 py-4 text-left transition-colors active:bg-accent border-b border-border/50"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-muted">
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-base font-medium truncate text-foreground">{group.label}</p>
-                        <p className="text-xs text-muted-foreground">{group.description} · {count}명</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="px-2 py-3 border-b border-border bg-card shrink-0 flex items-center gap-2">
-              <button
-                onClick={() => setSelectedGroupId(null)}
-                className="p-2 -ml-1 rounded-md active:bg-accent"
-                aria-label="뒤로"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-sm font-semibold text-foreground truncate">{selectedGroup?.label}</h2>
-                <p className="text-xs text-muted-foreground">{filteredMembers.length}명 · 최근 1개월</p>
-              </div>
-            </div>
-            <AttendanceTable
-              members={filteredMembers}
-              sundays={sundays}
-              attendance={attendance}
-              currentWeekIdx={currentWeekIdx}
-              onToggle={toggleAttendance}
-            />
-          </>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* ── Left panel: group list ── */}
-      <div className={`flex flex-col shrink-0 border-r border-border bg-card transition-all duration-200 ${selectedGroupId ? "w-52" : "flex-1 max-w-xs"}`}>
-        <div className="px-4 py-4 border-b border-border">
-          <h1 className="text-lg font-bold text-foreground">출석부</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
-        </div>
-        <div className="flex-1 overflow-y-auto py-2">
-          {GROUPS.map(group => {
-            const count = members.filter(group.filter).length;
-            const isSelected = selectedGroupId === group.id;
-            return (
-              <button
-                key={group.id}
-                onClick={() => setSelectedGroupId(isSelected ? null : group.id)}
-                className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-accent/50 border-b border-border/50 ${isSelected ? "bg-primary/10 border-l-2 border-l-primary" : ""}`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{group.label}</p>
-                    <p className="text-xs text-muted-foreground">{group.description} · {count}명</p>
+    <div className="h-screen overflow-y-auto bg-background">
+      <div className="min-h-full">
+        {isMobile ? (
+          <section className="border-b border-border bg-card">
+            {!selectedGroupId ? (
+              <div className="flex flex-col min-h-[60vh]">
+                <div className="px-4 py-4 border-b border-border shrink-0">
+                  <h1 className="text-lg font-bold text-foreground">출석부</h1>
+                  <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {GROUPS.map((group) => {
+                    const count = members.filter(group.filter).length;
+                    return (
+                      <button
+                        key={group.id}
+                        onClick={() => setSelectedGroupId(group.id)}
+                        className="w-full flex items-center justify-between px-4 py-4 text-left transition-colors active:bg-accent border-b border-border/50"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-muted">
+                            <Users className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-base font-medium truncate text-foreground">{group.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {group.description} · {count}명
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col min-h-[70vh] max-h-[75vh]">
+                <div className="px-2 py-3 border-b border-border bg-card shrink-0 flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedGroupId(null)}
+                    className="p-2 -ml-1 rounded-md active:bg-accent"
+                    aria-label="뒤로"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-sm font-semibold text-foreground truncate">{selectedGroup?.label}</h2>
+                    <p className="text-xs text-muted-foreground">{filteredMembers.length}명 · 최근 1개월</p>
                   </div>
                 </div>
-                <ChevronRight className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isSelected ? "rotate-90 text-primary" : ""}`} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                <AttendanceTable
+                  members={filteredMembers}
+                  sundays={sundays}
+                  attendance={attendance}
+                  currentWeekIdx={currentWeekIdx}
+                  onToggle={toggleAttendance}
+                />
+              </div>
+            )}
+          </section>
+        ) : (
+          <section className="flex h-[68vh] min-h-[560px] overflow-hidden border-b border-border bg-background">
+            <div className={`flex flex-col shrink-0 border-r border-border bg-card transition-all duration-200 ${selectedGroupId ? "w-52" : "flex-1 max-w-xs"}`}>
+              <div className="px-4 py-4 border-b border-border">
+                <h1 className="text-lg font-bold text-foreground">출석부</h1>
+                <p className="text-xs text-muted-foreground mt-0.5">총 {members.length}명</p>
+              </div>
+              <div className="flex-1 overflow-y-auto py-2">
+                {GROUPS.map((group) => {
+                  const count = members.filter(group.filter).length;
+                  const isSelected = selectedGroupId === group.id;
+                  return (
+                    <button
+                      key={group.id}
+                      onClick={() => setSelectedGroupId(isSelected ? null : group.id)}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-accent/50 border-b border-border/50 ${isSelected ? "bg-primary/10 border-l-2 border-l-primary" : ""}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-sm font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{group.label}</p>
+                          <p className="text-xs text-muted-foreground">{group.description} · {count}명</p>
+                        </div>
+                      </div>
+                      <ChevronRight className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${isSelected ? "rotate-90 text-primary" : ""}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-      {/* ── Right panel: attendance table or stats ── */}
-      {selectedGroupId ? (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-border bg-card shrink-0 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-            <h2 className="text-sm font-semibold text-foreground">{selectedGroup?.label}</h2>
-            <span className="text-xs text-muted-foreground">· {filteredMembers.length}명 · 최근 1개월</span>
-          </div>
-          <AttendanceTable
-            members={filteredMembers}
-            sundays={sundays}
-            attendance={attendance}
-            currentWeekIdx={currentWeekIdx}
-            onToggle={toggleAttendance}
-          />
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
-          <Users className="w-12 h-12 opacity-20" />
-          <p className="text-sm">왼쪽에서 그룹을 선택하세요</p>
-        </div>
-      )}
+            {selectedGroupId ? (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="px-4 py-3 border-b border-border bg-card shrink-0 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <h2 className="text-sm font-semibold text-foreground">{selectedGroup?.label}</h2>
+                  <span className="text-xs text-muted-foreground">· {filteredMembers.length}명 · 최근 1개월</span>
+                </div>
+                <AttendanceTable
+                  members={filteredMembers}
+                  sundays={sundays}
+                  attendance={attendance}
+                  currentWeekIdx={currentWeekIdx}
+                  onToggle={toggleAttendance}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
+                <Users className="w-12 h-12 opacity-20" />
+                <p className="text-sm">왼쪽에서 그룹을 선택하세요</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className="px-4 py-6 md:px-6 md:py-8">
+          <AttendanceStats members={members} attendance={attendance} records={records} />
+        </section>
+      </div>
     </div>
   );
 };
