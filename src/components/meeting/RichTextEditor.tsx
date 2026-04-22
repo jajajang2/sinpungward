@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   Bold,
+  Heading1,
   Italic,
   UnderlineIcon,
   List,
@@ -18,6 +19,7 @@ import {
   Undo,
   Redo,
   Minus,
+  Quote,
 } from "lucide-react";
 
 interface RichTextEditorProps {
@@ -33,12 +35,14 @@ const ToolbarButton = ({
   disabled,
   children,
   title,
+  label,
 }: {
   onClick: () => void;
   active?: boolean;
   disabled?: boolean;
   children: React.ReactNode;
   title?: string;
+  label?: string;
 }) => (
   <button
     type="button"
@@ -49,7 +53,7 @@ const ToolbarButton = ({
       onClick();
     }}
     className={cn(
-      "p-1.5 rounded transition-colors",
+      "inline-flex h-9 items-center gap-2 rounded-md px-2.5 text-sm transition-colors",
       active
         ? "bg-primary text-primary-foreground"
         : "text-foreground hover:bg-muted",
@@ -57,6 +61,7 @@ const ToolbarButton = ({
     )}
   >
     {children}
+    {label && <span className="text-xs font-medium">{label}</span>}
   </button>
 );
 
@@ -79,7 +84,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "min-h-[360px] px-4 py-3 focus:outline-none prose prose-sm max-w-none",
+          "meeting-editor min-h-[420px] px-5 py-4 focus:outline-none prose prose-sm max-w-none",
       },
     },
   });
@@ -94,10 +99,8 @@ export default function RichTextEditor({
   if (!editor) return null;
 
   return (
-    <div className={cn("border border-input rounded-md overflow-hidden", className)}>
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-input bg-muted/30">
-        {/* Undo / Redo */}
+    <div className={cn("overflow-hidden rounded-[0.5rem] border border-input bg-card", className)}>
+      <div className="flex flex-wrap items-center gap-1 border-b border-input bg-muted/30 px-3 py-2">
         <ToolbarButton
           title="실행 취소"
           onClick={() => editor.chain().focus().undo().run()}
@@ -115,20 +118,45 @@ export default function RichTextEditor({
 
         <span className="w-px h-5 bg-border mx-1" />
 
-        {/* Headings */}
+        <ToolbarButton
+          title="제목 1"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          active={editor.isActive("heading", { level: 1 })}
+          label="제목1"
+        >
+          <Heading1 className="h-4 w-4" />
+        </ToolbarButton>
         <ToolbarButton
           title="제목 2"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           active={editor.isActive("heading", { level: 2 })}
+          label="제목2"
         >
-          <Heading2 className="w-3.5 h-3.5" />
+          <Heading2 className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           title="제목 3"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           active={editor.isActive("heading", { level: 3 })}
+          label="제목3"
         >
-          <Heading3 className="w-3.5 h-3.5" />
+          <Heading3 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          title="본문"
+          onClick={() => editor.chain().focus().setParagraph().run()}
+          active={editor.isActive("paragraph")}
+          label="본문"
+        >
+          <span className="text-sm font-semibold">T</span>
+        </ToolbarButton>
+        <ToolbarButton
+          title="인용"
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          active={editor.isActive("blockquote")}
+          label="인용"
+        >
+          <Quote className="h-4 w-4" />
         </ToolbarButton>
 
         <span className="w-px h-5 bg-border mx-1" />
@@ -139,21 +167,21 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive("bold")}
         >
-          <Bold className="w-3.5 h-3.5" />
+          <Bold className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           title="기울임"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           active={editor.isActive("italic")}
         >
-          <Italic className="w-3.5 h-3.5" />
+          <Italic className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           title="밑줄"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           active={editor.isActive("underline")}
         >
-          <UnderlineIcon className="w-3.5 h-3.5" />
+          <UnderlineIcon className="h-4 w-4" />
         </ToolbarButton>
 
         <span className="w-px h-5 bg-border mx-1" />
@@ -164,14 +192,14 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           active={editor.isActive("bulletList")}
         >
-          <List className="w-3.5 h-3.5" />
+          <List className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           title="번호 매기기 목록"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           active={editor.isActive("orderedList")}
         >
-          <ListOrdered className="w-3.5 h-3.5" />
+          <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
 
         <span className="w-px h-5 bg-border mx-1" />
@@ -182,21 +210,21 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().setTextAlign("left").run()}
           active={editor.isActive({ textAlign: "left" })}
         >
-          <AlignLeft className="w-3.5 h-3.5" />
+          <AlignLeft className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           title="가운데 정렬"
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
           active={editor.isActive({ textAlign: "center" })}
         >
-          <AlignCenter className="w-3.5 h-3.5" />
+          <AlignCenter className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           title="오른쪽 정렬"
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
           active={editor.isActive({ textAlign: "right" })}
         >
-          <AlignRight className="w-3.5 h-3.5" />
+          <AlignRight className="h-4 w-4" />
         </ToolbarButton>
 
         <span className="w-px h-5 bg-border mx-1" />
@@ -206,17 +234,13 @@ export default function RichTextEditor({
           title="구분선"
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
         >
-          <Minus className="w-3.5 h-3.5" />
+          <Minus className="h-4 w-4" />
         </ToolbarButton>
       </div>
 
-      {/* Editor area */}
-      <div
-        className="bg-background cursor-text"
-        onClick={() => editor.commands.focus()}
-      >
+      <div className="relative bg-background cursor-text" onClick={() => editor.commands.focus()}>
         {!editor.getText() && (
-          <p className="absolute pointer-events-none px-4 py-3 text-sm text-muted-foreground">
+          <p className="pointer-events-none absolute left-0 top-0 px-5 py-4 text-sm text-muted-foreground">
             {placeholder}
           </p>
         )}
