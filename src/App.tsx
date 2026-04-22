@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import MembersPage from "./pages/MembersPage";
 import AttendancePage from "./pages/AttendancePage";
+import AttendanceStatsPage from "./pages/AttendanceStatsPage";
 import OrgChartPage from "./pages/OrgChartPage";
 import MeetingMinutesPage from "./pages/MeetingMinutesPage";
 import NotFound from "./pages/NotFound";
@@ -23,6 +24,7 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/members" element={<MembersPage />} />
             <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/attendance-stats" element={<AttendanceStatsPage />} />
             <Route path="/orgchart" element={<OrgChartPage />} />
             <Route path="/minutes" element={<MeetingMinutesPage />} />
           </Route>

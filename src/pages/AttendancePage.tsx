@@ -4,7 +4,6 @@ import { Member, AttendanceRecord } from "@/types/church";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronRight, ChevronLeft, Users } from "lucide-react";
-import { AttendanceStats } from "@/components/attendance/AttendanceStats";
 
 function getSundays(from: Date, to: Date): Date[] {
   const sundays: Date[] = [];
@@ -438,9 +437,6 @@ const AttendancePage = () => {
           </section>
         )}
 
-        <section className="px-4 py-6 md:px-6 md:py-8">
-          <AttendanceStats members={members} attendance={attendance} records={records} />
-        </section>
       </div>
     </div>
   );
