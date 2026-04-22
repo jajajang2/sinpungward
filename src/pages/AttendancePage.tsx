@@ -338,8 +338,8 @@ const AttendancePage = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-background">
-      <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-4 px-4 py-5 md:px-6 md:py-6">
+    <div className="h-screen overflow-hidden bg-background">
+      <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-4 px-4 py-5 md:px-6 md:py-6">
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -377,8 +377,8 @@ const AttendancePage = () => {
           </div>
         </div>
 
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-          <Card className="border-border">
+          <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+          <Card className="flex min-h-0 flex-col border-border overflow-hidden">
             <div className="border-b border-border p-4">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
@@ -400,7 +400,7 @@ const AttendancePage = () => {
               <div className="text-center">출석</div>
             </div>
 
-            <div className="divide-y divide-border">
+            <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-border">
               {filteredMembers.length === 0 ? (
                 <div className="p-6 text-sm text-muted-foreground">해당 그룹에 회원이 없습니다.</div>
               ) : (
