@@ -76,6 +76,39 @@ export type Database = {
           },
         ]
       }
+      attendance_visitors: {
+        Row: {
+          attendance_date: string
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          attendance_date: string
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          attendance_date?: string
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_minutes: {
         Row: {
           attendees: string | null

@@ -61,6 +61,17 @@ export interface AttendanceRecord {
   is_present: boolean;
 }
 
+export interface AttendanceVisitor {
+  id: string;
+  attendance_date: string;
+  name: string;
+  phone?: string | null;
+  notes?: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OrgPosition {
   id: string;
   section: string;
