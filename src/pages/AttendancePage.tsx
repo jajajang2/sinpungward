@@ -7,7 +7,6 @@ import { ChevronLeft, Plus, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { AttendanceRecord, AttendanceVisitor, Member } from "@/types/church";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -117,7 +116,6 @@ const formatSelectedDate = (date: Date) => format(date, "yyyy년 M월 d일 (EEE)
 
 const AttendancePage = () => {
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const [members, setMembers] = useState<Member[]>([]);
   const [attendance, setAttendance] = useState<Record<string, Record<string, boolean>>>({});
   const [visitors, setVisitors] = useState<AttendanceVisitor[]>([]);
@@ -125,6 +123,7 @@ const AttendancePage = () => {
   const [savingVisitor, setSavingVisitor] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+  const [memberSearch, setMemberSearch] = useState("");
   const [visitorDraft, setVisitorDraft] = useState<VisitorDraft>(emptyVisitorDraft);
 
   const calendarMonths = useMemo(() => {
@@ -194,7 +193,15 @@ const AttendancePage = () => {
   }, [attendance]);
 
   const selectedGroup = GROUPS.find((group) => group.id === selectedGroupId) ?? GROUPS[0];
-  const filteredMembers = useMemo(() => members.filter(selectedGroup.filter), [members, selectedGroup]);
+  const filteredMembers = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase();
+
+    return members.filter((member) => {
+      if (!selectedGroup.filter(member)) return false;
+      if (!query) return true;
+      return member.name.toLowerCase().includes(query);
+    });
+  }, [memberSearch, members, selectedGroup]);
 
   const selectedVisitors = useMemo(() => {
     if (!selectedDateStr) return [];
@@ -283,7 +290,7 @@ const AttendancePage = () => {
             {loading && <p className="text-xs text-muted-foreground">출석 현황을 불러오는 중...</p>}
           </div>
 
-          <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
+          <div className="grid auto-cols-[minmax(18.5rem,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
             {calendarMonths.map((monthDate) => (
               <Card key={monthDate.toISOString()} className="overflow-hidden border-border p-3">
                 <div className="mb-2 px-2 text-sm font-semibold text-foreground">{format(monthDate, "yyyy년 M월", { locale: ko })}</div>
@@ -294,13 +301,20 @@ const AttendancePage = () => {
                   month={monthDate}
                   fromMonth={monthDate}
                   toMonth={monthDate}
-                  showOutsideDays={false}
+                  fixedWeeks
+                  showOutsideDays
                   className="w-full"
                   classNames={{
                     month: "space-y-3",
-                    head_cell: "text-muted-foreground rounded-md w-12 font-normal text-[0.75rem]",
-                    cell: "h-14 w-12 p-0 text-center text-sm align-top",
-                    day: "h-14 w-12 rounded-md p-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground",
+                    head_row: "grid grid-cols-7 gap-1",
+                    row: "mt-1 grid grid-cols-7 gap-1",
+                    head_cell: "w-full rounded-md py-1 text-center text-[0.75rem] font-normal text-muted-foreground",
+                    cell:
+                      "h-[4.5rem] w-full p-0 text-center text-sm align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md",
+                    day:
+                      "h-full w-full rounded-md px-1 py-1.5 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground",
+                    day_outside:
+                      "day-outside text-muted-foreground/70 opacity-100 aria-selected:bg-accent aria-selected:text-accent-foreground",
                   }}
                   components={{
                     DayContent: ({ date }) => {
@@ -363,7 +377,7 @@ const AttendancePage = () => {
           </div>
         </div>
 
-        <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]"}`}>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
           <Card className="border-border">
             <div className="border-b border-border p-4">
               <div className="flex items-center gap-2">
@@ -371,6 +385,14 @@ const AttendancePage = () => {
                 <h2 className="text-base font-semibold text-foreground">{selectedGroup.label}</h2>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">회원마다 체크박스 한 칸만 표시됩니다.</p>
+                <div className="mt-3">
+                  <Input
+                    value={memberSearch}
+                    onChange={(event) => setMemberSearch(event.target.value)}
+                    placeholder="이름 검색"
+                    aria-label="회원 이름 검색"
+                  />
+                </div>
             </div>
 
             <div className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 border-b border-border bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground">
