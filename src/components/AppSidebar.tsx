@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from "@/components/NavLink";
 import { Users, Calendar, BarChart3, GitBranch, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
