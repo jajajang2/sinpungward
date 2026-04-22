@@ -301,7 +301,6 @@ const AttendancePage = () => {
                   month={monthDate}
                   fromMonth={monthDate}
                   toMonth={monthDate}
-                  fixedWeeks
                   showOutsideDays
                   className="w-full"
                   classNames={{
