@@ -339,8 +339,8 @@ const AttendancePage = () => {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-background">
-      <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-4 px-4 py-5 md:px-6 md:py-6">
+    <div className="h-screen overflow-y-auto bg-background md:overflow-hidden">
+      <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-4 px-4 py-5 md:h-full md:px-6 md:py-6">
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -378,8 +378,8 @@ const AttendancePage = () => {
           </div>
         </div>
 
-          <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-          <Card className="flex min-h-0 flex-col border-border overflow-hidden">
+          <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] md:overflow-hidden">
+          <Card className="flex min-h-[44vh] flex-col overflow-hidden border-border md:min-h-0">
             <div className="border-b border-border p-4">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
@@ -429,14 +429,14 @@ const AttendancePage = () => {
                 <UserPlus className="h-4 w-4 text-primary" />
                 <h2 className="text-base font-semibold text-foreground">방문자</h2>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">이름, 연락처, 메모를 기록할 수 있습니다.</p>
+              <p className="mt-1 text-xs text-muted-foreground md:text-sm">이름, 연락처, 메모를 기록할 수 있습니다.</p>
             </div>
 
-            <div className="space-y-4 p-4">
-              <div className="space-y-3 rounded-lg border border-border bg-background p-3">
-                <Input placeholder="이름" value={visitorDraft.name} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))} />
-                <Input placeholder="연락처" value={visitorDraft.phone} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))} />
-                <Textarea placeholder="메모" value={visitorDraft.notes} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))} />
+            <div className="space-y-3 p-3 md:space-y-4 md:p-4">
+              <div className="space-y-2 rounded-lg border border-border bg-background p-2.5 md:space-y-3 md:p-3">
+                <Input className="h-9 md:h-10" placeholder="이름" value={visitorDraft.name} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))} />
+                <Input className="h-9 md:h-10" placeholder="연락처" value={visitorDraft.phone} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))} />
+                <Textarea className="min-h-[68px] resize-none md:min-h-[96px]" rows={2} placeholder="메모" value={visitorDraft.notes} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))} />
                 <Button onClick={handleSaveVisitor} disabled={savingVisitor} className="w-full">
                   <Plus className="mr-1 h-4 w-4" />방문자 추가
                 </Button>
@@ -444,15 +444,15 @@ const AttendancePage = () => {
 
               <div className="space-y-2">
                 {selectedVisitors.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
+                  <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
                 ) : (
                   selectedVisitors.map((visitor) => (
                     <div key={visitor.id} className="rounded-lg border border-border bg-background p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 space-y-1">
-                          <div className="font-medium text-foreground">{visitor.name}</div>
-                          <div className="text-sm text-muted-foreground">{visitor.phone || "연락처 없음"}</div>
-                          {visitor.notes && <p className="text-sm text-foreground/80">{visitor.notes}</p>}
+                          <div className="text-sm font-medium text-foreground">{visitor.name}</div>
+                          <div className="text-xs text-muted-foreground md:text-sm">{visitor.phone || "연락처 없음"}</div>
+                          {visitor.notes && <p className="text-xs text-foreground/80 md:text-sm">{visitor.notes}</p>}
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>삭제</Button>
                       </div>
