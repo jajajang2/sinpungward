@@ -136,37 +136,45 @@ const AttendancePage = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [memberRes, attendanceRes, visitorRes] = await Promise.all([
-      supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
-      supabase.from("attendance").select("*"),
-      supabase.from("attendance_visitors").select("*").order("attendance_date", { ascending: false }).order("sort_order"),
-    ]);
+    try {
+      const [memberRes, attendanceRes, visitorRes] = await Promise.all([
+        supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
+        supabase.from("attendance").select("*"),
+        supabase.from("attendance_visitors").select("*").order("attendance_date", { ascending: false }).order("sort_order"),
+      ]);
 
-    if (memberRes.error) {
-      toast({ title: "오류", description: "회원 목록을 불러오지 못했습니다.", variant: "destructive" });
-    } else {
-      setMembers((memberRes.data as Member[]) || []);
-    }
+      if (memberRes.error) {
+        toast({ title: "오류", description: "회원 목록을 불러오지 못했습니다.", variant: "destructive" });
+      } else {
+        setMembers((memberRes.data as Member[]) || []);
+      }
 
-    if (attendanceRes.error) {
-      toast({ title: "오류", description: "출석 데이터를 불러오지 못했습니다.", variant: "destructive" });
-    } else {
-      const records = (attendanceRes.data as AttendanceRecord[]) || [];
-      const attendanceMap: Record<string, Record<string, boolean>> = {};
-      records.forEach((record) => {
-        if (!attendanceMap[record.member_id]) attendanceMap[record.member_id] = {};
-        attendanceMap[record.member_id][record.attendance_date] = record.is_present;
+      if (attendanceRes.error) {
+        toast({ title: "오류", description: "출석 데이터를 불러오지 못했습니다.", variant: "destructive" });
+      } else {
+        const records = (attendanceRes.data as AttendanceRecord[]) || [];
+        const attendanceMap: Record<string, Record<string, boolean>> = {};
+        records.forEach((record) => {
+          if (!attendanceMap[record.member_id]) attendanceMap[record.member_id] = {};
+          attendanceMap[record.member_id][record.attendance_date] = record.is_present;
+        });
+        setAttendance(attendanceMap);
+      }
+
+      if (visitorRes.error) {
+        toast({ title: "오류", description: "방문자 기록을 불러오지 못했습니다.", variant: "destructive" });
+      } else {
+        setVisitors((visitorRes.data as AttendanceVisitor[]) || []);
+      }
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: error instanceof Error ? error.message : "출석부를 불러오지 못했습니다.",
+        variant: "destructive",
       });
-      setAttendance(attendanceMap);
+    } finally {
+      setLoading(false);
     }
-
-    if (visitorRes.error) {
-      toast({ title: "오류", description: "방문자 기록을 불러오지 못했습니다.", variant: "destructive" });
-    } else {
-      setVisitors((visitorRes.data as AttendanceVisitor[]) || []);
-    }
-
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -265,10 +273,6 @@ const AttendancePage = () => {
     toast({ title: "삭제 완료", description: "방문자 기록을 삭제했습니다." });
   };
 
-  if (loading) {
-    return <div className="flex h-full items-center justify-center p-8 text-muted-foreground">불러오는 중...</div>;
-  }
-
   if (!selectedDate) {
     return (
       <div className="h-screen overflow-y-auto bg-background">
@@ -276,6 +280,7 @@ const AttendancePage = () => {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">출석부</h1>
             <p className="text-sm text-muted-foreground">최근 3개월 달력에서 날짜를 누르면 해당 일자의 출석부가 열립니다.</p>
+            {loading && <p className="text-xs text-muted-foreground">출석 현황을 불러오는 중...</p>}
           </div>
 
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
