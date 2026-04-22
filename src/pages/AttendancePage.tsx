@@ -377,7 +377,7 @@ const AttendancePage = () => {
           </div>
         </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
           <Card className="border-border">
             <div className="border-b border-border p-4">
               <div className="flex items-center gap-2">
@@ -422,7 +422,7 @@ const AttendancePage = () => {
             </div>
           </Card>
 
-          <Card className="border-border">
+            <Card className="border-border md:sticky md:top-4 md:self-start">
             <div className="border-b border-border p-4">
               <div className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4 text-primary" />
