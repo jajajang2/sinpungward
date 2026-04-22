@@ -200,6 +200,7 @@ export default function MeetingMinutesPage() {
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
+        {!showForm && (
         <div className="flex items-center gap-3 px-6 py-4 border-b bg-background">
           {(showDetail || showForm) && (
             <Button variant="ghost" size="sm" onClick={handleBack} className="mr-1">
@@ -244,6 +245,7 @@ export default function MeetingMinutesPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
