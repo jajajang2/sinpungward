@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { Users, Calendar, GitBranch, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
+import { Users, Calendar, BarChart3, GitBranch, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const mainNavItems = [
   { to: "/members", label: "회원기록양식", icon: Users },
   { to: "/attendance", label: "출석부", icon: Calendar },
+  { to: "/attendance-stats", label: "출석통계", icon: BarChart3 },
   { to: "/orgchart", label: "조직도", icon: GitBranch },
 ];
 
