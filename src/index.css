@@ -96,3 +96,36 @@
 .attendance-scroll:active {
   cursor: grabbing;
 }
+
+.meeting-editor .ProseMirror {
+  min-height: 420px;
+}
+
+.meeting-editor .ProseMirror h1 {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+}
+
+.meeting-editor .ProseMirror h2 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+}
+
+.meeting-editor .ProseMirror h3 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+}
+
+.meeting-editor .ProseMirror blockquote {
+  border-left: 3px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  margin: 1rem 0;
+  padding-left: 1rem;
+}
+
+.meeting-editor .ProseMirror:focus {
+  outline: none;
+}

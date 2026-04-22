@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RichTextEditor from "@/components/meeting/RichTextEditor";
@@ -41,6 +42,7 @@ export default function MeetingMinutesPage() {
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
     fetchMinutes();
@@ -82,6 +84,7 @@ export default function MeetingMinutesPage() {
 
   function handleNewClick() {
     setForm(emptyForm());
+    setIsPrivate(false);
     setIsCreating(true);
     setIsEditing(false);
     setSelectedMinute(null);
@@ -96,6 +99,7 @@ export default function MeetingMinutesPage() {
       content: selectedMinute.content,
       attendees: selectedMinute.attendees ?? "",
     });
+    setIsPrivate(false);
     setIsEditing(true);
   }
 
@@ -196,6 +200,7 @@ export default function MeetingMinutesPage() {
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
+        {!showForm && (
         <div className="flex items-center gap-3 px-6 py-4 border-b bg-background">
           {(showDetail || showForm) && (
             <Button variant="ghost" size="sm" onClick={handleBack} className="mr-1">
@@ -240,6 +245,7 @@ export default function MeetingMinutesPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
@@ -312,40 +318,79 @@ export default function MeetingMinutesPage() {
 
           {/* Form */}
           {showForm && (
-            <div className="max-w-3xl mx-auto px-8 py-8 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">회의 날짜</Label>
-                  <Input type="date" value={form.meeting_date} onChange={(e) => setForm((f) => ({ ...f, meeting_date: e.target.value }))} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">카테고리</Label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    {CATEGORIES.filter((c) => c !== "전체").map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+            <div className="flex h-full flex-col bg-background">
+              <div className="border-b border-border px-6 py-5 md:px-8">
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="icon" onClick={handleBack} aria-label="뒤로가기" className="shrink-0">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    placeholder="문서제목을 입력하세요"
+                    className="h-auto border-0 bg-transparent px-0 text-3xl font-semibold text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
+                  />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">제목</Label>
-                <Input placeholder="회의록 제목을 입력하세요" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+
+              <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8">
+                <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+                  <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_220px] md:items-center">
+                    <label className="flex h-16 items-center gap-3 rounded-[0.5rem] border border-input bg-card px-4 text-base text-foreground">
+                      <Checkbox checked={isPrivate} onCheckedChange={(checked) => setIsPrivate(checked === true)} />
+                      <span>비공개</span>
+                    </label>
+
+                    <div className="rounded-[0.5rem] border border-input bg-card px-4 py-3">
+                      <Label className="mb-1 block text-xs text-muted-foreground">카테고리 검색 및 선택</Label>
+                      <select
+                        value={form.category}
+                        onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                        className="h-8 w-full bg-transparent text-base text-foreground focus:outline-none"
+                      >
+                        {CATEGORIES.filter((c) => c !== "전체").map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="rounded-[0.5rem] border border-input bg-card px-4 py-3">
+                      <Label className="mb-1 block text-xs text-muted-foreground">회의 날짜</Label>
+                      <Input
+                        type="date"
+                        value={form.meeting_date}
+                        onChange={(e) => setForm((f) => ({ ...f, meeting_date: e.target.value }))}
+                        className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-[0.5rem] border border-input bg-card p-4">
+                    <Label className="mb-2 block text-xs text-muted-foreground">참석자</Label>
+                    <Input
+                      placeholder="참석자 이름을 입력하세요 (쉼표로 구분)"
+                      value={form.attendees ?? ""}
+                      onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))}
+                      className="border-0 px-0 shadow-none focus-visible:ring-0"
+                    />
+                  </div>
+
+                  <RichTextEditor
+                    value={form.content}
+                    onChange={(val) => setForm((f) => ({ ...f, content: val }))}
+                    placeholder="텍스트를 입력하거나 /를 입력하여 명령을 입력하세요."
+                    className="min-h-[540px]"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">참석자</Label>
-                <Input placeholder="참석자 이름을 입력하세요 (쉼표로 구분)" value={form.attendees ?? ""} onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">회의 내용</Label>
-                <RichTextEditor
-                  value={form.content}
-                  onChange={(val) => setForm((f) => ({ ...f, content: val }))}
-                  placeholder="회의 내용을 입력하세요..."
-                />
+
+              <div className="border-t border-border bg-card/80 px-6 py-4 backdrop-blur md:px-8">
+                <div className="mx-auto flex w-full max-w-6xl items-center justify-end gap-3">
+                  <Button size="lg" onClick={handleSave} disabled={saving}>
+                    {saving ? "저장 중..." : "저장"}
+                  </Button>
+                  <Button size="lg" variant="outline" onClick={handleBack}>취소</Button>
+                </div>
               </div>
             </div>
           )}
