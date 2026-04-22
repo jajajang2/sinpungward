@@ -290,7 +290,7 @@ const AttendancePage = () => {
             {loading && <p className="text-xs text-muted-foreground">출석 현황을 불러오는 중...</p>}
           </div>
 
-          <div className="grid auto-cols-[minmax(18.5rem,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {calendarMonths.map((monthDate) => (
               <Card key={monthDate.toISOString()} className="overflow-hidden border-border p-3">
                 <div className="mb-2 px-2 text-sm font-semibold text-foreground">{format(monthDate, "yyyy년 M월", { locale: ko })}</div>
@@ -305,12 +305,14 @@ const AttendancePage = () => {
                   showOutsideDays
                   className="w-full"
                   classNames={{
-                    month: "space-y-3",
+                    months: "block w-full",
+                    month: "w-full space-y-3",
+                    table: "w-full table-fixed border-collapse",
                     head_row: "grid grid-cols-7 gap-1",
                     row: "mt-1 grid grid-cols-7 gap-1",
                     head_cell: "w-full rounded-md py-1 text-center text-[0.75rem] font-normal text-muted-foreground",
                     cell:
-                      "h-[4.5rem] w-full p-0 text-center text-sm align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md",
+                      "aspect-square min-h-[4.75rem] w-full p-0 text-center text-sm align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md",
                     day:
                       "h-full w-full rounded-md px-1 py-1.5 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground",
                     day_outside:
