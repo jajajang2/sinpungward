@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ChevronLeft, Plus, Users, UserPlus } from "lucide-react";
+import { ChevronLeft, Plus, UserPlus, Users } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { AttendanceRecord, AttendanceVisitor, Member } from "@/types/church";
@@ -19,7 +19,7 @@ interface AttendanceGroup {
   id: string;
   label: string;
   description: string;
-  filter: (m: Member & { church_info?: { current_calling?: string[] } }) => boolean;
+  filter: (member: Member) => boolean;
 }
 
 interface VisitorDraft {
@@ -46,7 +46,7 @@ const getAge = (birthDate?: string): number | null => {
   const birth = new Date(birthDate);
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
   return age;
 };
 
@@ -56,53 +56,53 @@ const GROUPS: AttendanceGroup[] = [
     id: "elders",
     label: "장로정원회",
     description: "19세 이상 남성",
-    filter: (m) => {
-      const age = getAge(m.birth_date);
-      return m.gender === "남" && age !== null && age >= 19;
+    filter: (member) => {
+      const age = getAge(member.birth_date);
+      return member.gender === "남" && age !== null && age >= 19;
     },
   },
   {
     id: "rs",
     label: "상호부조회",
     description: "19세 이상 여성",
-    filter: (m) => {
-      const age = getAge(m.birth_date);
-      return m.gender === "여" && age !== null && age >= 19;
+    filter: (member) => {
+      const age = getAge(member.birth_date);
+      return member.gender === "여" && age !== null && age >= 19;
     },
   },
   {
     id: "singles",
     label: "독신 (미혼)",
     description: "미혼 성인",
-    filter: (m) => {
-      const age = getAge(m.birth_date);
-      return age !== null && age >= 19 && m.marital_status === "미혼";
+    filter: (member) => {
+      const age = getAge(member.birth_date);
+      return age !== null && age >= 19 && member.marital_status === "미혼";
     },
   },
   {
     id: "ym",
     label: "청남",
-    description: "11세 ~ 19세 남성",
-    filter: (m) => {
-      const age = getAge(m.birth_date);
-      return m.gender === "남" && age !== null && age >= 11 && age < 19;
+    description: "11세 ~ 18세 남성",
+    filter: (member) => {
+      const age = getAge(member.birth_date);
+      return member.gender === "남" && age !== null && age >= 11 && age < 19;
     },
   },
   {
     id: "yw",
     label: "청녀",
-    description: "11세 ~ 19세 여성",
-    filter: (m) => {
-      const age = getAge(m.birth_date);
-      return m.gender === "여" && age !== null && age >= 11 && age < 19;
+    description: "11세 ~ 18세 여성",
+    filter: (member) => {
+      const age = getAge(member.birth_date);
+      return member.gender === "여" && age !== null && age >= 11 && age < 19;
     },
   },
   {
     id: "primary",
     label: "초등회",
-    description: "0세 ~ 11세",
-    filter: (m) => {
-      const age = getAge(m.birth_date);
+    description: "0세 ~ 10세",
+    filter: (member) => {
+      const age = getAge(member.birth_date);
       return age !== null && age < 11;
     },
   },
@@ -113,7 +113,7 @@ const toDateStr = (date: Date) =>
 
 const monthOffset = (baseDate: Date, offset: number) => new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1);
 
-const formatSelectedDate = (date: Date) => format(date, "M월 d일 (EEE)", { locale: ko });
+const formatSelectedDate = (date: Date) => format(date, "yyyy년 M월 d일 (EEE)", { locale: ko });
 
 const AttendancePage = () => {
   const { toast } = useToast();
@@ -123,13 +123,13 @@ const AttendancePage = () => {
   const [visitors, setVisitors] = useState<AttendanceVisitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingVisitor, setSavingVisitor] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
   const [visitorDraft, setVisitorDraft] = useState<VisitorDraft>(emptyVisitorDraft);
 
   const calendarMonths = useMemo(() => {
     const today = new Date();
-    return [monthOffset(today, -1), monthOffset(today, 0), monthOffset(today, 1)];
+    return [monthOffset(today, -2), monthOffset(today, -1), monthOffset(today, 0)];
   }, []);
 
   const selectedDateStr = selectedDate ? toDateStr(selectedDate) : null;
@@ -138,7 +138,7 @@ const AttendancePage = () => {
     setLoading(true);
     const [memberRes, attendanceRes, visitorRes] = await Promise.all([
       supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
-      supabase.from("attendance").select("*") ,
+      supabase.from("attendance").select("*"),
       supabase.from("attendance_visitors").select("*").order("attendance_date", { ascending: false }).order("sort_order"),
     ]);
 
@@ -173,21 +173,27 @@ const AttendancePage = () => {
     fetchData();
   }, []);
 
+  const attendanceCountsByDate = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.values(attendance).forEach((memberAttendance) => {
+      Object.entries(memberAttendance).forEach(([dateStr, isPresent]) => {
+        if (isPresent) {
+          counts[dateStr] = (counts[dateStr] || 0) + 1;
+        }
+      });
+    });
+    return counts;
+  }, [attendance]);
+
   const selectedGroup = GROUPS.find((group) => group.id === selectedGroupId) ?? GROUPS[0];
-  const filteredMembers = useMemo(
-    () => members.filter(selectedGroup.filter),
-    [members, selectedGroup],
-  );
+  const filteredMembers = useMemo(() => members.filter(selectedGroup.filter), [members, selectedGroup]);
 
   const selectedVisitors = useMemo(() => {
     if (!selectedDateStr) return [];
     return visitors.filter((visitor) => visitor.attendance_date === selectedDateStr);
   }, [selectedDateStr, visitors]);
 
-  const presentCount = useMemo(() => {
-    if (!selectedDateStr) return 0;
-    return filteredMembers.filter((member) => attendance[member.id]?.[selectedDateStr] === true).length;
-  }, [attendance, filteredMembers, selectedDateStr]);
+  const selectedPresentCount = selectedDateStr ? attendanceCountsByDate[selectedDateStr] || 0 : 0;
 
   const toggleAttendance = async (memberId: string) => {
     if (!selectedDateStr) return;
@@ -232,7 +238,6 @@ const AttendancePage = () => {
     };
 
     const { data, error } = await supabase.from("attendance_visitors").insert(payload).select().single();
-
     setSavingVisitor(false);
 
     if (error) {
@@ -270,7 +275,7 @@ const AttendancePage = () => {
         <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-6 px-4 py-5 md:px-6 md:py-6">
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">출석부</h1>
-            <p className="text-sm text-muted-foreground">이전 달, 현재 달, 다음 달 중 날짜를 선택하면 해당 일자의 출석 체크 화면이 열립니다.</p>
+            <p className="text-sm text-muted-foreground">최근 3개월 달력에서 날짜를 누르면 해당 일자의 출석부가 열립니다.</p>
           </div>
 
           <div className={`grid gap-4 ${isMobile ? "grid-cols-1" : "grid-cols-3"}`}>
@@ -286,6 +291,24 @@ const AttendancePage = () => {
                   toMonth={monthDate}
                   showOutsideDays={false}
                   className="w-full"
+                  classNames={{
+                    month: "space-y-3",
+                    head_cell: "text-muted-foreground rounded-md w-12 font-normal text-[0.75rem]",
+                    cell: "h-14 w-12 p-0 text-center text-sm align-top",
+                    day: "h-14 w-12 rounded-md p-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground",
+                  }}
+                  components={{
+                    DayContent: ({ date }) => {
+                      const dateStr = toDateStr(date);
+                      const count = attendanceCountsByDate[dateStr] || 0;
+                      return (
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 leading-none">
+                          <span className="text-sm tabular-nums">{date.getDate()}</span>
+                          <span className="text-[10px] text-muted-foreground">{count > 0 ? `${count}명` : ""}</span>
+                        </div>
+                      );
+                    },
+                  }}
                 />
               </Card>
             ))}
@@ -301,24 +324,21 @@ const AttendancePage = () => {
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => setSelectedDate(undefined)} aria-label="날짜 선택으로 돌아가기">
+              <Button variant="outline" size="icon" onClick={() => setSelectedDate(undefined)} aria-label="달력으로 돌아가기">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div>
                 <h1 className="text-xl font-bold text-foreground">{formatSelectedDate(selectedDate)}</h1>
-                <p className="text-sm text-muted-foreground">회원 {presentCount}명 출석 · 방문자 {selectedVisitors.length}명</p>
+                <p className="text-sm text-muted-foreground">전체 출석 {selectedPresentCount}명 · 방문자 {selectedVisitors.length}명</p>
               </div>
             </div>
-
-            <Button variant="outline" onClick={() => setSelectedDate(undefined)}>
-              다른 날짜 선택
-            </Button>
+            <Button variant="outline" onClick={() => setSelectedDate(undefined)}>다른 날짜 선택</Button>
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1">
             {GROUPS.map((group) => {
-              const count = members.filter(group.filter).length;
               const isSelected = selectedGroupId === group.id;
+              const count = members.filter(group.filter).length;
               return (
                 <button
                   key={group.id}
@@ -345,7 +365,12 @@ const AttendancePage = () => {
                 <Users className="h-4 w-4 text-primary" />
                 <h2 className="text-base font-semibold text-foreground">{selectedGroup.label}</h2>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">이름 오른쪽에서 바로 출석 체크할 수 있습니다.</p>
+              <p className="mt-1 text-sm text-muted-foreground">회원마다 체크박스 한 칸만 표시됩니다.</p>
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 border-b border-border bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground">
+              <div>이름</div>
+              <div className="text-center">출석</div>
             </div>
 
             <div className="divide-y divide-border">
@@ -355,13 +380,15 @@ const AttendancePage = () => {
                 filteredMembers.map((member) => {
                   const checked = selectedDateStr ? attendance[member.id]?.[selectedDateStr] === true : false;
                   return (
-                    <label key={member.id} className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-accent/40">
+                    <div key={member.id} className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 px-4 py-3 hover:bg-accent/40">
                       <div className="min-w-0">
-                        <div className="font-medium text-foreground">{member.name}</div>
+                        <div className="truncate font-medium text-foreground">{member.name}</div>
                         <div className="text-xs text-muted-foreground">{selectedGroup.description}</div>
                       </div>
-                      <Checkbox checked={checked} onCheckedChange={() => toggleAttendance(member.id)} aria-label={`${member.name} 출석 체크`} />
-                    </label>
+                      <div className="flex justify-center">
+                        <Checkbox checked={checked} onCheckedChange={() => toggleAttendance(member.id)} aria-label={`${member.name} 출석 체크`} />
+                      </div>
+                    </div>
                   );
                 })
               )}
@@ -374,37 +401,22 @@ const AttendancePage = () => {
                 <UserPlus className="h-4 w-4 text-primary" />
                 <h2 className="text-base font-semibold text-foreground">방문자</h2>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">회원이 아닌 방문자의 이름, 연락처, 메모를 함께 기록합니다.</p>
+              <p className="mt-1 text-sm text-muted-foreground">이름, 연락처, 메모를 기록할 수 있습니다.</p>
             </div>
 
             <div className="space-y-4 p-4">
               <div className="space-y-3 rounded-lg border border-border bg-background p-3">
-                <Input
-                  placeholder="이름"
-                  value={visitorDraft.name}
-                  onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))}
-                />
-                <Input
-                  placeholder="연락처"
-                  value={visitorDraft.phone}
-                  onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))}
-                />
-                <Textarea
-                  placeholder="메모"
-                  value={visitorDraft.notes}
-                  onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))}
-                />
+                <Input placeholder="이름" value={visitorDraft.name} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))} />
+                <Input placeholder="연락처" value={visitorDraft.phone} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))} />
+                <Textarea placeholder="메모" value={visitorDraft.notes} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))} />
                 <Button onClick={handleSaveVisitor} disabled={savingVisitor} className="w-full">
-                  <Plus className="mr-1 h-4 w-4" />
-                  방문자 추가
+                  <Plus className="mr-1 h-4 w-4" />방문자 추가
                 </Button>
               </div>
 
               <div className="space-y-2">
                 {selectedVisitors.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                    아직 기록된 방문자가 없습니다.
-                  </div>
+                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
                 ) : (
                   selectedVisitors.map((visitor) => (
                     <div key={visitor.id} className="rounded-lg border border-border bg-background p-3">
@@ -414,9 +426,7 @@ const AttendancePage = () => {
                           <div className="text-sm text-muted-foreground">{visitor.phone || "연락처 없음"}</div>
                           {visitor.notes && <p className="text-sm text-foreground/80">{visitor.notes}</p>}
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>
-                          삭제
-                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>삭제</Button>
                       </div>
                     </div>
                   ))
