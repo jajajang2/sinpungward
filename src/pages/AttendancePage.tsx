@@ -397,7 +397,7 @@ const AttendancePage = () => {
                             head_row: "grid grid-cols-7 gap-1 md:gap-1.5 [&>th:first-child]:text-destructive [&>th:last-child]:text-primary",
                             tbody: "flex-1",
                             row: "mt-1.5 grid grid-cols-7 gap-1 md:gap-1.5",
-                            head_cell: "w-full rounded-md py-1 text-center text-xs font-medium md:text-base",
+                            head_cell: "w-full rounded-md py-1 text-center text-[0.65rem] font-medium md:text-[0.7rem]",
                             cell:
                               "min-h-[2.9rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[4.7rem]",
                             day:
@@ -422,8 +422,8 @@ const AttendancePage = () => {
 
                               return (
                                 <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 leading-none md:gap-1">
-                                  <span className={`text-base tabular-nums md:text-[1.9rem] ${dateTone}`}>{date.getDate()}</span>
-                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} text-[0.6rem] md:text-sm`}>
+                                  <span className={`text-[0.95rem] tabular-nums md:text-[1.25rem] ${dateTone}`}>{date.getDate()}</span>
+                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} text-[0.5rem] md:text-[0.65rem]`}>
                                     {count > 0 ? `${count}명` : "0명"}
                                   </span>
                                 </div>
