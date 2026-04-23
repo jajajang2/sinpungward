@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AttendanceGroup {
   id: string;
@@ -126,6 +127,8 @@ const AttendancePage = () => {
   const [memberSearch, setMemberSearch] = useState("");
   const [visitorDraft, setVisitorDraft] = useState<VisitorDraft>(emptyVisitorDraft);
   const [focusedMonth, setFocusedMonth] = useState(() => monthOffset(new Date(), 0));
+  const [isVisitorPanelOpen, setIsVisitorPanelOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const calendarMonths = useMemo(() => {
     return [monthOffset(focusedMonth, -1), monthOffset(focusedMonth, 0), monthOffset(focusedMonth, 1)];
@@ -209,6 +212,10 @@ const AttendancePage = () => {
   }, [selectedDateStr, visitors]);
 
   const selectedPresentCount = selectedDateStr ? attendanceCountsByDate[selectedDateStr] || 0 : 0;
+
+  useEffect(() => {
+    setIsVisitorPanelOpen(!isMobile);
+  }, [isMobile, selectedDateStr]);
 
   const handleSelectDate = (date?: Date) => {
     if (!date) return;
