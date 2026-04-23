@@ -32,7 +32,7 @@ const AppSidebar = () => {
   return (
     <aside
       className={cn(
-        "flex flex-col min-h-screen bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] transition-all duration-300 relative shrink-0",
+        "flex h-screen flex-col overflow-hidden bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] transition-all duration-300 relative shrink-0",
         collapsed ? "w-14" : "w-[220px]"
       )}
     >
@@ -50,7 +50,7 @@ const AppSidebar = () => {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
         {mainNavItems.map(renderNavLink)}
 
         {/* Divider */}
