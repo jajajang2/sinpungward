@@ -360,7 +360,10 @@ const AttendancePage = () => {
                     ? `z-10 -translate-x-[66%] scale-[0.9] opacity-74 ${sideMotionClass}`
                     : `z-10 -translate-x-[34%] scale-[0.9] opacity-74 ${sideMotionClass}`;
                 const weekdayGapClass = isCenter ? "grid grid-cols-7 gap-1 md:gap-1.5" : "grid grid-cols-7 gap-0.5 md:gap-1";
-                const rowGapClass = isCenter ? "mt-1.5 grid grid-cols-7 gap-1 md:gap-1.5" : "mt-1.5 grid grid-cols-7 gap-0.5 md:gap-1";
+                const rowGapClass = isCenter ? "mt-1.5 grid grid-cols-7 gap-1 md:gap-1.5" : "mt-0.5 grid grid-cols-7 gap-0.5 md:mt-1 md:gap-0.75";
+                const cellHeightClass = isCenter
+                  ? "min-h-[2.9rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[4.7rem]"
+                  : "min-h-[2.45rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[3.85rem]";
 
                 return (
                   <div
@@ -400,8 +403,7 @@ const AttendancePage = () => {
                             tbody: "flex-1",
                             row: rowGapClass,
                             head_cell: "w-full rounded-md py-1 text-center text-[0.65rem] font-medium md:text-[0.7rem]",
-                            cell:
-                              "min-h-[2.9rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[4.7rem]",
+                            cell: cellHeightClass,
                             day:
                               "h-full w-full rounded-lg px-1 py-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1 md:py-1.5",
                             day_outside:
