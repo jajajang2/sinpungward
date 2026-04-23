@@ -2,7 +2,7 @@ import { KeyboardEvent, TouchEvent, useEffect, useMemo, useRef, useState } from 
 import { z } from "zod";
 import { format, isSameMonth } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ChevronLeft, Plus, UserPlus, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, UserPlus, Users } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { AttendanceRecord, AttendanceVisitor, Member } from "@/types/church";
@@ -127,6 +127,7 @@ const AttendancePage = () => {
   const [memberSearch, setMemberSearch] = useState("");
   const [visitorDraft, setVisitorDraft] = useState<VisitorDraft>(emptyVisitorDraft);
   const [focusedMonth, setFocusedMonth] = useState(() => monthOffset(new Date(), 0));
+  const [motionDirection, setMotionDirection] = useState<"prev" | "next">("next");
   const [isVisitorPanelOpen, setIsVisitorPanelOpen] = useState(false);
   const isMobile = useIsMobile();
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -225,10 +226,12 @@ const AttendancePage = () => {
   };
 
   const navigateMonth = (offset: number) => {
+    setMotionDirection(offset < 0 ? "prev" : "next");
     setFocusedMonth((currentMonth) => monthOffset(currentMonth, offset));
   };
 
   const focusSpecificMonth = (monthDate: Date) => {
+    setMotionDirection(monthDate < focusedMonth ? "prev" : "next");
     setFocusedMonth(monthOffset(monthDate, 0));
   };
 
@@ -337,18 +340,49 @@ const AttendancePage = () => {
           </div>
 
           <div
-            className="relative overflow-hidden rounded-lg border border-border bg-card/40 px-0 py-4 md:px-2 md:py-5"
+            className="relative overflow-hidden rounded-lg border border-border bg-muted/20 px-0 py-5 md:px-2 md:py-6"
             onTouchStart={handleCalendarTouchStart}
             onTouchEnd={handleCalendarTouchEnd}
           >
-            <div className="relative h-[26rem] sm:h-[29rem] md:h-[33rem]">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-gradient-to-r from-background via-background/70 to-transparent md:w-16" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-gradient-to-l from-background via-background/70 to-transparent md:w-16" />
+
+            <div className="relative h-[29rem] sm:h-[31rem] md:h-[35rem]">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => navigateMonth(-1)}
+                aria-label="이전 달 보기"
+                className="absolute left-[calc(50%-9.65rem)] top-7 z-40 h-10 w-10 rounded-full border-border bg-card/95 shadow-[0_10px_30px_hsl(var(--foreground)/0.12)] backdrop-blur sm:left-[calc(50%-12rem)] md:left-[calc(50%-15.25rem)]"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => navigateMonth(1)}
+                aria-label="다음 달 보기"
+                className="absolute right-[calc(50%-9.65rem)] top-7 z-40 h-10 w-10 rounded-full border-border bg-card/95 shadow-[0_10px_30px_hsl(var(--foreground)/0.12)] backdrop-blur sm:right-[calc(50%-12rem)] md:right-[calc(50%-15.25rem)]"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+
               {calendarMonths.map((monthDate, index) => {
                 const isCenter = index === 1;
+                const sideMotionClass = motionDirection === "next"
+                  ? index === 0
+                    ? "rotate-[-2.5deg]"
+                    : "rotate-[2.5deg]"
+                  : index === 0
+                    ? "rotate-[-3.5deg]"
+                    : "rotate-[3.5deg]";
                 const slotClassName = isCenter
                   ? "z-30 -translate-x-1/2 scale-100 opacity-100"
                   : index === 0
-                    ? "z-10 -translate-x-[84%] scale-[0.96] rotate-[-3deg] opacity-60"
-                    : "z-10 -translate-x-[16%] scale-[0.96] rotate-[3deg] opacity-60";
+                    ? `z-10 -translate-x-[88%] scale-[0.96] opacity-50 ${sideMotionClass}`
+                    : `z-10 -translate-x-[12%] scale-[0.96] opacity-50 ${sideMotionClass}`;
 
                 return (
                   <div
@@ -358,14 +392,14 @@ const AttendancePage = () => {
                     aria-label={isCenter ? undefined : `${format(monthDate, "yyyy년 M월", { locale: ko })} 달력을 가운데로 이동`}
                     onClick={isCenter ? undefined : () => focusSpecificMonth(monthDate)}
                     onKeyDown={isCenter ? undefined : (event) => handleMonthPreviewKeyDown(event, monthDate)}
-                    className={`absolute left-1/2 top-1/2 w-[92%] max-w-3xl -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:w-[78%] ${slotClassName}`}
+                    className={`absolute left-1/2 top-1/2 w-[96%] max-w-[42rem] -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:w-[84%] ${slotClassName}`}
                   >
                     <Card
-                      className={`overflow-hidden border-border bg-card p-3 shadow-[0_18px_50px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:p-4 ${
-                        isCenter ? "ring-1 ring-border/60" : "bg-card/90"
+                      className={`overflow-hidden border-border bg-card px-3 pb-3 pt-5 shadow-[0_18px_50px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-4 md:pb-4 md:pt-5 ${
+                        isCenter ? "ring-1 ring-border/60" : "bg-card/92 shadow-[0_14px_40px_hsl(var(--foreground)/0.05)]"
                       }`}
                     >
-                      <div className="mb-3 text-center text-base font-semibold text-foreground md:mb-4 md:text-lg">
+                      <div className="mb-3 text-center text-lg font-semibold text-foreground md:mb-4 md:text-[1.75rem]">
                         {format(monthDate, "yyyy년 M월", { locale: ko })}
                       </div>
                       <div className={isCenter ? "" : "pointer-events-none"}>
@@ -386,9 +420,9 @@ const AttendancePage = () => {
                             table: "w-full table-fixed border-collapse",
                             head_row: "grid grid-cols-7 gap-1 md:gap-1.5 [&>th:first-child]:text-destructive [&>th:last-child]:text-primary",
                             row: "mt-1.5 grid grid-cols-7 gap-1 md:gap-1.5",
-                            head_cell: "w-full rounded-md py-1 text-center text-[0.72rem] font-medium md:text-[0.82rem]",
+                            head_cell: "w-full rounded-md py-1 text-center text-sm font-medium md:text-base",
                             cell:
-                              "min-h-[5.1rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[6.4rem]",
+                              "min-h-[5.45rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[6.85rem]",
                             day:
                               "h-full w-full rounded-md px-1 py-1.5 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1.5 md:py-2",
                             day_outside:
@@ -410,9 +444,9 @@ const AttendancePage = () => {
                                     : "text-foreground";
 
                               return (
-                                <div className="flex h-full w-full flex-col items-center justify-center gap-1 leading-none md:gap-1.5">
-                                  <span className={`text-base tabular-nums md:text-lg ${dateTone}`}>{date.getDate()}</span>
-                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} text-sm md:text-base`}>
+                                <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 leading-none md:gap-2">
+                                  <span className={`text-lg tabular-nums md:text-[1.6rem] ${dateTone}`}>{date.getDate()}</span>
+                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} text-sm md:text-lg`}>
                                     {count > 0 ? `${count}명` : "0명"}
                                   </span>
                                 </div>
