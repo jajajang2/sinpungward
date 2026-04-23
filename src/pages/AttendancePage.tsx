@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { KeyboardEvent, TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { format, isSameMonth } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, UserPlus, Users } from "lucide-react";
+import { ChevronLeft, Plus, UserPlus, Users } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { AttendanceRecord, AttendanceVisitor, Member } from "@/types/church";
@@ -129,6 +129,7 @@ const AttendancePage = () => {
   const [focusedMonth, setFocusedMonth] = useState(() => monthOffset(new Date(), 0));
   const [isVisitorPanelOpen, setIsVisitorPanelOpen] = useState(false);
   const isMobile = useIsMobile();
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const calendarMonths = useMemo(() => {
     return [monthOffset(focusedMonth, -1), monthOffset(focusedMonth, 0), monthOffset(focusedMonth, 1)];
@@ -223,6 +224,38 @@ const AttendancePage = () => {
     setSelectedDate(date);
   };
 
+  const navigateMonth = (offset: number) => {
+    setFocusedMonth((currentMonth) => monthOffset(currentMonth, offset));
+  };
+
+  const focusSpecificMonth = (monthDate: Date) => {
+    setFocusedMonth(monthOffset(monthDate, 0));
+  };
+
+  const handleMonthPreviewKeyDown = (event: KeyboardEvent<HTMLDivElement>, monthDate: Date) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      focusSpecificMonth(monthDate);
+    }
+  };
+
+  const handleCalendarTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleCalendarTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    if (Math.abs(deltaX) < 44 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    navigateMonth(deltaX > 0 ? -1 : 1);
+  };
+
   const toggleAttendance = async (memberId: string) => {
     if (!selectedDateStr) return;
 
@@ -299,101 +332,97 @@ const AttendancePage = () => {
         <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-6 px-4 py-5 md:px-6 md:py-6">
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">출석부</h1>
-            <p className="text-sm text-muted-foreground">최근 3개월 달력에서 날짜를 누르면 해당 일자의 출석부가 열립니다.</p>
+            <p className="text-sm text-muted-foreground">가운데 달력에서 날짜를 누르면 출석부가 열리고, 양옆 달력은 탭하거나 밀어서 가운데로 가져올 수 있습니다.</p>
             {loading && <p className="text-xs text-muted-foreground">출석 현황을 불러오는 중...</p>}
           </div>
 
-          <div className="relative overflow-hidden rounded-lg border border-border bg-card/40 px-1 py-3 md:px-3">
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute left-[22%] top-1/2 z-20 h-9 w-9 -translate-x-1/2 -translate-y-1/2 border-border bg-background/95 shadow-sm md:left-[34%]"
-              onClick={() => setFocusedMonth(monthOffset(focusedMonth, -1))}
-              aria-label="이전 달 보기"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute right-[22%] top-1/2 z-20 h-9 w-9 translate-x-1/2 -translate-y-1/2 border-border bg-background/95 shadow-sm md:right-[34%]"
-              onClick={() => setFocusedMonth(monthOffset(focusedMonth, 1))}
-              aria-label="다음 달 보기"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-
-            <div className="grid grid-cols-[0.26fr_0.48fr_0.26fr] items-stretch gap-1 md:grid-cols-[0.28fr_0.44fr_0.28fr] md:gap-3">
+          <div
+            className="relative overflow-hidden rounded-lg border border-border bg-card/40 px-0 py-4 md:px-2 md:py-5"
+            onTouchStart={handleCalendarTouchStart}
+            onTouchEnd={handleCalendarTouchEnd}
+          >
+            <div className="relative h-[26rem] sm:h-[29rem] md:h-[33rem]">
               {calendarMonths.map((monthDate, index) => {
                 const isCenter = index === 1;
+                const slotClassName = isCenter
+                  ? "z-30 -translate-x-1/2 scale-100 opacity-100"
+                  : index === 0
+                    ? "z-10 -translate-x-[84%] scale-[0.96] rotate-[-3deg] opacity-60"
+                    : "z-10 -translate-x-[16%] scale-[0.96] rotate-[3deg] opacity-60";
 
                 return (
-                  <Card
+                  <div
                     key={monthDate.toISOString()}
-                    className={`overflow-hidden border-border p-2 transition-all md:p-3 ${
-                      isCenter
-                        ? "scale-100 bg-card opacity-100 shadow-sm"
-                        : "scale-[0.94] bg-card/70 opacity-55"
-                    }`}
+                    role={isCenter ? undefined : "button"}
+                    tabIndex={isCenter ? -1 : 0}
+                    aria-label={isCenter ? undefined : `${format(monthDate, "yyyy년 M월", { locale: ko })} 달력을 가운데로 이동`}
+                    onClick={isCenter ? undefined : () => focusSpecificMonth(monthDate)}
+                    onKeyDown={isCenter ? undefined : (event) => handleMonthPreviewKeyDown(event, monthDate)}
+                    className={`absolute left-1/2 top-1/2 w-[92%] max-w-3xl -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:w-[78%] ${slotClassName}`}
                   >
-                    <div className={`mb-2 text-center font-semibold text-foreground ${isCenter ? "text-sm md:text-base" : "text-xs md:text-sm"}`}>
-                      {format(monthDate, "yyyy년 M월", { locale: ko })}
-                    </div>
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={handleSelectDate}
-                      month={monthDate}
-                      fromMonth={monthDate}
-                      toMonth={monthDate}
-                      showOutsideDays
-                      className="w-full"
-                      classNames={{
-                        months: "block w-full",
-                        month: "w-full space-y-2 md:space-y-3",
-                        caption: "justify-center",
-                        nav: "hidden",
-                        table: "w-full table-fixed border-collapse",
-                        head_row: "grid grid-cols-7 gap-0.5 md:gap-1 [&>th:first-child]:text-destructive [&>th:last-child]:text-primary",
-                        row: "mt-1 grid grid-cols-7 gap-0.5 md:gap-1",
-                        head_cell: `w-full rounded-md py-1 text-center font-normal ${isCenter ? "text-[0.72rem] md:text-[0.8rem]" : "text-[0.62rem] md:text-[0.72rem]"}`,
-                        cell: `aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md ${
-                          isCenter ? "min-h-[4.95rem] md:min-h-[5.35rem]" : "min-h-[3.1rem] md:min-h-[4.2rem]"
-                        }`,
-                        day:
-                          "h-full w-full rounded-md px-0.5 py-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1 md:py-1.5",
-                        day_outside:
-                          "day-outside text-muted-foreground/70 opacity-100 aria-selected:bg-accent aria-selected:text-accent-foreground",
-                      }}
-                      components={{
-                        DayContent: ({ date }) => {
-                          const dateStr = toDateStr(date);
-                          const count = attendanceCountsByDate[dateStr] || 0;
-                          const isSunday = date.getDay() === 0;
-                          const isSaturday = date.getDay() === 6;
-                          const isOutside = !isSameMonth(date, monthDate);
-                          const dateTone = isOutside
-                            ? "text-muted-foreground/70"
-                            : isSunday
-                              ? "text-destructive"
-                              : isSaturday
-                                ? "text-primary"
-                                : "text-foreground";
+                    <Card
+                      className={`overflow-hidden border-border bg-card p-3 shadow-[0_18px_50px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:p-4 ${
+                        isCenter ? "ring-1 ring-border/60" : "bg-card/90"
+                      }`}
+                    >
+                      <div className="mb-3 text-center text-base font-semibold text-foreground md:mb-4 md:text-lg">
+                        {format(monthDate, "yyyy년 M월", { locale: ko })}
+                      </div>
+                      <div className={isCenter ? "" : "pointer-events-none"}>
+                        <Calendar
+                          mode="single"
+                          selected={isCenter ? selectedDate : undefined}
+                          onSelect={isCenter ? handleSelectDate : undefined}
+                          month={monthDate}
+                          fromMonth={monthDate}
+                          toMonth={monthDate}
+                          showOutsideDays
+                          className="w-full"
+                          classNames={{
+                            months: "block w-full",
+                            month: "w-full space-y-3 md:space-y-4",
+                            caption: "justify-center",
+                            nav: "hidden",
+                            table: "w-full table-fixed border-collapse",
+                            head_row: "grid grid-cols-7 gap-1 md:gap-1.5 [&>th:first-child]:text-destructive [&>th:last-child]:text-primary",
+                            row: "mt-1.5 grid grid-cols-7 gap-1 md:gap-1.5",
+                            head_cell: "w-full rounded-md py-1 text-center text-[0.72rem] font-medium md:text-[0.82rem]",
+                            cell:
+                              "min-h-[5.1rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[6.4rem]",
+                            day:
+                              "h-full w-full rounded-md px-1 py-1.5 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1.5 md:py-2",
+                            day_outside:
+                              "day-outside text-muted-foreground/70 opacity-100 aria-selected:bg-accent aria-selected:text-accent-foreground",
+                          }}
+                          components={{
+                            DayContent: ({ date }) => {
+                              const dateStr = toDateStr(date);
+                              const count = attendanceCountsByDate[dateStr] || 0;
+                              const isSunday = date.getDay() === 0;
+                              const isSaturday = date.getDay() === 6;
+                              const isOutside = !isSameMonth(date, monthDate);
+                              const dateTone = isOutside
+                                ? "text-muted-foreground/70"
+                                : isSunday
+                                  ? "text-destructive"
+                                  : isSaturday
+                                    ? "text-primary"
+                                    : "text-foreground";
 
-                          return (
-                            <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 leading-none md:gap-1">
-                              <span className={`${dateTone} tabular-nums ${isCenter ? "text-sm md:text-base" : "text-[0.68rem] md:text-sm"}`}>
-                                {date.getDate()}
-                              </span>
-                              <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} ${isCenter ? "text-xs md:text-sm" : "text-[0.6rem] md:text-xs"}`}>
-                                {count > 0 ? `${count}명` : "0명"}
-                              </span>
-                            </div>
-                          );
-                        },
-                      }}
-                    />
-                  </Card>
+                              return (
+                                <div className="flex h-full w-full flex-col items-center justify-center gap-1 leading-none md:gap-1.5">
+                                  <span className={`text-base tabular-nums md:text-lg ${dateTone}`}>{date.getDate()}</span>
+                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} text-sm md:text-base`}>
+                                    {count > 0 ? `${count}명` : "0명"}
+                                  </span>
+                                </div>
+                              );
+                            },
+                          }}
+                        />
+                      </div>
+                    </Card>
+                  </div>
                 );
               })}
             </div>
