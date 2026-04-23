@@ -357,8 +357,8 @@ const AttendancePage = () => {
                 const slotClassName = isCenter
                   ? "z-30 -translate-x-1/2 scale-100 opacity-100"
                   : index === 0
-                    ? `z-10 -translate-x-[72%] scale-[0.92] opacity-80 ${sideMotionClass}`
-                    : `z-10 -translate-x-[28%] scale-[0.92] opacity-80 ${sideMotionClass}`;
+                    ? `z-10 -translate-x-[88%] scale-[0.92] opacity-80 ${sideMotionClass}`
+                    : `z-10 -translate-x-[12%] scale-[0.92] opacity-80 ${sideMotionClass}`;
                 const weekdayGapClass = isCenter
                   ? "grid grid-cols-7 gap-0.75 md:gap-1.25"
                   : "grid grid-cols-7 gap-0.5 md:gap-0.75";
