@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AttendanceGroup {
   id: string;
@@ -126,6 +127,8 @@ const AttendancePage = () => {
   const [memberSearch, setMemberSearch] = useState("");
   const [visitorDraft, setVisitorDraft] = useState<VisitorDraft>(emptyVisitorDraft);
   const [focusedMonth, setFocusedMonth] = useState(() => monthOffset(new Date(), 0));
+  const [isVisitorPanelOpen, setIsVisitorPanelOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const calendarMonths = useMemo(() => {
     return [monthOffset(focusedMonth, -1), monthOffset(focusedMonth, 0), monthOffset(focusedMonth, 1)];
@@ -209,6 +212,10 @@ const AttendancePage = () => {
   }, [selectedDateStr, visitors]);
 
   const selectedPresentCount = selectedDateStr ? attendanceCountsByDate[selectedDateStr] || 0 : 0;
+
+  useEffect(() => {
+    setIsVisitorPanelOpen(!isMobile);
+  }, [isMobile, selectedDateStr]);
 
   const handleSelectDate = (date?: Date) => {
     if (!date) return;
@@ -397,20 +404,20 @@ const AttendancePage = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-background md:overflow-hidden">
-      <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-4 px-4 py-5 md:h-full md:px-6 md:py-6">
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => setSelectedDate(undefined)} aria-label="달력으로 돌아가기">
+    <div className="min-h-screen overflow-y-auto bg-background">
+      <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-3 px-3 pb-5 pt-16 sm:px-4 md:h-screen md:gap-4 md:px-6 md:py-6">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-2 md:items-center">
+              <Button variant="outline" size="icon" onClick={() => setSelectedDate(undefined)} aria-label="달력으로 돌아가기" className="mt-0.5 h-9 w-9 shrink-0 md:mt-0">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">{formatSelectedDate(selectedDate)}</h1>
-                <p className="text-sm text-muted-foreground">전체 출석 {selectedPresentCount}명 · 방문자 {selectedVisitors.length}명</p>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-foreground md:text-xl">{formatSelectedDate(selectedDate)}</h1>
+                <p className="text-xs text-muted-foreground md:text-sm">전체 출석 {selectedPresentCount}명 · 방문자 {selectedVisitors.length}명</p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => setSelectedDate(undefined)}>다른 날짜 선택</Button>
+            <Button variant="outline" onClick={() => setSelectedDate(undefined)} className="w-full md:w-auto">다른 날짜 선택</Button>
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1">
@@ -436,40 +443,41 @@ const AttendancePage = () => {
           </div>
         </div>
 
-          <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] md:overflow-hidden">
-          <Card className="flex min-h-[44vh] flex-col overflow-hidden border-border md:min-h-0">
-            <div className="border-b border-border p-4">
+        <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] md:gap-4 md:overflow-hidden">
+          <Card className="order-1 flex min-h-[56vh] flex-col overflow-hidden border-border md:min-h-0">
+            <div className="border-b border-border p-3 md:p-4">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
                 <h2 className="text-base font-semibold text-foreground">{selectedGroup.label}</h2>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">회원마다 체크박스 한 칸만 표시됩니다.</p>
-                <div className="mt-3">
-                  <Input
-                    value={memberSearch}
-                    onChange={(event) => setMemberSearch(event.target.value)}
-                    placeholder="이름 검색"
-                    aria-label="회원 이름 검색"
-                  />
-                </div>
+              <p className="mt-1 text-xs text-muted-foreground md:text-sm">회원마다 체크박스 한 칸만 표시됩니다.</p>
+              <div className="mt-3">
+                <Input
+                  className="h-9 md:h-10"
+                  value={memberSearch}
+                  onChange={(event) => setMemberSearch(event.target.value)}
+                  placeholder="이름 검색"
+                  aria-label="회원 이름 검색"
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 border-b border-border bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground">
+            <div className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 border-b border-border bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground md:px-4 sticky top-0 z-10">
               <div>이름</div>
               <div className="text-center">출석</div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-border">
               {filteredMembers.length === 0 ? (
-                <div className="p-6 text-sm text-muted-foreground">해당 그룹에 회원이 없습니다.</div>
+                <div className="p-5 text-sm text-muted-foreground md:p-6">해당 그룹에 회원이 없습니다.</div>
               ) : (
                 filteredMembers.map((member) => {
                   const checked = selectedDateStr ? attendance[member.id]?.[selectedDateStr] === true : false;
                   return (
-                    <div key={member.id} className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 px-4 py-3 hover:bg-accent/40">
+                    <div key={member.id} className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 px-3 py-3 hover:bg-accent/40 md:px-4 md:py-3">
                       <div className="min-w-0">
-                        <div className="truncate font-medium text-foreground">{member.name}</div>
-                        <div className="text-xs text-muted-foreground">{selectedGroup.description}</div>
+                        <div className="truncate text-sm font-medium text-foreground md:text-base">{member.name}</div>
+                        <div className="text-[11px] text-muted-foreground md:text-xs">{selectedGroup.description}</div>
                       </div>
                       <div className="flex justify-center">
                         <Checkbox checked={checked} onCheckedChange={() => toggleAttendance(member.id)} aria-label={`${member.name} 출석 체크`} />
@@ -481,43 +489,82 @@ const AttendancePage = () => {
             </div>
           </Card>
 
-            <Card className="border-border md:sticky md:top-4 md:self-start">
-            <div className="border-b border-border p-4">
-              <div className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4 text-primary" />
-                <h2 className="text-base font-semibold text-foreground">방문자</h2>
+          <Card className="order-2 border-border md:sticky md:top-4 md:self-start">
+            <div className="border-b border-border p-3 md:p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-primary" />
+                  <h2 className="text-base font-semibold text-foreground">방문자</h2>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setIsVisitorPanelOpen((prev) => !prev)} className="h-8 px-3 md:hidden">
+                  {isVisitorPanelOpen ? "접기" : "열기"}
+                </Button>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground md:text-sm">이름, 연락처, 메모를 기록할 수 있습니다.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground md:text-sm">이름, 연락처, 메모를 기록할 수 있습니다.</p>
             </div>
 
             <div className="space-y-3 p-3 md:space-y-4 md:p-4">
-              <div className="space-y-2 rounded-lg border border-border bg-background p-2.5 md:space-y-3 md:p-3">
-                <Input className="h-9 md:h-10" placeholder="이름" value={visitorDraft.name} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))} />
-                <Input className="h-9 md:h-10" placeholder="연락처" value={visitorDraft.phone} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))} />
-                <Textarea className="min-h-[68px] resize-none md:min-h-[96px]" rows={2} placeholder="메모" value={visitorDraft.notes} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))} />
-                <Button onClick={handleSaveVisitor} disabled={savingVisitor} className="w-full">
-                  <Plus className="mr-1 h-4 w-4" />방문자 추가
-                </Button>
+              <div className="rounded-lg border border-border bg-background p-2.5 md:p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">방문자 {selectedVisitors.length}명</div>
+                    <div className="text-[11px] text-muted-foreground md:text-xs">모바일에서는 필요할 때만 입력창을 펼칠 수 있습니다.</div>
+                  </div>
+                  {!isVisitorPanelOpen && (
+                    <Button onClick={() => setIsVisitorPanelOpen(true)} size="sm" className="h-8 px-3 md:hidden">
+                      <Plus className="mr-1 h-4 w-4" />추가
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                {selectedVisitors.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
-                ) : (
-                  selectedVisitors.map((visitor) => (
-                    <div key={visitor.id} className="rounded-lg border border-border bg-background p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <div className="text-sm font-medium text-foreground">{visitor.name}</div>
-                          <div className="text-xs text-muted-foreground md:text-sm">{visitor.phone || "연락처 없음"}</div>
-                          {visitor.notes && <p className="text-xs text-foreground/80 md:text-sm">{visitor.notes}</p>}
+              {isVisitorPanelOpen && (
+                <div className="space-y-3">
+                  <div className="space-y-2 rounded-lg border border-border bg-background p-2.5 md:space-y-3 md:p-3">
+                    <Input className="h-8.5 md:h-10" placeholder="이름" value={visitorDraft.name} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))} />
+                    <Input className="h-8.5 md:h-10" placeholder="연락처" value={visitorDraft.phone} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))} />
+                    <Textarea className="min-h-[60px] resize-none text-sm md:min-h-[96px]" rows={2} placeholder="메모" value={visitorDraft.notes} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))} />
+                    <Button onClick={handleSaveVisitor} disabled={savingVisitor} className="w-full">
+                      <Plus className="mr-1 h-4 w-4" />방문자 추가
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {selectedVisitors.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
+                    ) : (
+                      selectedVisitors.map((visitor) => (
+                        <div key={visitor.id} className="rounded-lg border border-border bg-background p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 space-y-1">
+                              <div className="text-sm font-medium text-foreground">{visitor.name}</div>
+                              <div className="text-xs text-muted-foreground md:text-sm">{visitor.phone || "연락처 없음"}</div>
+                              {visitor.notes && <p className="text-xs text-foreground/80 md:text-sm">{visitor.notes}</p>}
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>삭제</Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!isVisitorPanelOpen && selectedVisitors.length > 0 && (
+                <div className="space-y-2">
+                  {selectedVisitors.map((visitor) => (
+                    <div key={visitor.id} className="rounded-lg border border-border bg-background px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-foreground">{visitor.name}</div>
+                          <div className="truncate text-[11px] text-muted-foreground">{visitor.phone || "연락처 없음"}</div>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>삭제</Button>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </Card>
         </div>
