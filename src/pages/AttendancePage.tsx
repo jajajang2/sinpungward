@@ -340,21 +340,21 @@ const AttendancePage = () => {
           </div>
 
           <div
-            className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-muted/10 px-0 py-4 md:px-2 md:py-6"
+            className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-0 py-3 md:px-2 md:py-4"
             onTouchStart={handleCalendarTouchStart}
             onTouchEnd={handleCalendarTouchEnd}
           >
             <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-10 bg-gradient-to-r from-background via-background/80 to-transparent md:w-20" />
             <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-gradient-to-l from-background via-background/80 to-transparent md:w-20" />
 
-            <div className="relative h-[31rem] sm:h-[34rem] md:h-[40rem]">
+            <div className="relative h-[21rem] sm:h-[23rem] md:h-[27rem]">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 onClick={() => navigateMonth(-1)}
                 aria-label="이전 달 보기"
-                className="absolute left-[calc(50%-9.8rem)] top-8 z-40 h-12 w-12 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:left-[calc(50%-12.4rem)] md:left-[calc(50%-16.8rem)]"
+                className="absolute left-[calc(50%-7rem)] top-5 z-40 h-10 w-10 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:left-[calc(50%-8.4rem)] md:left-[calc(50%-11rem)]"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -364,7 +364,7 @@ const AttendancePage = () => {
                 size="icon"
                 onClick={() => navigateMonth(1)}
                 aria-label="다음 달 보기"
-                className="absolute right-[calc(50%-9.8rem)] top-8 z-40 h-12 w-12 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:right-[calc(50%-12.4rem)] md:right-[calc(50%-16.8rem)]"
+                className="absolute right-[calc(50%-7rem)] top-5 z-40 h-10 w-10 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:right-[calc(50%-8.4rem)] md:right-[calc(50%-11rem)]"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -381,8 +381,8 @@ const AttendancePage = () => {
                 const slotClassName = isCenter
                   ? "z-30 -translate-x-1/2 scale-100 opacity-100"
                   : index === 0
-                    ? `z-10 -translate-x-[90.5%] scale-[0.975] opacity-45 ${sideMotionClass}`
-                    : `z-10 -translate-x-[9.5%] scale-[0.975] opacity-45 ${sideMotionClass}`;
+                    ? `z-10 -translate-x-[77%] scale-[0.66] opacity-55 ${sideMotionClass}`
+                    : `z-10 -translate-x-[23%] scale-[0.66] opacity-55 ${sideMotionClass}`;
 
                 return (
                   <div
@@ -392,14 +392,14 @@ const AttendancePage = () => {
                     aria-label={isCenter ? undefined : `${format(monthDate, "yyyy년 M월", { locale: ko })} 달력을 가운데로 이동`}
                     onClick={isCenter ? undefined : () => focusSpecificMonth(monthDate)}
                     onKeyDown={isCenter ? undefined : (event) => handleMonthPreviewKeyDown(event, monthDate)}
-                    className={`absolute left-1/2 top-1/2 w-[98%] max-w-[72rem] -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:w-[91%] ${slotClassName}`}
+                    className={`absolute left-1/2 top-1/2 w-[65%] max-w-[48rem] -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:w-[66%] ${slotClassName}`}
                   >
                     <Card
-                      className={`overflow-hidden rounded-[1.6rem] border border-border/70 bg-card px-4 pb-4 pt-5 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-8 md:pb-8 md:pt-6 ${
+                      className={`overflow-hidden rounded-[1.25rem] border border-border/70 bg-card px-3 pb-3 pt-3 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-5 md:pb-5 md:pt-4 ${
                         isCenter ? "ring-1 ring-border/50" : "bg-card/95 shadow-[0_20px_52px_hsl(var(--foreground)/0.05)]"
                       }`}
                     >
-                      <div className="mb-5 text-center text-[2rem] font-bold text-foreground md:mb-6 md:text-[3.75rem]">
+                      <div className="mb-3 text-center text-lg font-bold text-foreground md:mb-4 md:text-[2.1rem]">
                         {format(monthDate, "yyyy년 M월", { locale: ko })}
                       </div>
                       <div className={isCenter ? "" : "pointer-events-none"}>
@@ -414,17 +414,17 @@ const AttendancePage = () => {
                           className="w-full"
                           classNames={{
                             months: "block w-full",
-                            month: "w-full space-y-4 md:space-y-5",
+                            month: "w-full space-y-2.5 md:space-y-3",
                             caption: "justify-center",
                             nav: "hidden",
                             table: "w-full table-fixed border-collapse",
-                            head_row: "grid grid-cols-7 gap-1.5 md:gap-2 [&>th:first-child]:text-destructive [&>th:last-child]:text-primary",
-                            row: "mt-2 grid grid-cols-7 gap-1.5 md:gap-2",
-                            head_cell: "w-full rounded-md py-1.5 text-center text-base font-medium md:text-[2rem]",
+                            head_row: "grid grid-cols-7 gap-1 md:gap-1.5 [&>th:first-child]:text-destructive [&>th:last-child]:text-primary",
+                            row: "mt-1.5 grid grid-cols-7 gap-1 md:gap-1.5",
+                            head_cell: "w-full rounded-md py-1 text-center text-xs font-medium md:text-base",
                             cell:
-                              "min-h-[4.6rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[7.5rem]",
+                              "min-h-[2.9rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[4.7rem]",
                             day:
-                              "h-full w-full rounded-xl px-1 py-1.5 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1.5 md:py-2",
+                              "h-full w-full rounded-lg px-1 py-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1 md:py-1.5",
                             day_outside:
                               "day-outside text-muted-foreground/70 opacity-100 aria-selected:bg-accent aria-selected:text-accent-foreground",
                           }}
@@ -444,9 +444,9 @@ const AttendancePage = () => {
                                     : "text-foreground";
 
                               return (
-                                <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 leading-none md:gap-2.5">
-                                  <span className={`text-[1.7rem] tabular-nums md:text-[3rem] ${dateTone}`}>{date.getDate()}</span>
-                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} text-[0.8rem] md:text-lg`}>
+                                <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 leading-none md:gap-1">
+                                  <span className={`text-base tabular-nums md:text-[1.9rem] ${dateTone}`}>{date.getDate()}</span>
+                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} text-[0.6rem] md:text-sm`}>
                                     {count > 0 ? `${count}명` : "0명"}
                                   </span>
                                 </div>
