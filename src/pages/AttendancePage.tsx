@@ -340,11 +340,12 @@ const AttendancePage = () => {
                       fromMonth={monthDate}
                       toMonth={monthDate}
                       showOutsideDays
-                      hideNavigation
                       className="w-full"
                       classNames={{
                         months: "block w-full",
                         month: "w-full space-y-2 md:space-y-3",
+                        caption: "justify-center",
+                        nav: "hidden",
                         table: "w-full table-fixed border-collapse",
                         head_row: "grid grid-cols-7 gap-0.5 md:gap-1 [&>th:first-child]:text-destructive [&>th:last-child]:text-primary",
                         row: "mt-1 grid grid-cols-7 gap-0.5 md:gap-1",
