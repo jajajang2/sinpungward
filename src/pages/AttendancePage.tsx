@@ -340,11 +340,11 @@ const AttendancePage = () => {
           </div>
 
           <div
-            className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-2 py-4 md:px-4 md:py-5"
+            className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-1.5 py-3 sm:px-2 sm:py-4 md:px-4 md:py-4"
             onTouchStart={handleCalendarTouchStart}
             onTouchEnd={handleCalendarTouchEnd}
           >
-            <div className="relative h-[25rem] sm:h-[28rem] md:h-[34rem]">
+            <div className="relative h-[27rem] sm:h-[30rem] md:h-[36rem]">
               {calendarMonths.map((monthDate, index) => {
                 const isCenter = index === 1;
                 const sideMotionClass = motionDirection === "next"
@@ -357,13 +357,20 @@ const AttendancePage = () => {
                 const slotClassName = isCenter
                   ? "z-30 -translate-x-1/2 scale-100 opacity-100"
                   : index === 0
-                    ? `z-10 -translate-x-[66%] scale-[0.9] opacity-74 ${sideMotionClass}`
-                    : `z-10 -translate-x-[34%] scale-[0.9] opacity-74 ${sideMotionClass}`;
-                const weekdayGapClass = isCenter ? "grid grid-cols-7 gap-1 md:gap-1.5" : "grid grid-cols-7 gap-0.5 md:gap-1";
-                const rowGapClass = isCenter ? "mt-1.5 grid grid-cols-7 gap-1 md:gap-1.5" : "mt-0.5 grid grid-cols-7 gap-0.5 md:mt-1 md:gap-0.75";
+                    ? `z-10 -translate-x-[72%] scale-[0.92] opacity-80 ${sideMotionClass}`
+                    : `z-10 -translate-x-[28%] scale-[0.92] opacity-80 ${sideMotionClass}`;
+                const weekdayGapClass = isCenter
+                  ? "grid grid-cols-7 gap-0.75 md:gap-1.25"
+                  : "grid grid-cols-7 gap-0.5 md:gap-0.75";
+                const rowGapClass = isCenter
+                  ? "mt-1 grid grid-cols-7 gap-x-0.75 gap-y-0.75 md:mt-1.25 md:gap-x-1.25 md:gap-y-1"
+                  : "mt-0 grid grid-cols-7 gap-x-0.5 gap-y-0.5 md:mt-0.5 md:gap-x-0.75 md:gap-y-0.5";
                 const cellHeightClass = isCenter
-                  ? "min-h-[2.9rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[4.7rem]"
-                  : "min-h-[2.45rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[3.85rem]";
+                  ? "min-h-[2.75rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[4.35rem]"
+                  : "min-h-[2.15rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[3.35rem]";
+                const dayClassName = isCenter
+                  ? "h-full w-full rounded-lg px-1 py-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1 md:py-1.25"
+                  : "h-full w-full rounded-lg px-0.5 py-0.5 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-0.5 md:py-0.75";
 
                 return (
                   <div
@@ -373,17 +380,17 @@ const AttendancePage = () => {
                     aria-label={isCenter ? undefined : `${format(monthDate, "yyyy년 M월", { locale: ko })} 달력을 가운데로 이동`}
                     onClick={isCenter ? undefined : () => focusSpecificMonth(monthDate)}
                     onKeyDown={isCenter ? undefined : (event) => handleMonthPreviewKeyDown(event, monthDate)}
-                    className={`absolute left-1/2 top-1 h-[23.5rem] w-[62%] max-w-[40rem] transform-gpu transition-all duration-500 ease-out sm:h-[26rem] md:top-2 md:h-[31rem] md:w-[60%] ${slotClassName}`}
+                    className={`absolute left-1/2 top-1.5 h-[25.5rem] w-[66%] max-w-[40rem] transform-gpu transition-all duration-500 ease-out sm:h-[28rem] md:top-2 md:h-[33.5rem] md:w-[58%] ${slotClassName}`}
                   >
                     <Card
-                      className={`h-full overflow-hidden rounded-[1.25rem] border border-border/70 bg-card px-3 pb-3 pt-3 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-5 md:pb-5 md:pt-4 ${
+                      className={`flex h-full flex-col overflow-hidden rounded-[1.25rem] border border-border/70 bg-card px-2.5 pb-2.5 pt-2 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-4 md:pb-4 md:pt-3 ${
                         isCenter ? "ring-1 ring-border/50" : "bg-card/95 shadow-[0_20px_52px_hsl(var(--foreground)/0.05)]"
                       }`}
                     >
-                      <div className={`mb-3 text-center font-bold text-foreground md:mb-4 ${isCenter ? "text-xl md:text-[2.2rem]" : "text-base md:text-xl"}`}>
+                      <div className={`mb-1.5 text-center font-bold text-foreground md:mb-2 ${isCenter ? "text-lg md:text-[2rem]" : "text-sm md:text-lg"}`}>
                         {format(monthDate, "yyyy년 M월", { locale: ko })}
                       </div>
-                      <div className={`h-[calc(100%-2.25rem)] md:h-[calc(100%-3rem)] ${isCenter ? "" : "pointer-events-none"}`}>
+                      <div className={`min-h-0 flex-1 ${isCenter ? "" : "pointer-events-none"}`}>
                         <Calendar
                           mode="single"
                           selected={isCenter ? selectedDate : undefined}
@@ -392,20 +399,19 @@ const AttendancePage = () => {
                           fromMonth={monthDate}
                           toMonth={monthDate}
                           showOutsideDays
-                          className="h-full w-full"
+                          className="h-full w-full p-1 md:p-1.5"
                           classNames={{
-                            months: "block w-full",
-                            month: "flex h-full flex-col w-full space-y-2 md:space-y-3",
+                            months: "block h-full w-full",
+                            month: "flex h-full min-h-0 w-full flex-col space-y-1 md:space-y-1.5",
                             caption: "justify-center",
                             nav: "hidden",
                             table: "h-full w-full table-fixed border-collapse",
                             head_row: `${weekdayGapClass} [&>th:first-child]:text-destructive [&>th:last-child]:text-primary`,
                             tbody: "flex-1",
                             row: rowGapClass,
-                            head_cell: "w-full rounded-md py-1 text-center text-[0.65rem] font-medium md:text-[0.7rem]",
+                            head_cell: `${isCenter ? "py-0.5 text-[0.62rem] md:py-1 md:text-[0.7rem]" : "py-0 text-[0.55rem] md:py-0.5 md:text-[0.62rem]"} w-full rounded-md text-center font-medium`,
                             cell: cellHeightClass,
-                            day:
-                              "h-full w-full rounded-lg px-1 py-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1 md:py-1.5",
+                            day: dayClassName,
                             day_outside:
                               "day-outside text-muted-foreground/70 opacity-100 aria-selected:bg-accent aria-selected:text-accent-foreground",
                           }}
@@ -425,9 +431,11 @@ const AttendancePage = () => {
                                     : "text-foreground";
 
                               return (
-                                <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 leading-none md:gap-1">
-                                  <span className={`text-[0.95rem] tabular-nums md:text-[1.25rem] ${dateTone}`}>{date.getDate()}</span>
-                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} text-[0.5rem] md:text-[0.65rem]`}>
+                                <div className={`flex h-full w-full flex-col items-center justify-center leading-none ${isCenter ? "gap-0.5 md:gap-0.75" : "gap-0 md:gap-0.25"}`}>
+                                  <span className={`${isCenter ? "text-[0.82rem] md:text-[1.12rem]" : "text-[0.62rem] md:text-[0.9rem]"} tabular-nums ${dateTone}`}>
+                                    {date.getDate()}
+                                  </span>
+                                  <span className={`${count > 0 ? "font-semibold text-foreground" : "text-muted-foreground/0"} ${isCenter ? "text-[0.48rem] md:text-[0.62rem]" : "text-[0.4rem] md:text-[0.52rem]"}`}>
                                     {count > 0 ? `${count}명` : "0명"}
                                   </span>
                                 </div>
