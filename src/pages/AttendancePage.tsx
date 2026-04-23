@@ -340,21 +340,21 @@ const AttendancePage = () => {
           </div>
 
           <div
-            className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-0 py-3 md:px-2 md:py-4"
+            className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-0 py-4 md:px-2 md:py-5"
             onTouchStart={handleCalendarTouchStart}
             onTouchEnd={handleCalendarTouchEnd}
           >
             <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-10 bg-gradient-to-r from-background via-background/80 to-transparent md:w-20" />
             <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-gradient-to-l from-background via-background/80 to-transparent md:w-20" />
 
-            <div className="relative h-[21rem] sm:h-[23rem] md:h-[27rem]">
+            <div className="relative h-[22rem] sm:h-[24rem] md:h-[28rem]">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 onClick={() => navigateMonth(-1)}
                 aria-label="이전 달 보기"
-                className="absolute left-[calc(50%-7rem)] top-5 z-40 h-10 w-10 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:left-[calc(50%-8.4rem)] md:left-[calc(50%-11rem)]"
+                className="absolute left-[calc(50%-7rem)] top-6 z-40 h-10 w-10 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:left-[calc(50%-8.4rem)] md:left-[calc(50%-11rem)]"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -364,7 +364,7 @@ const AttendancePage = () => {
                 size="icon"
                 onClick={() => navigateMonth(1)}
                 aria-label="다음 달 보기"
-                className="absolute right-[calc(50%-7rem)] top-5 z-40 h-10 w-10 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:right-[calc(50%-8.4rem)] md:right-[calc(50%-11rem)]"
+                className="absolute right-[calc(50%-7rem)] top-6 z-40 h-10 w-10 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:right-[calc(50%-8.4rem)] md:right-[calc(50%-11rem)]"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -373,11 +373,11 @@ const AttendancePage = () => {
                 const isCenter = index === 1;
                 const sideMotionClass = motionDirection === "next"
                   ? index === 0
-                    ? "rotate-[-2.5deg]"
-                    : "rotate-[2.5deg]"
+                    ? "rotate-[-1.75deg]"
+                    : "rotate-[1.75deg]"
                   : index === 0
-                    ? "rotate-[-3.5deg]"
-                    : "rotate-[3.5deg]";
+                    ? "rotate-[-2.25deg]"
+                    : "rotate-[2.25deg]";
                 const slotClassName = isCenter
                   ? "z-30 -translate-x-1/2 scale-100 opacity-100"
                   : index === 0
@@ -392,7 +392,7 @@ const AttendancePage = () => {
                     aria-label={isCenter ? undefined : `${format(monthDate, "yyyy년 M월", { locale: ko })} 달력을 가운데로 이동`}
                     onClick={isCenter ? undefined : () => focusSpecificMonth(monthDate)}
                     onKeyDown={isCenter ? undefined : (event) => handleMonthPreviewKeyDown(event, monthDate)}
-                    className={`absolute left-1/2 top-1/2 w-[65%] max-w-[48rem] -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:w-[66%] ${slotClassName}`}
+                    className={`absolute left-1/2 top-[53%] w-[65%] max-w-[48rem] -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:top-[52%] md:w-[66%] ${slotClassName}`}
                   >
                     <Card
                       className={`overflow-hidden rounded-[1.25rem] border border-border/70 bg-card px-3 pb-3 pt-3 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-5 md:pb-5 md:pt-4 ${
