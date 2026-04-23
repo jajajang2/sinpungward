@@ -344,8 +344,8 @@ const AttendancePage = () => {
             onTouchStart={handleCalendarTouchStart}
             onTouchEnd={handleCalendarTouchEnd}
           >
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-10 bg-gradient-to-r from-background via-background/80 to-transparent md:w-20" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-gradient-to-l from-background via-background/80 to-transparent md:w-20" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-4 bg-gradient-to-r from-background via-background/45 to-transparent md:w-10" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-4 bg-gradient-to-l from-background via-background/45 to-transparent md:w-10" />
 
             <div className="relative h-[22rem] sm:h-[24rem] md:h-[28rem]">
               <Button
@@ -381,8 +381,8 @@ const AttendancePage = () => {
                 const slotClassName = isCenter
                   ? "z-30 -translate-x-1/2 scale-100 opacity-100"
                   : index === 0
-                    ? `z-10 -translate-x-[77%] scale-[0.66] opacity-55 ${sideMotionClass}`
-                    : `z-10 -translate-x-[23%] scale-[0.66] opacity-55 ${sideMotionClass}`;
+                    ? `z-10 -translate-x-[81%] scale-[0.62] opacity-60 ${sideMotionClass}`
+                    : `z-10 -translate-x-[19%] scale-[0.62] opacity-60 ${sideMotionClass}`;
 
                 return (
                   <div
@@ -392,7 +392,7 @@ const AttendancePage = () => {
                     aria-label={isCenter ? undefined : `${format(monthDate, "yyyy년 M월", { locale: ko })} 달력을 가운데로 이동`}
                     onClick={isCenter ? undefined : () => focusSpecificMonth(monthDate)}
                     onKeyDown={isCenter ? undefined : (event) => handleMonthPreviewKeyDown(event, monthDate)}
-                    className={`absolute left-1/2 top-[53%] w-[65%] max-w-[48rem] -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:top-[52%] md:w-[66%] ${slotClassName}`}
+                    className={`absolute left-1/2 top-[53%] w-[57%] max-w-[42rem] -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:top-[52%] md:w-[58%] ${slotClassName}`}
                   >
                     <Card
                       className={`overflow-hidden rounded-[1.25rem] border border-border/70 bg-card px-3 pb-3 pt-3 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-5 md:pb-5 md:pt-4 ${
