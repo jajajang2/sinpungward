@@ -2,7 +2,7 @@ import { KeyboardEvent, TouchEvent, useEffect, useMemo, useRef, useState } from 
 import { z } from "zod";
 import { format, isSameMonth } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, UserPlus, Users } from "lucide-react";
+import { ChevronLeft, Plus, UserPlus, Users } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 import { AttendanceRecord, AttendanceVisitor, Member } from "@/types/church";
@@ -340,35 +340,11 @@ const AttendancePage = () => {
           </div>
 
           <div
-            className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-0 py-4 md:px-2 md:py-5"
+            className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-2 py-4 md:px-4 md:py-5"
             onTouchStart={handleCalendarTouchStart}
             onTouchEnd={handleCalendarTouchEnd}
           >
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-4 bg-gradient-to-r from-background via-background/45 to-transparent md:w-10" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-4 bg-gradient-to-l from-background via-background/45 to-transparent md:w-10" />
-
-            <div className="relative h-[22rem] sm:h-[24rem] md:h-[28rem]">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => navigateMonth(-1)}
-                aria-label="이전 달 보기"
-                className="absolute left-[calc(50%-7rem)] top-6 z-40 h-10 w-10 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:left-[calc(50%-8.4rem)] md:left-[calc(50%-11rem)]"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => navigateMonth(1)}
-                aria-label="다음 달 보기"
-                className="absolute right-[calc(50%-7rem)] top-6 z-40 h-10 w-10 rounded-full border-border/80 bg-card/95 shadow-[0_14px_36px_hsl(var(--foreground)/0.10)] backdrop-blur sm:right-[calc(50%-8.4rem)] md:right-[calc(50%-11rem)]"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-
+            <div className="relative h-[22rem] sm:h-[24rem] md:h-[29rem]">
               {calendarMonths.map((monthDate, index) => {
                 const isCenter = index === 1;
                 const sideMotionClass = motionDirection === "next"
@@ -381,8 +357,8 @@ const AttendancePage = () => {
                 const slotClassName = isCenter
                   ? "z-30 -translate-x-1/2 scale-100 opacity-100"
                   : index === 0
-                    ? `z-10 -translate-x-[81%] scale-[0.62] opacity-60 ${sideMotionClass}`
-                    : `z-10 -translate-x-[19%] scale-[0.62] opacity-60 ${sideMotionClass}`;
+                    ? `z-10 -translate-x-[74%] scale-[0.84] opacity-72 ${sideMotionClass}`
+                    : `z-10 -translate-x-[26%] scale-[0.84] opacity-72 ${sideMotionClass}`;
 
                 return (
                   <div
@@ -392,17 +368,17 @@ const AttendancePage = () => {
                     aria-label={isCenter ? undefined : `${format(monthDate, "yyyy년 M월", { locale: ko })} 달력을 가운데로 이동`}
                     onClick={isCenter ? undefined : () => focusSpecificMonth(monthDate)}
                     onKeyDown={isCenter ? undefined : (event) => handleMonthPreviewKeyDown(event, monthDate)}
-                    className={`absolute left-1/2 top-[53%] w-[57%] max-w-[42rem] -translate-y-1/2 transform-gpu transition-all duration-500 ease-out md:top-[52%] md:w-[58%] ${slotClassName}`}
+                    className={`absolute left-1/2 top-1 h-[20.5rem] w-[62%] max-w-[40rem] transform-gpu transition-all duration-500 ease-out sm:h-[22rem] md:top-2 md:h-[25.5rem] md:w-[60%] ${slotClassName}`}
                   >
                     <Card
-                      className={`overflow-hidden rounded-[1.25rem] border border-border/70 bg-card px-3 pb-3 pt-3 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-5 md:pb-5 md:pt-4 ${
+                      className={`h-full overflow-hidden rounded-[1.25rem] border border-border/70 bg-card px-3 pb-3 pt-3 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-5 md:pb-5 md:pt-4 ${
                         isCenter ? "ring-1 ring-border/50" : "bg-card/95 shadow-[0_20px_52px_hsl(var(--foreground)/0.05)]"
                       }`}
                     >
-                      <div className="mb-3 text-center text-lg font-bold text-foreground md:mb-4 md:text-[2.1rem]">
+                      <div className={`mb-3 text-center font-bold text-foreground md:mb-4 ${isCenter ? "text-xl md:text-[2.2rem]" : "text-base md:text-xl"}`}>
                         {format(monthDate, "yyyy년 M월", { locale: ko })}
                       </div>
-                      <div className={isCenter ? "" : "pointer-events-none"}>
+                      <div className={`h-[calc(100%-2.25rem)] md:h-[calc(100%-3rem)] ${isCenter ? "" : "pointer-events-none"}`}>
                         <Calendar
                           mode="single"
                           selected={isCenter ? selectedDate : undefined}
@@ -411,14 +387,15 @@ const AttendancePage = () => {
                           fromMonth={monthDate}
                           toMonth={monthDate}
                           showOutsideDays
-                          className="w-full"
+                          className="h-full w-full"
                           classNames={{
                             months: "block w-full",
-                            month: "w-full space-y-2.5 md:space-y-3",
+                            month: "flex h-full flex-col w-full space-y-2 md:space-y-3",
                             caption: "justify-center",
                             nav: "hidden",
-                            table: "w-full table-fixed border-collapse",
+                            table: "h-full w-full table-fixed border-collapse",
                             head_row: "grid grid-cols-7 gap-1 md:gap-1.5 [&>th:first-child]:text-destructive [&>th:last-child]:text-primary",
+                            tbody: "flex-1",
                             row: "mt-1.5 grid grid-cols-7 gap-1 md:gap-1.5",
                             head_cell: "w-full rounded-md py-1 text-center text-xs font-medium md:text-base",
                             cell:
