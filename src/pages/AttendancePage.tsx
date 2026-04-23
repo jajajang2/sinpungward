@@ -344,7 +344,7 @@ const AttendancePage = () => {
             onTouchStart={handleCalendarTouchStart}
             onTouchEnd={handleCalendarTouchEnd}
           >
-            <div className="relative h-[22rem] sm:h-[24rem] md:h-[29rem]">
+            <div className="relative h-[25rem] sm:h-[28rem] md:h-[34rem]">
               {calendarMonths.map((monthDate, index) => {
                 const isCenter = index === 1;
                 const sideMotionClass = motionDirection === "next"
@@ -357,8 +357,8 @@ const AttendancePage = () => {
                 const slotClassName = isCenter
                   ? "z-30 -translate-x-1/2 scale-100 opacity-100"
                   : index === 0
-                    ? `z-10 -translate-x-[74%] scale-[0.84] opacity-72 ${sideMotionClass}`
-                    : `z-10 -translate-x-[26%] scale-[0.84] opacity-72 ${sideMotionClass}`;
+                    ? `z-10 -translate-x-[66%] scale-[0.9] opacity-74 ${sideMotionClass}`
+                    : `z-10 -translate-x-[34%] scale-[0.9] opacity-74 ${sideMotionClass}`;
 
                 return (
                   <div
@@ -368,7 +368,7 @@ const AttendancePage = () => {
                     aria-label={isCenter ? undefined : `${format(monthDate, "yyyy년 M월", { locale: ko })} 달력을 가운데로 이동`}
                     onClick={isCenter ? undefined : () => focusSpecificMonth(monthDate)}
                     onKeyDown={isCenter ? undefined : (event) => handleMonthPreviewKeyDown(event, monthDate)}
-                    className={`absolute left-1/2 top-1 h-[20.5rem] w-[62%] max-w-[40rem] transform-gpu transition-all duration-500 ease-out sm:h-[22rem] md:top-2 md:h-[25.5rem] md:w-[60%] ${slotClassName}`}
+                    className={`absolute left-1/2 top-1 h-[23.5rem] w-[62%] max-w-[40rem] transform-gpu transition-all duration-500 ease-out sm:h-[26rem] md:top-2 md:h-[31rem] md:w-[60%] ${slotClassName}`}
                   >
                     <Card
                       className={`h-full overflow-hidden rounded-[1.25rem] border border-border/70 bg-card px-3 pb-3 pt-3 shadow-[0_24px_70px_hsl(var(--foreground)/0.08)] transition-all duration-500 ease-out md:px-5 md:pb-5 md:pt-4 ${
