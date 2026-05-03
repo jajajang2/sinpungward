@@ -340,7 +340,7 @@ const AttendancePage = () => {
           </div>
 
           <div
-            className="relative overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-1.5 py-3 sm:px-2 sm:py-4 md:px-4 md:py-4"
+            className="relative mx-auto w-full max-w-[60rem] overflow-hidden rounded-[1.5rem] border border-border/70 bg-muted/10 px-1.5 py-3 sm:px-2 sm:py-4 md:px-4 md:py-4"
             onTouchStart={handleCalendarTouchStart}
             onTouchEnd={handleCalendarTouchEnd}
           >
