@@ -158,9 +158,56 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       }
     }
 
+    // ── 양방향 가족 동기화 ──
+    // 가족으로 등록된 회원들끼리 서로의 가족정보에 자동으로 포함되도록 한다.
+    try {
+      const linkedIds = Array.from(new Set(
+        family.filter(f => f._linked_member_id && f.name).map(f => f._linked_member_id!)
+      ));
+      const groupIds = Array.from(new Set([memberId, ...linkedIds]));
+
+      if (groupIds.length > 1) {
+        // 그룹 내 회원 정보 조회 (이름 기준)
+        const { data: groupMembers } = await supabase
+          .from('members')
+          .select('id, name')
+          .in('id', groupIds);
+        const idToName = new Map<string, string>((groupMembers || []).map((m: any) => [m.id, m.name]));
+
+        for (const gid of groupIds) {
+          if (gid === memberId) continue; // 본인은 이미 위에서 저장됨
+          const otherIds = groupIds.filter(x => x !== gid);
+          const { data: existing } = await supabase
+            .from('member_family')
+            .select('*')
+            .eq('member_id', gid)
+            .order('sort_order');
+          const existingNames = new Set((existing || []).map((e: any) => e.name));
+          const toAdd = otherIds
+            .map(id => idToName.get(id))
+            .filter((n): n is string => !!n && !existingNames.has(n));
+          if (toAdd.length > 0) {
+            const startOrder = (existing || []).length;
+            await supabase.from('member_family').insert(
+              toAdd.map((name, i) => ({
+                member_id: gid,
+                name,
+                relationship: null,
+                phone: null,
+                sort_order: startOrder + i,
+              }))
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.error('가족 동기화 실패', err);
+    }
+
     setSaving(false);
-    toast({ title: '저장 완료' });
+    toast({ title: '저장 완료', description: '가족 구성원들에게도 자동 반영되었습니다.' });
     onUpdated();
+    fetchData();
   };
 
   const deleteMember = async () => {
