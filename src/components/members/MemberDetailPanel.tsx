@@ -594,81 +594,78 @@ const FamilyNameCombobox = ({
   ).slice(0, 30);
 
   return (
-    <div className="relative">
-      <div className="relative">
-        <Input
-          value={inputValue}
-          onChange={e => {
-            setInputValue(e.target.value);
-            onChange(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          placeholder="이름 검색..."
-          className="h-7 text-xs pr-6"
-        />
-        <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
-      </div>
-
-      {open && (
-        <>
-          {/* 바깥 클릭 닫기 오버레이 (z-40) */}
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-
-          {/* 드롭다운 (z-50) */}
-          <div
-            className="absolute left-0 top-full mt-1 z-50 w-52 rounded-md border border-border bg-popover shadow-md overflow-hidden"
-            onMouseDown={e => e.preventDefault()} // blur 방지
-          >
-            <div className="max-h-48 overflow-y-auto">
-              {filtered.length === 0 && !inputValue ? (
-                <div className="px-3 py-3 text-xs text-muted-foreground text-center">이름을 입력하세요</div>
-              ) : filtered.length === 0 ? (
-                <div className="px-3 py-2">
-                  <button
-                    className="w-full text-left text-xs text-primary hover:underline"
-                    onClick={() => { onChange(inputValue); setOpen(false); }}
-                  >
-                    "{inputValue}" 직접 입력
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border">
-                    회원 목록
-                  </div>
-                  {filtered.map(m => (
-                    <button
-                      key={m.id}
-                      className={cn(
-                        "w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground transition-colors",
-                        value === m.name && "bg-accent/50"
-                      )}
-                      onClick={() => {
-                        setInputValue(m.name);
-                        onChange(m.name, m);
-                        setOpen(false);
-                      }}
-                    >
-                      <Check className={cn("w-3 h-3 shrink-0", value === m.name ? "opacity-100 text-primary" : "opacity-0")} />
-                      {m.name}
-                    </button>
-                  ))}
-                  {inputValue && !memberList.find(m => m.name === inputValue) && (
-                    <button
-                      className="w-full px-3 py-1.5 text-xs text-left text-primary hover:bg-accent border-t border-border"
-                      onClick={() => { onChange(inputValue); setOpen(false); }}
-                    >
-                      "{inputValue}" 직접 입력
-                    </button>
-                  )}
-                </>
-              )}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div className="relative">
+          <Input
+            value={inputValue}
+            onChange={e => {
+              setInputValue(e.target.value);
+              onChange(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder="이름 검색..."
+            className="h-7 text-xs pr-6"
+          />
+          <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+        </div>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={4}
+        className="w-56 p-0"
+        onOpenAutoFocus={e => e.preventDefault()}
+      >
+        <div className="max-h-56 overflow-y-auto">
+          {filtered.length === 0 && !inputValue ? (
+            <div className="px-3 py-3 text-xs text-muted-foreground text-center">이름을 입력하세요</div>
+          ) : filtered.length === 0 ? (
+            <div className="px-3 py-2">
+              <button
+                className="w-full text-left text-xs text-primary hover:underline"
+                onClick={() => { onChange(inputValue); setOpen(false); }}
+              >
+                "{inputValue}" 직접 입력
+              </button>
             </div>
-          </div>
-        </>
-      )}
-    </div>
+          ) : (
+            <>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border">
+                회원 목록
+              </div>
+              {filtered.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground transition-colors",
+                    value === m.name && "bg-accent/50"
+                  )}
+                  onClick={() => {
+                    setInputValue(m.name);
+                    onChange(m.name, m);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("w-3 h-3 shrink-0", value === m.name ? "opacity-100 text-primary" : "opacity-0")} />
+                  {m.name}
+                </button>
+              ))}
+              {inputValue && !memberList.find(m => m.name === inputValue) && (
+                <button
+                  type="button"
+                  className="w-full px-3 py-1.5 text-xs text-left text-primary hover:bg-accent border-t border-border"
+                  onClick={() => { onChange(inputValue); setOpen(false); }}
+                >
+                  "{inputValue}" 직접 입력
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
