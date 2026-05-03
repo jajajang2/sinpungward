@@ -498,9 +498,19 @@ const AttendancePage = () => {
         <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] md:gap-4 md:overflow-hidden">
           <Card className="order-1 flex min-h-[56vh] flex-col overflow-hidden border-border md:min-h-0">
             <div className="border-b border-border p-3 md:p-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                <h2 className="text-base font-semibold text-foreground">{selectedGroup.label}</h2>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  <h2 className="text-base font-semibold text-foreground">{selectedGroup.label}</h2>
+                </div>
+                <Button
+                  variant={isVisitorPanelOpen ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsVisitorPanelOpen((prev) => !prev)}
+                  className="h-8 px-3 md:hidden"
+                >
+                  <UserPlus className="mr-1 h-4 w-4" />방문자 입력
+                </Button>
               </div>
               <p className="mt-1 text-xs text-muted-foreground md:text-sm">회원마다 체크박스 한 칸만 표시됩니다.</p>
               <div className="mt-3">
