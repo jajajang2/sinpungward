@@ -9,6 +9,7 @@ import AddMemberDialog from "@/components/members/AddMemberDialog";
 import MemberDetailPanel from "@/components/members/MemberDetailPanel";
 import ExcelImportDialog from "@/components/members/ExcelImportDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AlertDialog,
   AlertDialogAction,
