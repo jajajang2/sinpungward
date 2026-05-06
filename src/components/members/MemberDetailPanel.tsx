@@ -78,7 +78,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
       supabase.from('member_family').select('*').eq('member_id', memberId).order('sort_order'),
       supabase.from('member_church_info').select('*').eq('member_id', memberId).maybeSingle(),
       supabase.from('member_notes').select('*').eq('member_id', memberId).order('note_date', { ascending: false }),
-      supabase.from('members').select('id, name, birth_date, member_church_info(current_calling)').order('name'),
+      supabase.from('members').select('id, name, birth_date, phone, member_church_info(current_calling)').order('name'),
     ]);
     if (mRes.data) setMember(mRes.data);
 
@@ -88,6 +88,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
       name: m.name,
       birth_date: m.birth_date ?? null,
       current_calling: m.member_church_info?.current_calling ?? null,
+      phone: m.phone ?? null,
     }));
     setMemberList(allMembers);
 
@@ -98,6 +99,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
         ...f,
         _birth_date: linked?.birth_date ?? null,
         _current_calling: linked?.current_calling ?? null,
+        _phone: linked?.phone ?? null,
         _linked_member_id: linked?.id,
       };
     });
