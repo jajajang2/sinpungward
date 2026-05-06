@@ -433,6 +433,19 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
+                        {/* 비고 (직접 입력한 가족만 입력 가능) */}
+                        <td className="px-2 py-1.5 align-top">
+                          {fam._linked_member_id ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <Input
+                              value={fam.notes || ''}
+                              onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, notes: e.target.value } : x))}
+                              placeholder="비고 입력..."
+                              className="h-7 text-xs"
+                            />
+                          )}
+                        </td>
                         {/* 삭제 */}
                         <td className="px-2 py-2 align-middle">
                           <button
