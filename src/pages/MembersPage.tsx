@@ -276,6 +276,10 @@ const MembersPage = () => {
               memberId={selectedMember.id}
               onClose={handleBack}
               onUpdated={fetchMembers}
+              onNavigateToMember={(m) => {
+                const target = members.find(x => x.id === m.id);
+                if (target) setSelectedMember(target);
+              }}
             />
           </div>
         </div>
