@@ -37,7 +37,7 @@ const AppSidebar = ({ isMobile, mobileOpen, onMobileToggle }: AppSidebarProps) =
       activeClassName="bg-[hsl(var(--sidebar-active))] text-white"
     >
       <Icon className="w-5 h-5 shrink-0" />
-      {!collapsed && <span className="truncate">{label}</span>}
+      {(isMobile || !collapsed) && <span className="truncate">{label}</span>}
     </NavLink>
   );
 
