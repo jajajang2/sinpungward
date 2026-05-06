@@ -49,6 +49,7 @@ function calcAge(birth?: string | null): number | null {
 interface FamilyRow extends MemberFamily {
   _birth_date?: string | null;
   _current_calling?: string[] | null;
+  _phone?: string | null;
   _linked_member_id?: string;
 }
 
@@ -58,6 +59,7 @@ interface MemberListItem {
   name: string;
   birth_date?: string | null;
   current_calling?: string[] | null;
+  phone?: string | null;
 }
 
 const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelProps) => {
