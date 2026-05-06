@@ -62,7 +62,7 @@ interface MemberListItem {
   phone?: string | null;
 }
 
-const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelProps) => {
+const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }: MemberDetailPanelProps) => {
   const { toast } = useToast();
   const [member, setMember] = useState<Member | null>(null);
   const [family, setFamily] = useState<FamilyRow[]>([]);
