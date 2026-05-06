@@ -431,26 +431,45 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        {/* 현재 부름 */}
+                        {/* 현재 부름 / 연락처 */}
                         <td className="px-3 py-2 align-middle">
-                          {fam._current_calling?.length ? (
-                            <span className="text-foreground">{(fam._current_calling as string[]).join(', ')}</span>
+                          {fam._current_calling?.length || fam._phone ? (
+                            <div className="flex flex-col gap-0.5">
+                              {fam._current_calling?.length ? (
+                                <span className="text-foreground">{(fam._current_calling as string[]).join(', ')}</span>
+                              ) : null}
+                              {fam._phone ? (
+                                <span className="text-muted-foreground">{fam._phone}</span>
+                              ) : null}
+                            </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        {/* 비고 (직접 입력한 가족만 입력 가능) */}
-                        <td className="px-2 py-1.5 align-top">
-                          {fam._linked_member_id ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : (
-                            <Input
-                              value={fam.notes || ''}
-                              onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, notes: e.target.value } : x))}
-                              placeholder="비고 입력..."
-                              className="h-7 text-xs"
-                            />
-                          )}
+                        {/* 비고 + 회원카드 이동 */}
+                        <td className="px-2 py-1.5 align-middle">
+                          <div className="flex items-center gap-1.5">
+                            {fam._linked_member_id ? (
+                              <span className="text-muted-foreground flex-1">—</span>
+                            ) : (
+                              <Input
+                                value={fam.notes || ''}
+                                onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, notes: e.target.value } : x))}
+                                placeholder="비고 입력..."
+                                className="h-7 text-xs flex-1"
+                              />
+                            )}
+                            {fam._linked_member_id && onNavigateToMember && fam.name && (
+                              <button
+                                type="button"
+                                onClick={() => onNavigateToMember({ id: fam._linked_member_id!, name: fam.name! })}
+                                title={`${fam.name} 회원카드로 이동`}
+                                className="shrink-0 p-1 rounded hover:bg-accent text-primary"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                         {/* 삭제 */}
                         <td className="px-2 py-2 align-middle">
