@@ -551,9 +551,10 @@ const MembersPage = () => {
                       <MemberCard
                         key={member.id}
                         member={member}
-                        isSelected={false}
-                        onClick={() => handleMemberSelect(member)}
+                        isSelected={deleteMode ? selectedIds.has(member.id) : false}
+                        onClick={() => deleteMode ? toggleSelectId(member.id) : handleMemberSelect(member)}
                         compact={false}
+                        selectionTint={deleteMode ? 'danger' : undefined}
                       />
                     ))}
                   </div>
