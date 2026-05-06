@@ -407,6 +407,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                                 name,
                                 _birth_date: linked?.birth_date ?? (linked ? null : x._birth_date),
                                 _current_calling: linked?.current_calling ?? (linked ? null : x._current_calling),
+                                _phone: linked?.phone ?? (linked ? null : x._phone),
                                 _linked_member_id: linked?.id ?? x._linked_member_id,
                               } : x));
                             }}
