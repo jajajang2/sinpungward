@@ -505,6 +505,26 @@ const MembersPage = () => {
                 <Button size="sm" className="h-7 text-xs" onClick={() => setShowAdd(true)}>
                   <Plus className="w-3.5 h-3.5 mr-1" />추가
                 </Button>
+                {!deleteMode ? (
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setDeleteMode(true)}>
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={exitDeleteMode}>
+                      <X className="w-3.5 h-3.5 mr-1" />중지
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => setShowDeleteSelected(true)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" />삭제 ({selectedIds.size})
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
