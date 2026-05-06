@@ -9,6 +9,7 @@ import AddMemberDialog from "@/components/members/AddMemberDialog";
 import MemberDetailPanel from "@/components/members/MemberDetailPanel";
 import ExcelImportDialog from "@/components/members/ExcelImportDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -128,6 +129,7 @@ const MembersPage = () => {
   const [showImport, setShowImport] = useState(false);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleDeleteAll = async () => {
     try {
@@ -207,6 +209,164 @@ const MembersPage = () => {
   const showGroupList = !selectedMember;
   const showMemberList = !!selectedGroupId && !selectedMember;
   const showDetail = !!selectedMember;
+
+  // ── Mobile view: 그룹 탭 제거, 전체 회원 가로 바 형태 ──
+  if (isMobile) {
+    const allFiltered = members
+      .filter(m =>
+        m.name.toLowerCase().includes(search.toLowerCase()) ||
+        (m.phone || '').includes(search)
+      );
+    // alphabetical groups for all members
+    const mEnglish = allFiltered.filter(m => isEnglish(m.name));
+    const mKorean = allFiltered.filter(m => !isEnglish(m.name));
+    const mAlpha: { label: string; members: Member[] }[] = [];
+    if (mEnglish.length > 0) mAlpha.push({ label: '영문', members: mEnglish });
+    for (const initial of KOREAN_INITIALS) {
+      const g = mKorean.filter(m => getKoreanInitial(m.name) === initial);
+      if (g.length > 0) mAlpha.push({ label: initial, members: g });
+    }
+    const mOthers = mKorean.filter(m => !KOREAN_INITIALS.includes(getKoreanInitial(m.name)));
+    if (mOthers.length > 0) mAlpha.push({ label: '#', members: mOthers });
+
+    if (selectedMember) {
+      return (
+        <div className="flex flex-col h-screen overflow-hidden bg-card">
+          <div className="px-3 py-2 border-b border-border shrink-0 flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5 px-2" onClick={handleBack}>
+              <ArrowLeft className="w-4 h-4" /> 목록으로
+            </Button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <MemberDetailPanel
+              memberId={selectedMember.id}
+              onClose={handleBack}
+              onUpdated={fetchMembers}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col h-screen overflow-hidden">
+        {/* Header */}
+        <div className="px-3 py-3 border-b border-border bg-card shrink-0">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-foreground truncate">회원기록양식</h1>
+              <p className="text-xs text-muted-foreground">총 {members.length}명</p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button variant="destructive" size="sm" className="h-7 text-xs px-2" onClick={() => setShowDeleteAll(true)}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => setShowImport(true)}>
+                <Upload className="w-3.5 h-3.5" />
+              </Button>
+              <Button size="sm" className="h-7 text-xs px-2" onClick={() => setShowAdd(true)}>
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="이름 또는 전화번호 검색..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-7 h-8 text-xs"
+            />
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">불러오는 중...</div>
+          ) : allFiltered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-3">
+              <Users className="w-12 h-12 opacity-20" />
+              <p className="text-sm">회원이 없습니다.</p>
+            </div>
+          ) : (
+            mAlpha.map(group => (
+              <div key={group.label}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="w-6 h-6 rounded-full bg-muted text-primary font-bold text-xs flex items-center justify-center shrink-0">{group.label}</span>
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground shrink-0">{group.members.length}명</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {group.members.map(member => {
+                    const age = member.birth_date
+                      ? new Date().getFullYear() - new Date(member.birth_date).getFullYear()
+                      : null;
+                    const isFemale = member.gender === '여';
+                    return (
+                      <button
+                        key={member.id}
+                        onClick={() => handleMemberSelect(member)}
+                        className="w-full text-left px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors flex items-center gap-3"
+                      >
+                        <span className="font-semibold text-sm text-foreground truncate flex-1 min-w-0">
+                          {member.name}
+                        </span>
+                        {member.gender ? (
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                            isFemale ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'
+                          }`}>{member.gender}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground shrink-0 w-6 text-center">-</span>
+                        )}
+                        <span className="text-xs text-muted-foreground shrink-0 w-10 text-right">
+                          {age !== null ? `${age}세` : '-'}
+                        </span>
+                        <span className="text-xs text-muted-foreground shrink-0 w-24 text-right truncate">
+                          {member.phone || '-'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {showAdd && (
+          <AddMemberDialog
+            open={showAdd}
+            onClose={() => setShowAdd(false)}
+            onSaved={() => { fetchMembers(); setShowAdd(false); }}
+          />
+        )}
+        {showImport && (
+          <ExcelImportDialog
+            open={showImport}
+            onClose={() => setShowImport(false)}
+            onImported={() => { fetchMembers(); setShowImport(false); }}
+          />
+        )}
+        <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>전체 기록 삭제</AlertDialogTitle>
+              <AlertDialogDescription>
+                모든 회원 기록(가족정보, 교회정보, 메모, 출석 포함)이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                전체 삭제
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
