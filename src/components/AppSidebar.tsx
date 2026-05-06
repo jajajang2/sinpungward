@@ -37,7 +37,7 @@ const AppSidebar = ({ isMobile, mobileOpen, onMobileToggle }: AppSidebarProps) =
       activeClassName="bg-[hsl(var(--sidebar-active))] text-white"
     >
       <Icon className="w-5 h-5 shrink-0" />
-      {!collapsed && <span className="truncate">{label}</span>}
+      {(isMobile || !collapsed) && <span className="truncate">{label}</span>}
     </NavLink>
   );
 
@@ -69,7 +69,7 @@ const AppSidebar = ({ isMobile, mobileOpen, onMobileToggle }: AppSidebarProps) =
         <div className="w-8 h-8 rounded-full bg-[hsl(var(--gold))] flex items-center justify-center shrink-0">
           <span className="text-white text-xs font-bold">⛪</span>
         </div>
-        {!collapsed && (
+        {(isMobile || !collapsed) && (
           <div className="overflow-hidden">
             <p className="text-sm font-bold leading-tight truncate">교회 관리</p>
             <p className="text-xs opacity-60 truncate">Church Manager</p>
