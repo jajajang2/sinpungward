@@ -5,9 +5,11 @@ interface MemberCardProps {
   isSelected: boolean;
   onClick: () => void;
   compact?: boolean; // 상세 패널이 열렸을 때 가로 목록 형태
+  selectionTint?: 'danger'; // 다중 선택 시 빨간색 음영
 }
 
-const MemberCard = ({ member, isSelected, onClick, compact = false }: MemberCardProps) => {
+const MemberCard = ({ member, isSelected, onClick, compact = false, selectionTint }: MemberCardProps) => {
+  const danger = selectionTint === 'danger';
   const age = member.birth_date
     ? new Date().getFullYear() - new Date(member.birth_date).getFullYear()
     : null;
@@ -59,7 +61,9 @@ const MemberCard = ({ member, isSelected, onClick, compact = false }: MemberCard
     <button
       onClick={onClick}
       className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-sm ${
-        isSelected
+        danger && isSelected
+          ? 'border-red-300 bg-red-100/70 ring-1 ring-red-300'
+          : isSelected
           ? 'border-primary bg-accent ring-1 ring-primary'
           : 'border-border bg-card hover:border-primary/40 hover:bg-accent/50'
       }`}

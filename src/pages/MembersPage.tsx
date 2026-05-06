@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { Member } from "@/types/church";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Upload, Search, Users, ChevronRight, ArrowLeft, Trash2 } from "lucide-react";
+import { Plus, Upload, Search, Users, ChevronRight, ArrowLeft, Trash2, X } from "lucide-react";
 import MemberCard from "@/components/members/MemberCard";
 import AddMemberDialog from "@/components/members/AddMemberDialog";
 import MemberDetailPanel from "@/components/members/MemberDetailPanel";
@@ -128,8 +128,42 @@ const MembersPage = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteSelected, setShowDeleteSelected] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  const exitDeleteMode = () => {
+    setDeleteMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelectId = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) { setShowDeleteSelected(false); return; }
+    try {
+      await supabase.from('member_notes').delete().in('member_id', ids);
+      await supabase.from('member_family').delete().in('member_id', ids);
+      await supabase.from('member_church_info').delete().in('member_id', ids);
+      await supabase.from('attendance').delete().in('member_id', ids);
+      await supabase.from('members').delete().in('id', ids);
+      toast({ title: '완료', description: `${ids.length}명의 회원이 삭제되었습니다.` });
+      exitDeleteMode();
+      fetchMembers();
+    } catch {
+      toast({ title: '오류', description: '삭제 중 오류가 발생했습니다.', variant: 'destructive' });
+    }
+    setShowDeleteSelected(false);
+  };
 
   const handleDeleteAll = async () => {
     try {
@@ -471,6 +505,26 @@ const MembersPage = () => {
                 <Button size="sm" className="h-7 text-xs" onClick={() => setShowAdd(true)}>
                   <Plus className="w-3.5 h-3.5 mr-1" />추가
                 </Button>
+                {!deleteMode ? (
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setDeleteMode(true)}>
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />삭제
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={exitDeleteMode}>
+                      <X className="w-3.5 h-3.5 mr-1" />중지
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => setShowDeleteSelected(true)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" />삭제 ({selectedIds.size})
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -497,9 +551,10 @@ const MembersPage = () => {
                       <MemberCard
                         key={member.id}
                         member={member}
-                        isSelected={false}
-                        onClick={() => handleMemberSelect(member)}
+                        isSelected={deleteMode ? selectedIds.has(member.id) : false}
+                        onClick={() => deleteMode ? toggleSelectId(member.id) : handleMemberSelect(member)}
                         compact={false}
+                        selectionTint={deleteMode ? 'danger' : undefined}
                       />
                     ))}
                   </div>
@@ -536,6 +591,22 @@ const MembersPage = () => {
             <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               전체 삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={showDeleteSelected} onOpenChange={setShowDeleteSelected}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>선택한 회원 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              선택한 {selectedIds.size}명의 회원과 관련된 모든 기록(가족정보, 교회정보, 메모, 출석)이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              삭제
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
