@@ -129,6 +129,7 @@ const MembersPage = () => {
   const [showImport, setShowImport] = useState(false);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleDeleteAll = async () => {
     try {
