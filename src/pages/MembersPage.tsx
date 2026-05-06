@@ -128,8 +128,42 @@ const MembersPage = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteSelected, setShowDeleteSelected] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  const exitDeleteMode = () => {
+    setDeleteMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelectId = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) { setShowDeleteSelected(false); return; }
+    try {
+      await supabase.from('member_notes').delete().in('member_id', ids);
+      await supabase.from('member_family').delete().in('member_id', ids);
+      await supabase.from('member_church_info').delete().in('member_id', ids);
+      await supabase.from('attendance').delete().in('member_id', ids);
+      await supabase.from('members').delete().in('id', ids);
+      toast({ title: '완료', description: `${ids.length}명의 회원이 삭제되었습니다.` });
+      exitDeleteMode();
+      fetchMembers();
+    } catch {
+      toast({ title: '오류', description: '삭제 중 오류가 발생했습니다.', variant: 'destructive' });
+    }
+    setShowDeleteSelected(false);
+  };
 
   const handleDeleteAll = async () => {
     try {
