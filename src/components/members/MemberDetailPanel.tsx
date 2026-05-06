@@ -129,6 +129,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
           name: f.name,
           relationship: f.relationship,
           phone: f.phone,
+          notes: f.notes || null,
           sort_order: i,
         }))
       );
