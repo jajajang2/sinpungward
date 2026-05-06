@@ -61,7 +61,9 @@ const MemberCard = ({ member, isSelected, onClick, compact = false, selectionTin
     <button
       onClick={onClick}
       className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-sm ${
-        isSelected
+        danger && isSelected
+          ? 'border-red-300 bg-red-100/70 ring-1 ring-red-300'
+          : isSelected
           ? 'border-primary bg-accent ring-1 ring-primary'
           : 'border-border bg-card hover:border-primary/40 hover:bg-accent/50'
       }`}
