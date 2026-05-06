@@ -1,0 +1,1 @@
+ALTER TABLE public.member_family ADD COLUMN IF NOT EXISTS notes text;

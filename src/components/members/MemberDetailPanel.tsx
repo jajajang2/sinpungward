@@ -129,6 +129,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
           name: f.name,
           relationship: f.relationship,
           phone: f.phone,
+          notes: f.notes || null,
           sort_order: i,
         }))
       );
@@ -374,13 +375,14 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-xs min-w-[520px]">
+              <table className="w-full text-xs min-w-[640px]">
                 <thead>
                   <tr className="bg-[hsl(var(--table-header))] border-b border-border">
                     <th className="px-3 py-2 text-left font-semibold w-36">이름</th>
                     <th className="px-2 py-2 text-left font-semibold w-32">관계</th>
                     <th className="px-3 py-2 text-left font-semibold w-32">생년월일 (나이)</th>
                     <th className="px-3 py-2 text-left font-semibold">현재 부름</th>
+                    <th className="px-2 py-2 text-left font-semibold w-40">비고</th>
                     <th className="px-2 py-2 w-7"></th>
                   </tr>
                 </thead>
@@ -429,6 +431,19 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                             <span className="text-foreground">{(fam._current_calling as string[]).join(', ')}</span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        {/* 비고 (직접 입력한 가족만 입력 가능) */}
+                        <td className="px-2 py-1.5 align-top">
+                          {fam._linked_member_id ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <Input
+                              value={fam.notes || ''}
+                              onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, notes: e.target.value } : x))}
+                              placeholder="비고 입력..."
+                              className="h-7 text-xs"
+                            />
                           )}
                         </td>
                         {/* 삭제 */}

@@ -26,6 +26,7 @@ export interface MemberFamily {
   name?: string;
   relationship?: string;
   phone?: string;
+  notes?: string;
   sort_order: number;
 }
 

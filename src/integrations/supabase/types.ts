@@ -210,6 +210,7 @@ export type Database = {
           id: string
           member_id: string
           name: string | null
+          notes: string | null
           phone: string | null
           relationship: string | null
           sort_order: number | null
@@ -219,6 +220,7 @@ export type Database = {
           id?: string
           member_id: string
           name?: string | null
+          notes?: string | null
           phone?: string | null
           relationship?: string | null
           sort_order?: number | null
@@ -228,6 +230,7 @@ export type Database = {
           id?: string
           member_id?: string
           name?: string | null
+          notes?: string | null
           phone?: string | null
           relationship?: string | null
           sort_order?: number | null
