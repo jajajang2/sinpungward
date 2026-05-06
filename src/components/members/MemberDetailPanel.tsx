@@ -387,7 +387,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                     <th className="px-2 py-2 text-left font-semibold w-32">관계</th>
                     <th className="px-3 py-2 text-left font-semibold w-32">생년월일 (나이)</th>
                     <th className="px-3 py-2 text-left font-semibold">현재 부름</th>
-                    <th className="px-2 py-2 text-left font-semibold w-40">비고</th>
+                    <th className="px-3 py-2 text-left font-semibold">현재 부름 / 연락처</th>
+                    <th className="px-2 py-2 text-left font-semibold w-44">비고</th>
                     <th className="px-2 py-2 w-7"></th>
                   </tr>
                 </thead>
