@@ -20,6 +20,7 @@ interface MemberDetailPanelProps {
   memberId: string;
   onClose: () => void;
   onUpdated: () => void;
+  onNavigateToMember?: (member: { id: string; name: string }) => void;
 }
 
 // 한국 2촌 관계 목록
