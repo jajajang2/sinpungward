@@ -375,13 +375,14 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-xs min-w-[520px]">
+              <table className="w-full text-xs min-w-[640px]">
                 <thead>
                   <tr className="bg-[hsl(var(--table-header))] border-b border-border">
                     <th className="px-3 py-2 text-left font-semibold w-36">이름</th>
                     <th className="px-2 py-2 text-left font-semibold w-32">관계</th>
                     <th className="px-3 py-2 text-left font-semibold w-32">생년월일 (나이)</th>
                     <th className="px-3 py-2 text-left font-semibold">현재 부름</th>
+                    <th className="px-2 py-2 text-left font-semibold w-40">비고</th>
                     <th className="px-2 py-2 w-7"></th>
                   </tr>
                 </thead>
