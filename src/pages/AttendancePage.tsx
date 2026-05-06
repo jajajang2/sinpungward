@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AttendanceGroup {
@@ -551,85 +552,96 @@ const AttendancePage = () => {
             </div>
           </Card>
 
-          <Card className={`order-2 border-border md:sticky md:top-4 md:self-start md:block ${isVisitorPanelOpen ? "block" : "hidden"}`}>
+          <Card className="order-2 hidden border-border md:sticky md:top-4 md:block md:self-start">
             <div className="border-b border-border p-3 md:p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4 text-primary" />
-                  <h2 className="text-base font-semibold text-foreground">방문자</h2>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setIsVisitorPanelOpen(false)} className="h-8 px-3 md:hidden">
-                  닫기
-                </Button>
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold text-foreground">방문자</h2>
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground md:text-sm">이름, 연락처, 메모를 기록할 수 있습니다.</p>
             </div>
 
             <div className="space-y-3 p-3 md:space-y-4 md:p-4">
               <div className="rounded-lg border border-border bg-background p-2.5 md:p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-medium text-foreground">방문자 {selectedVisitors.length}명</div>
-                    <div className="text-[11px] text-muted-foreground md:text-xs">모바일에서는 필요할 때만 입력창을 펼칠 수 있습니다.</div>
-                  </div>
-                  {!isVisitorPanelOpen && (
-                    <Button onClick={() => setIsVisitorPanelOpen(true)} size="sm" className="h-8 px-3 md:hidden">
-                      <Plus className="mr-1 h-4 w-4" />추가
-                    </Button>
+                <div className="text-sm font-medium text-foreground">방문자 {selectedVisitors.length}명</div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-2 rounded-lg border border-border bg-background p-2.5 md:space-y-3 md:p-3">
+                  <Input className="h-8.5 md:h-10" placeholder="이름" value={visitorDraft.name} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))} />
+                  <Input className="h-8.5 md:h-10" placeholder="연락처" value={visitorDraft.phone} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))} />
+                  <Textarea className="min-h-[60px] resize-none text-sm md:min-h-[96px]" rows={2} placeholder="메모" value={visitorDraft.notes} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))} />
+                  <Button onClick={handleSaveVisitor} disabled={savingVisitor} className="w-full">
+                    <Plus className="mr-1 h-4 w-4" />방문자 추가
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {selectedVisitors.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
+                  ) : (
+                    selectedVisitors.map((visitor) => (
+                      <div key={visitor.id} className="rounded-lg border border-border bg-background p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1">
+                            <div className="text-sm font-medium text-foreground">{visitor.name}</div>
+                            <div className="text-xs text-muted-foreground md:text-sm">{visitor.phone || "연락처 없음"}</div>
+                            {visitor.notes && <p className="text-xs text-foreground/80 md:text-sm">{visitor.notes}</p>}
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>삭제</Button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
+            </div>
+          </Card>
+        </div>
 
-              {isVisitorPanelOpen && (
-                <div className="space-y-3">
-                  <div className="space-y-2 rounded-lg border border-border bg-background p-2.5 md:space-y-3 md:p-3">
-                    <Input className="h-8.5 md:h-10" placeholder="이름" value={visitorDraft.name} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))} />
-                    <Input className="h-8.5 md:h-10" placeholder="연락처" value={visitorDraft.phone} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))} />
-                    <Textarea className="min-h-[60px] resize-none text-sm md:min-h-[96px]" rows={2} placeholder="메모" value={visitorDraft.notes} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))} />
-                    <Button onClick={handleSaveVisitor} disabled={savingVisitor} className="w-full">
-                      <Plus className="mr-1 h-4 w-4" />방문자 추가
-                    </Button>
-                  </div>
+        {/* 모바일 전용 방문자 입력 다이얼로그 */}
+        <Dialog open={isMobile && isVisitorPanelOpen} onOpenChange={setIsVisitorPanelOpen}>
+          <DialogContent className="max-h-[90vh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto p-4 sm:p-5">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <UserPlus className="h-4 w-4 text-primary" />방문자 입력
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                {selectedDate ? formatSelectedDate(selectedDate) : ""} · 방문자 {selectedVisitors.length}명
+              </DialogDescription>
+            </DialogHeader>
 
-                  <div className="space-y-2">
-                    {selectedVisitors.length === 0 ? (
-                      <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
-                    ) : (
-                      selectedVisitors.map((visitor) => (
-                        <div key={visitor.id} className="rounded-lg border border-border bg-background p-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 space-y-1">
-                              <div className="text-sm font-medium text-foreground">{visitor.name}</div>
-                              <div className="text-xs text-muted-foreground md:text-sm">{visitor.phone || "연락처 없음"}</div>
-                              {visitor.notes && <p className="text-xs text-foreground/80 md:text-sm">{visitor.notes}</p>}
-                            </div>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>삭제</Button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
+            <div className="mt-2 space-y-3">
+              <div className="space-y-2 rounded-lg border border-border bg-background p-3">
+                <Input className="h-10" placeholder="이름" value={visitorDraft.name} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, name: event.target.value }))} />
+                <Input className="h-10" placeholder="연락처" value={visitorDraft.phone} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, phone: event.target.value }))} />
+                <Textarea className="min-h-[80px] resize-none text-sm" rows={3} placeholder="메모" value={visitorDraft.notes} onChange={(event) => setVisitorDraft((prev) => ({ ...prev, notes: event.target.value }))} />
+                <Button onClick={handleSaveVisitor} disabled={savingVisitor} className="w-full">
+                  <Plus className="mr-1 h-4 w-4" />방문자 추가
+                </Button>
+              </div>
 
-              {!isVisitorPanelOpen && selectedVisitors.length > 0 && (
-                <div className="space-y-2">
-                  {selectedVisitors.map((visitor) => (
-                    <div key={visitor.id} className="rounded-lg border border-border bg-background px-3 py-2.5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-medium text-foreground">{visitor.name}</div>
-                          <div className="truncate text-[11px] text-muted-foreground">{visitor.phone || "연락처 없음"}</div>
+              <div className="space-y-2">
+                {selectedVisitors.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
+                ) : (
+                  selectedVisitors.map((visitor) => (
+                    <div key={visitor.id} className="rounded-lg border border-border bg-background p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-1">
+                          <div className="text-sm font-medium text-foreground">{visitor.name}</div>
+                          <div className="text-xs text-muted-foreground">{visitor.phone || "연락처 없음"}</div>
+                          {visitor.notes && <p className="text-xs text-foreground/80">{visitor.notes}</p>}
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>삭제</Button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
-          </Card>
-        </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
