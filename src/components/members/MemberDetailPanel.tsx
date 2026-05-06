@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { X, Save, Trash2, Plus, ChevronsUpDown, Check } from "lucide-react";
+import { X, Save, Trash2, Plus, ChevronsUpDown, Check, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import PhotoUpload from "./PhotoUpload";
@@ -20,6 +20,7 @@ interface MemberDetailPanelProps {
   memberId: string;
   onClose: () => void;
   onUpdated: () => void;
+  onNavigateToMember?: (member: { id: string; name: string }) => void;
 }
 
 // 한국 2촌 관계 목록
@@ -48,6 +49,7 @@ function calcAge(birth?: string | null): number | null {
 interface FamilyRow extends MemberFamily {
   _birth_date?: string | null;
   _current_calling?: string[] | null;
+  _phone?: string | null;
   _linked_member_id?: string;
 }
 
@@ -57,9 +59,10 @@ interface MemberListItem {
   name: string;
   birth_date?: string | null;
   current_calling?: string[] | null;
+  phone?: string | null;
 }
 
-const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelProps) => {
+const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }: MemberDetailPanelProps) => {
   const { toast } = useToast();
   const [member, setMember] = useState<Member | null>(null);
   const [family, setFamily] = useState<FamilyRow[]>([]);
@@ -75,7 +78,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       supabase.from('member_family').select('*').eq('member_id', memberId).order('sort_order'),
       supabase.from('member_church_info').select('*').eq('member_id', memberId).maybeSingle(),
       supabase.from('member_notes').select('*').eq('member_id', memberId).order('note_date', { ascending: false }),
-      supabase.from('members').select('id, name, birth_date, member_church_info(current_calling)').order('name'),
+      supabase.from('members').select('id, name, birth_date, phone, member_church_info(current_calling)').order('name'),
     ]);
     if (mRes.data) setMember(mRes.data);
 
@@ -85,6 +88,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
       name: m.name,
       birth_date: m.birth_date ?? null,
       current_calling: m.member_church_info?.current_calling ?? null,
+      phone: m.phone ?? null,
     }));
     setMemberList(allMembers);
 
@@ -95,6 +99,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
         ...f,
         _birth_date: linked?.birth_date ?? null,
         _current_calling: linked?.current_calling ?? null,
+        _phone: linked?.phone ?? null,
         _linked_member_id: linked?.id,
       };
     });
@@ -381,8 +386,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                     <th className="px-3 py-2 text-left font-semibold w-36">이름</th>
                     <th className="px-2 py-2 text-left font-semibold w-32">관계</th>
                     <th className="px-3 py-2 text-left font-semibold w-32">생년월일 (나이)</th>
-                    <th className="px-3 py-2 text-left font-semibold">현재 부름</th>
-                    <th className="px-2 py-2 text-left font-semibold w-40">비고</th>
+                    <th className="px-3 py-2 text-left font-semibold">현재 부름 / 연락처</th>
+                    <th className="px-2 py-2 text-left font-semibold w-44">비고</th>
                     <th className="px-2 py-2 w-7"></th>
                   </tr>
                 </thead>
@@ -402,6 +407,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                                 name,
                                 _birth_date: linked?.birth_date ?? (linked ? null : x._birth_date),
                                 _current_calling: linked?.current_calling ?? (linked ? null : x._current_calling),
+                                _phone: linked?.phone ?? (linked ? null : x._phone),
                                 _linked_member_id: linked?.id ?? x._linked_member_id,
                               } : x));
                             }}
@@ -425,26 +431,45 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated }: MemberDetailPanelPr
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        {/* 현재 부름 */}
+                        {/* 현재 부름 / 연락처 */}
                         <td className="px-3 py-2 align-middle">
-                          {fam._current_calling?.length ? (
-                            <span className="text-foreground">{(fam._current_calling as string[]).join(', ')}</span>
+                          {fam._current_calling?.length || fam._phone ? (
+                            <div className="flex flex-col gap-0.5">
+                              {fam._current_calling?.length ? (
+                                <span className="text-foreground">{(fam._current_calling as string[]).join(', ')}</span>
+                              ) : null}
+                              {fam._phone ? (
+                                <span className="text-muted-foreground">{fam._phone}</span>
+                              ) : null}
+                            </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        {/* 비고 (직접 입력한 가족만 입력 가능) */}
-                        <td className="px-2 py-1.5 align-top">
-                          {fam._linked_member_id ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : (
-                            <Input
-                              value={fam.notes || ''}
-                              onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, notes: e.target.value } : x))}
-                              placeholder="비고 입력..."
-                              className="h-7 text-xs"
-                            />
-                          )}
+                        {/* 비고 + 회원카드 이동 */}
+                        <td className="px-2 py-1.5 align-middle">
+                          <div className="flex items-center gap-1.5">
+                            {fam._linked_member_id ? (
+                              <span className="text-muted-foreground flex-1">—</span>
+                            ) : (
+                              <Input
+                                value={fam.notes || ''}
+                                onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, notes: e.target.value } : x))}
+                                placeholder="비고 입력..."
+                                className="h-7 text-xs flex-1"
+                              />
+                            )}
+                            {fam._linked_member_id && onNavigateToMember && fam.name && (
+                              <button
+                                type="button"
+                                onClick={() => onNavigateToMember({ id: fam._linked_member_id!, name: fam.name! })}
+                                title={`${fam.name} 회원카드로 이동`}
+                                className="shrink-0 p-1 rounded hover:bg-accent text-primary"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                         {/* 삭제 */}
                         <td className="px-2 py-2 align-middle">
