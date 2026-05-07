@@ -522,12 +522,6 @@ const FamilyTree = ({
           {grandchildren.map(r => renderRow(r, 2))}
         </Section>
 
-        {/* 기타 친족 */}
-        {extended.length > 0 && (
-          <Section title="기타 친족">
-            {extended.map(r => renderRow(r, 0))}
-          </Section>
-        )}
       </div>
     </>
   );
