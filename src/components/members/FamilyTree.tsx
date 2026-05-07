@@ -294,6 +294,31 @@ const ExpandableSubFamily = ({
         };
       });
 
+      // 2차 추정: 부모 회원의 배우자 가족 기록에서 동일 인물의 관계를 가져옴
+      // (예: 박호형의 가족에 박이한 관계가 NULL이지만, 배우자 강세희의 가족에는 박이한="아들")
+      const spouseIds = enrichedAll
+        .filter(r => classifyLevel(r.relationship) === "spouse" && r.linked_id)
+        .map(r => r.linked_id!);
+      const unresolved = enrichedAll.filter(r => !r.relationship && r.name);
+      if (spouseIds.length > 0 && unresolved.length > 0) {
+        const { data: spouseFam } = await supabase
+          .from("member_family")
+          .select("member_id, name, relationship")
+          .in("member_id", spouseIds)
+          .in("name", unresolved.map(u => u.name));
+        const spouseRelMap = new Map<string, string>(); // name -> rel
+        (spouseFam || []).forEach((r: any) => {
+          if (r.relationship && !spouseRelMap.has(r.name)) {
+            spouseRelMap.set(r.name, r.relationship);
+          }
+        });
+        for (const r of enrichedAll) {
+          if (!r.relationship && spouseRelMap.has(r.name)) {
+            r.relationship = spouseRelMap.get(r.name)!;
+          }
+        }
+      }
+
       const filtered = enrichedAll.filter(r => {
         const lv = classifyLevel(r.relationship);
         return lv === "spouse" || lv === "children";
