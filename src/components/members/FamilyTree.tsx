@@ -236,7 +236,7 @@ const ExpandableSubFamily = ({
   const [rows, setRows] = useState<SubFamilyRow[] | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useState(() => {
+  useEffect(() => {
     let cancel = false;
     (async () => {
       const { data } = await supabase
