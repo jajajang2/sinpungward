@@ -25,15 +25,43 @@ interface FamilyTreeProps {
   onNavigateToMember?: (m: { id: string; name: string }) => void;
 }
 
-type Level = "grandparents" | "parents" | "siblings" | "spouse" | "children" | "grandchildren" | "extended";
+type Level =
+  | "grandparents"
+  | "spouse_grandparents"
+  | "parents"
+  | "spouse_parents"
+  | "siblings"
+  | "spouse_siblings"
+  | "siblings_in_law"
+  | "spouse"
+  | "children"
+  | "grandchildren"
+  | "nieces_nephews"
+  | "extended";
 
 function classifyLevel(rel?: string | null): Level {
   if (!rel) return "extended";
+  // 배우자 쪽 조부모
+  if (/시할(아버지|머니)|처할(아버지|머니)/.test(rel)) return "spouse_grandparents";
+  // 본인 조부모
   if (/할아버지|할머니|외할/.test(rel)) return "grandparents";
-  if (/^아버지$|^어머니$|시아버지|시어머니|장인|장모/.test(rel)) return "parents";
-  if (rel.startsWith("배우자")) return "spouse";
-  if (/^형$|^오빠$|^누나$|^언니$|^남동생$|^여동생$/.test(rel)) return "siblings";
+  // 시(처)부모
+  if (/시아버지|시어머니|장인|장모/.test(rel)) return "spouse_parents";
+  // 본인 부모
+  if (/^아버지$|^어머니$/.test(rel)) return "parents";
+  // 배우자
+  if (rel.startsWith("배우자") || rel === "남편" || rel === "아내") return "spouse";
+  // 시형제 / 처형제
+  if (/아주버님|도련님|시누이|시동생|시형|처남|처형|처제|형님/.test(rel)) return "spouse_siblings";
+  // 동서·올케·매형 등 (형제의 배우자)
+  if (/동서|올케|매형|매부|형부|제부/.test(rel)) return "siblings_in_law";
+  // 본인 형제자매
+  if (/^형$|^오빠$|^누나$|^언니$|^남동생$|^여동생$|^동생$/.test(rel)) return "siblings";
+  // 자녀
   if (rel === "아들" || rel === "딸" || rel === "며느리" || rel === "사위") return "children";
+  // 조카
+  if (/조카/.test(rel)) return "nieces_nephews";
+  // 손자녀
   if (/손자|손녀|외손/.test(rel)) return "grandchildren";
   return "extended";
 }
@@ -76,7 +104,6 @@ const FamilyMemberCard = ({
             isSelf ? "border-2 border-primary bg-primary/5" : "border-border"
           )}
         >
-          {/* 관계 뱃지 */}
           <div className="flex items-center justify-between gap-1 mb-1">
             <span className={cn(
               "inline-block text-[10px] font-medium px-1.5 py-0.5 rounded",
@@ -86,12 +113,7 @@ const FamilyMemberCard = ({
             </span>
             <div className="flex items-center gap-0.5">
               {linkedId && onNavigate && (
-                <button
-                  type="button"
-                  onClick={onNavigate}
-                  className="p-0.5 rounded hover:bg-accent text-primary"
-                  title="회원카드 이동"
-                >
+                <button type="button" onClick={onNavigate} className="p-0.5 rounded hover:bg-accent text-primary" title="회원카드 이동">
                   <ExternalLink className="w-3 h-3" />
                 </button>
               )}
@@ -107,19 +129,15 @@ const FamilyMemberCard = ({
               )}
             </div>
           </div>
-          {/* 이름 */}
           <div className={cn("text-sm font-semibold truncate", isSelf && "text-primary")}>{name || "—"}</div>
-          {/* 생년월일·나이 */}
           {birthDate && (
             <div className="text-[11px] text-muted-foreground truncate">
               {birthDate}{age != null && ` (${age}세)`}
             </div>
           )}
-          {/* 부름 */}
           {calling && calling.length > 0 && (
             <div className="text-[11px] text-foreground truncate">{calling.join(", ")}</div>
           )}
-          {/* 연락처 */}
           {phone && <div className="text-[11px] text-muted-foreground truncate">{phone}</div>}
         </div>
       </HoverCardTrigger>
@@ -178,7 +196,7 @@ const InlineEditCard = ({
   </div>
 );
 
-// ── 그룹 섹션 (모바일/펼침-접기) ───────────────────────────
+// ── 그룹 섹션 ─────────────────────────────────────────────
 const GroupSection = ({
   title, count, children, defaultOpen = true,
 }: {
@@ -198,6 +216,10 @@ const GroupSection = ({
   );
 };
 
+const Connector = ({ className }: { className?: string }) => (
+  <div className={cn("bg-border", className)} />
+);
+
 // ── 메인 FamilyTree ───────────────────────────────────────
 const FamilyTree = ({
   member, memberId, churchInfo, family, setFamily, memberList, onNavigateToMember,
@@ -206,15 +228,19 @@ const FamilyTree = ({
   const [editMode, setEditMode] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
-  // 그룹화
-  const indexed = family.map((fam, i) => ({ fam, i }));
-  const grandparents = sortByAge(indexed.filter(x => classifyLevel(x.fam.relationship) === "grandparents").map(x => x.fam));
-  const parents = sortByAge(indexed.filter(x => classifyLevel(x.fam.relationship) === "parents").map(x => x.fam));
-  const siblings = sortByAge(indexed.filter(x => classifyLevel(x.fam.relationship) === "siblings").map(x => x.fam));
-  const spouse = indexed.filter(x => classifyLevel(x.fam.relationship) === "spouse").map(x => x.fam);
-  const children = sortByAge(indexed.filter(x => classifyLevel(x.fam.relationship) === "children").map(x => x.fam));
-  const grandchildren = sortByAge(indexed.filter(x => classifyLevel(x.fam.relationship) === "grandchildren").map(x => x.fam));
-  const extended = indexed.filter(x => classifyLevel(x.fam.relationship) === "extended").map(x => x.fam);
+  const byLevel = (lv: Level) => sortByAge(family.filter(f => classifyLevel(f.relationship) === lv));
+  const grandparents = byLevel("grandparents");
+  const spouseGrandparents = byLevel("spouse_grandparents");
+  const parents = byLevel("parents");
+  const spouseParents = byLevel("spouse_parents");
+  const siblings = byLevel("siblings");
+  const spouseSiblings = byLevel("spouse_siblings");
+  const siblingsInLaw = byLevel("siblings_in_law");
+  const spouse = family.filter(f => classifyLevel(f.relationship) === "spouse");
+  const children = byLevel("children");
+  const grandchildren = byLevel("grandchildren");
+  const nieces = byLevel("nieces_nephews");
+  const extended = family.filter(f => classifyLevel(f.relationship) === "extended");
 
   const indexOfFam = (fam: FamilyRow) => family.indexOf(fam);
 
@@ -277,7 +303,6 @@ const FamilyTree = ({
     </Button>
   );
 
-  // ── 헤더 ──
   const header = (
     <div className="flex items-center justify-between mb-3">
       <p className="text-xs text-muted-foreground">가족 관계도</p>
@@ -307,130 +332,132 @@ const FamilyTree = ({
 
   // ── 모바일: 세로 스택 ──
   if (isMobile) {
+    const grid = (rows: FamilyRow[]) => <div className="grid grid-cols-2 gap-2">{rows.map(renderCard)}</div>;
     return (
       <>
         {header}
         <div className="space-y-4">
-          {grandparents.length > 0 && (
-            <GroupSection title="조부모" count={grandparents.length}>
-              <div className="grid grid-cols-2 gap-2">{grandparents.map(renderCard)}</div>
-            </GroupSection>
-          )}
-          {parents.length > 0 && (
-            <GroupSection title="부모" count={parents.length}>
-              <div className="grid grid-cols-2 gap-2">{parents.map(renderCard)}</div>
-            </GroupSection>
-          )}
-          {siblings.length > 0 && (
-            <GroupSection title="형제자매" count={siblings.length}>
-              <div className="grid grid-cols-2 gap-2">{siblings.map(renderCard)}</div>
-            </GroupSection>
-          )}
+          <GroupSection title="조부모" count={grandparents.length}>{grid(grandparents)}</GroupSection>
+          <GroupSection title="부모" count={parents.length}>{grid(parents)}</GroupSection>
+          <GroupSection title="시(처)부모" count={spouseParents.length}>{grid(spouseParents)}</GroupSection>
+          <GroupSection title="형제자매" count={siblings.length}>{grid(siblings)}</GroupSection>
+          <GroupSection title="시(처)형제" count={spouseSiblings.length}>{grid(spouseSiblings)}</GroupSection>
+          <GroupSection title="형제의 배우자" count={siblingsInLaw.length}>{grid(siblingsInLaw)}</GroupSection>
           <GroupSection title="본인 / 배우자" count={1 + spouse.length}>
             <div className="grid grid-cols-2 gap-2">
               {selfCard}
               {spouse.map(renderCard)}
             </div>
           </GroupSection>
-          {children.length > 0 && (
-            <GroupSection title="자녀" count={children.length}>
-              <div className="grid grid-cols-2 gap-2">{children.map(renderCard)}</div>
-            </GroupSection>
-          )}
-          {grandchildren.length > 0 && (
-            <GroupSection title="손자녀" count={grandchildren.length}>
-              <div className="grid grid-cols-2 gap-2">{grandchildren.map(renderCard)}</div>
-            </GroupSection>
-          )}
-          {extended.length > 0 && (
-            <GroupSection title="기타 친족" count={extended.length} defaultOpen={false}>
-              <div className="grid grid-cols-2 gap-2">{extended.map(renderCard)}</div>
-            </GroupSection>
-          )}
+          <GroupSection title="자녀" count={children.length}>{grid(children)}</GroupSection>
+          <GroupSection title="조카" count={nieces.length}>{grid(nieces)}</GroupSection>
+          <GroupSection title="시(처)조부모" count={spouseGrandparents.length}>{grid(spouseGrandparents)}</GroupSection>
+          <GroupSection title="손자녀" count={grandchildren.length}>{grid(grandchildren)}</GroupSection>
+          <GroupSection title="기타 친족" count={extended.length} defaultOpen={false}>{grid(extended)}</GroupSection>
         </div>
       </>
     );
   }
 
-  // ── 데스크탑: 가계도 ──
-  // 연결선: 부모 그룹 아래 ↓, 본인-배우자 가로선, 본인 아래 자녀 ↓
-  const Connector = ({ className }: { className?: string }) => (
-    <div className={cn("bg-border", className)} />
+  // ── 데스크탑: 본인측 / 배우자측 두 컬럼 ──
+  const hasSpouseSide =
+    spouse.length > 0 ||
+    spouseParents.length > 0 ||
+    spouseGrandparents.length > 0 ||
+    spouseSiblings.length > 0 ||
+    siblingsInLaw.length > 0 ||
+    nieces.length > 0;
+
+  const Column = ({ children }: { children: React.ReactNode }) => (
+    <div className="flex flex-col items-center gap-3">{children}</div>
+  );
+
+  // L1: 조부모 (가로 부부선)
+  const renderL1 = (rows: FamilyRow[]) => rows.length > 0 && (
+    <>
+      <div className="flex items-end gap-4 relative">
+        {rows.length >= 2 && <Connector className="absolute top-1/2 left-8 right-8 h-px" />}
+        {rows.map(renderCard)}
+      </div>
+      <Connector className="w-px h-5" />
+    </>
+  );
+
+  // L2: 부모 (가로 부부선)
+  const renderL2 = (rows: FamilyRow[]) => rows.length > 0 && (
+    <>
+      <div className="flex items-end gap-4 relative">
+        {rows.length >= 2 && <Connector className="absolute top-1/2 left-8 right-8 h-px" />}
+        {rows.map(renderCard)}
+      </div>
+      <Connector className="w-px h-5" />
+    </>
+  );
+
+  // 본인측 컬럼 L3: [형제] [본인]
+  const ownColumn = (
+    <Column>
+      {renderL1(grandparents)}
+      {renderL2(parents)}
+      <div className="flex items-end gap-4 relative">
+        {(parents.length > 0 && siblings.length > 0) && (
+          <Connector className="absolute -top-3 left-8 right-8 h-px" />
+        )}
+        {siblings.map(renderCard)}
+        {selfCard}
+      </div>
+      {children.length > 0 && (
+        <>
+          <Connector className="w-px h-5" />
+          <div className="flex items-end gap-4 relative">
+            {children.length >= 2 && <Connector className="absolute -top-3 left-8 right-8 h-px" />}
+            {children.map(renderCard)}
+          </div>
+        </>
+      )}
+      {grandchildren.length > 0 && (
+        <>
+          <Connector className="w-px h-5" />
+          <div className="flex items-end gap-4">{grandchildren.map(renderCard)}</div>
+        </>
+      )}
+    </Column>
+  );
+
+  // 배우자측 컬럼 L3: [배우자] [시형제] [동서]
+  const spouseColumn = hasSpouseSide && (
+    <Column>
+      {renderL1(spouseGrandparents)}
+      {renderL2(spouseParents)}
+      <div className="flex items-end gap-4 relative">
+        {(spouseParents.length > 0 && (spouse.length > 0 || spouseSiblings.length > 0)) && (
+          <Connector className="absolute -top-3 left-8 right-8 h-px" />
+        )}
+        {spouse.map(renderCard)}
+        {spouseSiblings.map(renderCard)}
+        {siblingsInLaw.map(renderCard)}
+      </div>
+      {nieces.length > 0 && (
+        <>
+          <Connector className="w-px h-5" />
+          <div className="flex items-end gap-4 relative">
+            {nieces.length >= 2 && <Connector className="absolute -top-3 left-8 right-8 h-px" />}
+            {nieces.map(renderCard)}
+          </div>
+        </>
+      )}
+    </Column>
   );
 
   return (
     <>
       {header}
       <div className="overflow-x-auto pb-4">
-        <div className="flex flex-col items-center gap-3 min-w-max px-4">
-          {/* L1: 조부모 */}
-          {grandparents.length > 0 && (
-            <>
-              <div className="flex items-end gap-4">{grandparents.map(renderCard)}</div>
-              <Connector className="w-px h-5" />
-            </>
-          )}
-
-          {/* L2: 부모 */}
-          {parents.length > 0 && (
-            <>
-              <div className="flex items-end gap-4 relative">
-                {parents.length >= 2 && (
-                  <Connector className="absolute top-1/2 left-8 right-8 h-px" />
-                )}
-                {parents.map(renderCard)}
-              </div>
-              <Connector className="w-px h-5" />
-            </>
-          )}
-
-          {/* L3: 형제 + 본인 + 배우자 */}
-          <div className="relative">
-            {/* 형제·본인·배우자를 한 줄에 표시 */}
-            <div className="flex items-end gap-4 relative">
-              {/* 형제→본인 가로 연결선 (parents가 있을 때) */}
-              {parents.length > 0 && siblings.length > 0 && (
-                <Connector className="absolute -top-3 left-1/2 right-1/2 h-px" />
-              )}
-              {siblings.map(renderCard)}
-              {selfCard}
-              {spouse.map(renderCard)}
-            </div>
-            {/* 본인-배우자 가로 연결선 */}
-            {spouse.length > 0 && (
-              <div
-                className="absolute h-px bg-primary/40"
-                style={{
-                  top: "50%",
-                  left: `calc(${siblings.length} * (11rem + 1rem) + 5.5rem)`,
-                  width: `calc(${spouse.length} * (11rem + 1rem))`,
-                }}
-              />
-            )}
+        <div className="min-w-max px-4 relative">
+          <div className={cn("flex items-start", hasSpouseSide ? "gap-12" : "")}>
+            {ownColumn}
+            {spouseColumn}
           </div>
-
-          {/* L4: 자녀 */}
-          {children.length > 0 && (
-            <>
-              <Connector className="w-px h-5" />
-              <div className="flex items-end gap-4 relative">
-                {children.length >= 2 && (
-                  <Connector className="absolute -top-3 left-8 right-8 h-px" />
-                )}
-                {children.map(renderCard)}
-              </div>
-            </>
-          )}
-
-          {/* L5: 손자녀 */}
-          {grandchildren.length > 0 && (
-            <>
-              <Connector className="w-px h-5" />
-              <div className="flex items-end gap-4">{grandchildren.map(renderCard)}</div>
-            </>
-          )}
-
-          {/* 기타 친족 */}
           {extended.length > 0 && (
             <div className="w-full mt-6 pt-4 border-t border-border">
               <GroupSection title="기타 친족" count={extended.length} defaultOpen={false}>
