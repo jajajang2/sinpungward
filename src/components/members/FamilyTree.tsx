@@ -1,94 +1,66 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Member, MemberChurchInfo } from "@/types/church";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Edit2, Trash2, ExternalLink, Plus, Eye, Pencil, X, ChevronRight, ChevronDown } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Trash2, ExternalLink, Plus, Eye, Pencil, X, ChevronRight, ChevronDown, ChevronsUpDown,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { calcAge } from "./MemberDetailPanel";
 import {
-  calcAge,
-  FamilyRow,
-  MemberListItem,
-  FamilyNameCombobox,
-  RelationshipSelect,
-  reverseRelationship,
-} from "./MemberDetailPanel";
+  RelationType,
+  RelationMember,
+  RelationEdge,
+  RELATION_TYPE_OPTIONS,
+  relationLabel,
+  fetchRelationGraph,
+  getRelated,
+} from "@/lib/familyRelations";
 
 interface FamilyTreeProps {
-  member: Member | null;
   memberId: string;
-  churchInfo: MemberChurchInfo | null;
-  family: FamilyRow[];
-  setFamily: React.Dispatch<React.SetStateAction<FamilyRow[]>>;
-  memberList: MemberListItem[];
+  member?: Member | null;
+  churchInfo?: MemberChurchInfo | null;
   onNavigateToMember?: (m: { id: string; name: string }) => void;
+  // 아래 props는 호환을 위해 유지(미사용)
+  family?: any;
+  setFamily?: any;
+  memberList?: any;
 }
 
-type Level =
-  | "grandparents"
-  | "spouse_grandparents"
-  | "parents"
-  | "spouse_parents"
-  | "siblings"
-  | "spouse_siblings"
-  | "siblings_in_law"
-  | "spouse"
-  | "children"
-  | "grandchildren"
-  | "nieces_nephews"
-  | "extended";
-
-function classifyLevel(rel?: string | null): Level {
-  if (!rel) return "extended";
-  if (/시할(아버지|머니)|처할(아버지|머니)/.test(rel)) return "spouse_grandparents";
-  if (/할아버지|할머니|외할/.test(rel)) return "grandparents";
-  if (/시아버지|시어머니|장인|장모/.test(rel)) return "spouse_parents";
-  if (/^아버지$|^어머니$/.test(rel)) return "parents";
-  if (rel.startsWith("배우자") || rel === "남편" || rel === "아내") return "spouse";
-  if (/아주버님|도련님|시누이|시동생|시형|처남|처형|처제|형님/.test(rel)) return "spouse_siblings";
-  if (/동서|올케|매형|매부|형부|제부/.test(rel)) return "siblings_in_law";
-  if (/^형$|^오빠$|^누나$|^언니$|^남동생$|^여동생$|^동생$/.test(rel)) return "siblings";
-  if (rel === "아들" || rel === "딸" || rel === "며느리" || rel === "사위") return "children";
-  if (/조카/.test(rel)) return "nieces_nephews";
-  if (/손자|손녀|외손/.test(rel)) return "grandchildren";
-  return "extended";
-}
-
-function sortByAge(rows: FamilyRow[]) {
-  return [...rows].sort((a, b) => {
-    const ad = a._birth_date || "9999-12-31";
-    const bd = b._birth_date || "9999-12-31";
-    return ad.localeCompare(bd);
-  });
-}
-
-// ── Row 컴포넌트 ───────────────────────────────────────────
-interface RowProps {
-  name: string;
-  relationship?: string;
-  birthDate?: string | null;
-  calling?: string[] | null;
-  phone?: string | null;
-  notes?: string | null;
+interface TreeNode {
+  key: string;
+  memberId: string;
   isSelf?: boolean;
-  linkedId?: string;
+  relationLabel?: string;
+  indent: number;
+  children: TreeNode[];
+}
+
+// ── Row 컴포넌트 ────────────────────────────────────────────
+const FamilyRowItem = ({
+  m, label, indent, isSelf, onNavigate, onDelete, editMode,
+  expandable, expanded, onToggleExpand,
+}: {
+  m: RelationMember;
+  label?: string;
+  indent: number;
+  isSelf?: boolean;
   onNavigate?: () => void;
-  onEdit?: () => void;
   onDelete?: () => void;
   editMode?: boolean;
-  indent?: number;
   expandable?: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
-}
-
-const FamilyRowItem = ({
-  name, relationship, birthDate, calling, phone, notes,
-  isSelf, linkedId, onNavigate, onEdit, onDelete, editMode, indent = 0,
-  expandable, expanded, onToggleExpand,
-}: RowProps) => {
-  const age = calcAge(birthDate);
+}) => {
+  const age = calcAge(m.birth_date);
   return (
     <HoverCard openDelay={250}>
       <HoverCardTrigger asChild>
@@ -112,35 +84,30 @@ const FamilyRowItem = ({
             "shrink-0 inline-block text-[10px] font-medium px-1.5 py-0.5 rounded min-w-[3.5rem] text-center",
             isSelf ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
           )}>
-            {isSelf ? "본인" : relationship || "—"}
+            {isSelf ? "본인" : label || "—"}
           </span>
           <div className="flex-1 min-w-0 grid grid-cols-12 gap-2 items-center">
             <div className={cn("col-span-3 text-sm font-semibold truncate", isSelf && "text-primary")}>
-              {name || "—"}
+              {m.name || "—"}
             </div>
             <div className="col-span-3 text-xs text-muted-foreground truncate">
-              {birthDate ? `${birthDate}${age != null ? ` (${age})` : ""}` : "—"}
+              {m.birth_date ? `${m.birth_date}${age != null ? ` (${age})` : ""}` : "—"}
             </div>
             <div className="col-span-3 text-xs truncate">
-              {calling && calling.length > 0 ? calling.join(", ") : "—"}
+              {m.current_calling && m.current_calling.length > 0 ? m.current_calling.join(", ") : "—"}
             </div>
             <div className="col-span-3 text-xs text-muted-foreground truncate">
-              {phone || "—"}
+              {m.phone || "—"}
             </div>
           </div>
           <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-            {linkedId && onNavigate && (
+            {!isSelf && onNavigate && (
               <button type="button" onClick={onNavigate} className="p-1 rounded hover:bg-accent text-primary" title="회원카드 이동">
                 <ExternalLink className="w-3.5 h-3.5" />
               </button>
             )}
-            {editMode && onEdit && (
-              <button type="button" onClick={onEdit} className="p-1 rounded hover:bg-accent">
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-            )}
             {editMode && onDelete && !isSelf && (
-              <button type="button" onClick={onDelete} className="p-1 rounded hover:bg-destructive/10 text-destructive">
+              <button type="button" onClick={onDelete} className="p-1 rounded hover:bg-destructive/10 text-destructive" title="관계 삭제">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
@@ -148,61 +115,17 @@ const FamilyRowItem = ({
         </div>
       </HoverCardTrigger>
       <HoverCardContent className="w-64 text-xs space-y-1" side="top">
-        <div className="font-semibold text-sm">{name}</div>
-        {relationship && <div><span className="text-muted-foreground">관계:</span> {relationship}</div>}
-        {birthDate && <div><span className="text-muted-foreground">생년월일:</span> {birthDate}{age != null && ` (${age}세)`}</div>}
-        {calling && calling.length > 0 && <div><span className="text-muted-foreground">부름:</span> {calling.join(", ")}</div>}
-        {phone && <div><span className="text-muted-foreground">연락처:</span> {phone}</div>}
-        {notes && <div><span className="text-muted-foreground">비고:</span> {notes}</div>}
+        <div className="font-semibold text-sm">{m.name}</div>
+        {label && <div><span className="text-muted-foreground">관계:</span> {label}</div>}
+        {m.birth_date && <div><span className="text-muted-foreground">생년월일:</span> {m.birth_date}{age != null && ` (${age}세)`}</div>}
+        {m.current_calling && m.current_calling.length > 0 && (
+          <div><span className="text-muted-foreground">부름:</span> {m.current_calling.join(", ")}</div>
+        )}
+        {m.phone && <div><span className="text-muted-foreground">연락처:</span> {m.phone}</div>}
       </HoverCardContent>
     </HoverCard>
   );
 };
-
-// ── 인라인 편집 ─────────────────────────────────────────────
-const InlineEditRow = ({
-  fam, index, memberList, setFamily, onClose,
-}: {
-  fam: FamilyRow;
-  index: number;
-  memberList: MemberListItem[];
-  setFamily: React.Dispatch<React.SetStateAction<FamilyRow[]>>;
-  onClose: () => void;
-}) => (
-  <div className="rounded-md border-2 border-primary bg-card p-2 space-y-1.5">
-    <div className="flex items-center justify-between">
-      <span className="text-[10px] font-semibold text-primary">편집 중</span>
-      <button onClick={onClose} className="p-0.5 rounded hover:bg-accent">
-        <X className="w-3 h-3" />
-      </button>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
-      <FamilyNameCombobox
-        value={fam.name || ""}
-        memberList={memberList}
-        onChange={(name, linked) => setFamily(f => f.map((x, j) => j === index ? {
-          ...x, name,
-          _birth_date: linked?.birth_date ?? (linked ? null : x._birth_date),
-          _current_calling: linked?.current_calling ?? (linked ? null : x._current_calling),
-          _phone: linked?.phone ?? (linked ? null : x._phone),
-          _linked_member_id: linked?.id ?? x._linked_member_id,
-        } : x))}
-      />
-      <RelationshipSelect
-        value={fam.relationship || ""}
-        onChange={v => setFamily(f => f.map((x, j) => j === index ? { ...x, relationship: v } : x))}
-      />
-      {!fam._linked_member_id && (
-        <Input
-          value={fam.notes || ""}
-          onChange={e => setFamily(f => f.map((x, j) => j === index ? { ...x, notes: e.target.value } : x))}
-          placeholder="비고..."
-          className="h-8 text-xs"
-        />
-      )}
-    </div>
-  </div>
-);
 
 // ── Section ────────────────────────────────────────────────
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -212,173 +135,83 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </section>
 );
 
-// ── 서브 가족 (배우자/자녀) 행 ─────────────────────────────
-interface SubFamilyRow {
-  id: string;
-  name: string;
-  relationship: string;
-  birth_date: string | null;
-  current_calling: string[] | null;
-  phone: string | null;
-  linked_id?: string;
-}
-
-const ExpandableSubFamily = ({
-  parentMemberId,
-  memberList,
-  indent,
-  onNavigateToMember,
+// ── Member 검색 콤보박스 ───────────────────────────────────
+const MemberCombobox = ({
+  members, value, onChange,
 }: {
-  parentMemberId: string;
-  memberList: MemberListItem[];
-  indent: number;
-  onNavigateToMember?: (m: { id: string; name: string }) => void;
+  members: RelationMember[];
+  value: string;
+  onChange: (memberId: string) => void;
 }) => {
-  const [rows, setRows] = useState<SubFamilyRow[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      // 1) 부모 회원 자신의 가족 행
-      // 2) 부모 회원의 이름/성별 + 각 가족의 회원이 가진 가족 행에서 역추정
-      const { data: parentMember } = await supabase
-        .from("members")
-        .select("id, name, gender")
-        .eq("id", parentMemberId)
-        .single();
-      const { data } = await supabase
-        .from("member_family")
-        .select("id, name, relationship")
-        .eq("member_id", parentMemberId)
-        .order("sort_order");
-      if (cancel) return;
-
-      const rowsRaw = (data || []) as Array<{ id: string; name: string; relationship: string | null }>;
-
-      // 비어있는 관계는 상대방 가족 테이블에서 역추정
-      const linkedNames = rowsRaw.map(r => r.name).filter(Boolean);
-      const linkedMembers = memberList.filter(m => linkedNames.includes(m.name));
-      const linkedIds = linkedMembers.map(m => m.id);
-      let revMap = new Map<string, string>(); // linkedMemberId -> rel
-      let genderMap = new Map<string, string | null>();
-      if (linkedIds.length > 0 && parentMember?.name) {
-        const [{ data: revRows }, { data: others }] = await Promise.all([
-          supabase.from("member_family")
-            .select("member_id, name, relationship")
-            .in("member_id", linkedIds)
-            .eq("name", parentMember.name),
-          supabase.from("members").select("id, gender").in("id", linkedIds),
-        ]);
-        (revRows || []).forEach((r: any) => {
-          if (r.relationship) revMap.set(r.member_id, r.relationship);
-        });
-        (others || []).forEach((m: any) => genderMap.set(m.id, m.gender ?? null));
-      }
-
-      const enrichedAll = rowsRaw.map(r => {
-        const linked = memberList.find(m => m.name === r.name);
-        let rel = r.relationship;
-        if (!rel && linked) {
-          const otherRel = revMap.get(linked.id);
-          rel = reverseRelationship(otherRel, genderMap.get(linked.id)) || null;
-        }
-        return {
-          id: r.id,
-          name: r.name,
-          relationship: rel || "",
-          birth_date: linked?.birth_date ?? null,
-          current_calling: linked?.current_calling ?? null,
-          phone: linked?.phone ?? null,
-          linked_id: linked?.id,
-        };
-      });
-
-      // 2차 추정: 부모 회원의 배우자 가족 기록에서 동일 인물의 관계를 가져옴
-      // (예: 박호형의 가족에 박이한 관계가 NULL이지만, 배우자 강세희의 가족에는 박이한="아들")
-      const spouseIds = enrichedAll
-        .filter(r => classifyLevel(r.relationship) === "spouse" && r.linked_id)
-        .map(r => r.linked_id!);
-      const unresolved = enrichedAll.filter(r => !r.relationship && r.name);
-      if (spouseIds.length > 0 && unresolved.length > 0) {
-        const { data: spouseFam } = await supabase
-          .from("member_family")
-          .select("member_id, name, relationship")
-          .in("member_id", spouseIds)
-          .in("name", unresolved.map(u => u.name));
-        const spouseRelMap = new Map<string, string>(); // name -> rel
-        (spouseFam || []).forEach((r: any) => {
-          if (r.relationship && !spouseRelMap.has(r.name)) {
-            spouseRelMap.set(r.name, r.relationship);
-          }
-        });
-        for (const r of enrichedAll) {
-          if (!r.relationship && spouseRelMap.has(r.name)) {
-            r.relationship = spouseRelMap.get(r.name)!;
-          }
-        }
-      }
-
-      const filtered = enrichedAll.filter(r => {
-        const lv = classifyLevel(r.relationship);
-        return lv === "spouse" || lv === "children";
-      });
-
-      filtered.sort((a, b) => {
-        const ord = (lv: Level) => (lv === "spouse" ? 0 : 1);
-        const la = classifyLevel(a.relationship);
-        const lb = classifyLevel(b.relationship);
-        if (la !== lb) return ord(la) - ord(lb);
-        return (a.birth_date || "9999").localeCompare(b.birth_date || "9999");
-      });
-      setRows(filtered);
-      setLoading(false);
-    })();
-    return () => { cancel = true; };
-  }, [parentMemberId, memberList]);
-
-  if (loading) {
-    return (
-      <div className="text-xs text-muted-foreground px-3 py-1.5" style={{ marginLeft: indent * 16 }}>
-        불러오는 중...
-      </div>
-    );
-  }
-  if (!rows || rows.length === 0) {
-    return (
-      <div className="text-xs text-muted-foreground px-3 py-1.5" style={{ marginLeft: indent * 16 }}>
-        등록된 배우자·자녀 없음
-      </div>
-    );
-  }
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const selected = members.find(m => m.id === value);
+  const filtered = members.filter(m =>
+    !q || m.name.toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 30);
   return (
-    <>
-      {rows.map(r => (
-        <FamilyRowItem
-          key={r.id}
-          name={r.name}
-          relationship={r.relationship}
-          birthDate={r.birth_date}
-          calling={r.current_calling}
-          phone={r.phone}
-          linkedId={r.linked_id}
-          indent={indent}
-          onNavigate={r.linked_id && onNavigateToMember
-            ? () => onNavigateToMember({ id: r.linked_id!, name: r.name })
-            : undefined}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="h-8 px-2 text-xs border border-input rounded-md flex items-center justify-between gap-1 w-full bg-background hover:bg-accent"
+        >
+          <span className={cn("truncate", !selected && "text-muted-foreground")}>
+            {selected?.name || "회원 선택..."}
+          </span>
+          <ChevronsUpDown className="w-3 h-3 text-muted-foreground shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="start">
+        <Input
+          autoFocus
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="이름 검색..."
+          className="h-8 text-xs border-0 border-b rounded-none"
         />
-      ))}
-    </>
+        <div className="max-h-56 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-3 text-xs text-muted-foreground text-center">결과 없음</div>
+          ) : filtered.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => { onChange(m.id); setOpen(false); setQ(""); }}
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent"
+            >
+              <span className="font-medium">{m.name}</span>
+              {m.birth_date && <span className="ml-2 text-muted-foreground">{m.birth_date}</span>}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
 // ── 메인 ───────────────────────────────────────────────────
-const FamilyTree = ({
-  member, memberId, churchInfo, family, setFamily, memberList, onNavigateToMember,
-}: FamilyTreeProps) => {
+const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
+  const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
-  const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [members, setMembers] = useState<Map<string, RelationMember>>(new Map());
+  const [edges, setEdges] = useState<Map<string, RelationEdge[]>>(new Map());
+  const [loading, setLoading] = useState(true);
+
+  // 새 관계 추가 상태
+  const [addType, setAddType] = useState<RelationType>("child");
+  const [addTarget, setAddTarget] = useState<string>("");
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    const g = await fetchRelationGraph();
+    setMembers(g.members);
+    setEdges(g.edgesByMember);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { reload(); }, [reload, memberId]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -388,165 +221,218 @@ const FamilyTree = ({
     });
   };
 
-  const byLevel = (lv: Level) => sortByAge(family.filter(f => classifyLevel(f.relationship) === lv));
-  const grandparents = byLevel("grandparents");
-  const parents = byLevel("parents");
-  const siblings = byLevel("siblings");
-  const siblingsInLaw = byLevel("siblings_in_law");
-  const nieces = byLevel("nieces_nephews");
-  const spouseParents = byLevel("spouse_parents");
-  const spouseGrandparents = byLevel("spouse_grandparents");
-  const spouseSiblings = byLevel("spouse_siblings");
-  const spouse = family.filter(f => classifyLevel(f.relationship) === "spouse");
-  const children = byLevel("children");
-  const grandchildren = byLevel("grandchildren");
-  const extended = family.filter(f => classifyLevel(f.relationship) === "extended");
+  const self = members.get(memberId);
 
-  const indexOfFam = (fam: FamilyRow) => family.indexOf(fam);
+  // 관계별 정렬: 나이순
+  const sortByAge = (ids: string[]) =>
+    [...ids].sort((a, b) => {
+      const ad = members.get(a)?.birth_date || "9999-12-31";
+      const bd = members.get(b)?.birth_date || "9999-12-31";
+      return ad.localeCompare(bd);
+    });
 
-  const renderRow = (fam: FamilyRow, indent = 0, allowExpand = false) => {
-    const idx = indexOfFam(fam);
-    if (editMode && editingIdx === idx) {
-      return (
-        <InlineEditRow
-          key={fam.id || `f-${idx}`}
-          fam={fam} index={idx}
-          memberList={memberList} setFamily={setFamily}
-          onClose={() => setEditingIdx(null)}
-        />
-      );
+  const relatedOf = (id: string, t: RelationType) => sortByAge(getRelated(edges, id, t));
+
+  // 관계 추가
+  const handleAddRelation = async () => {
+    if (!addTarget) {
+      toast({ title: "회원을 선택하세요", variant: "destructive" });
+      return;
     }
-    const expandable = allowExpand && !!fam._linked_member_id && !editMode;
-    const expanded = expandable && expandedIds.has(fam._linked_member_id!);
+    if (addTarget === memberId) {
+      toast({ title: "자기 자신은 추가할 수 없습니다", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("member_relations").insert({
+      member_id: memberId,
+      related_member_id: addTarget,
+      relation_type: addType,
+    });
+    if (error) {
+      if (error.code === "23505") {
+        toast({ title: "이미 등록된 관계입니다", variant: "destructive" });
+      } else {
+        toast({ title: "추가 실패", description: error.message, variant: "destructive" });
+      }
+      return;
+    }
+    setAddTarget("");
+    toast({ title: "추가됨", description: "양쪽 회원카드에 자동 반영됩니다." });
+    await reload();
+  };
+
+  // 관계 삭제: A의 관점에서 B와의 직접 edge 제거 (트리거가 역방향도 정리)
+  const handleDeleteRelation = async (fromId: string, toId: string, type: RelationType) => {
+    if (!confirm("이 가족 관계를 삭제할까요? 양쪽 회원카드 모두에서 제거됩니다.")) return;
+    const { error } = await supabase
+      .from("member_relations")
+      .delete()
+      .eq("member_id", fromId)
+      .eq("related_member_id", toId)
+      .eq("relation_type", type);
+    if (error) {
+      toast({ title: "삭제 실패", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "삭제됨" });
+    await reload();
+  };
+
+  // 본인 관점 라벨
+  const labelFor = (fromId: string, toId: string, type: RelationType) => {
+    const a = members.get(fromId);
+    const b = members.get(toId);
+    return relationLabel(type, a?.gender, b?.gender, a?.birth_date, b?.birth_date);
+  };
+
+  // ── 행 렌더 ─────────────────────────────────────────────
+  const renderMemberRow = (
+    targetId: string,
+    fromId: string,
+    type: RelationType | null,
+    indent: number,
+    expandable: boolean,
+    isSelf?: boolean
+  ) => {
+    const m = members.get(targetId);
+    if (!m) return null;
+    const label = type ? labelFor(fromId, targetId, type) : undefined;
+    const expanded = expandable && expandedIds.has(targetId);
     return (
-      <div key={fam.id || `f-${idx}`} className="space-y-1.5">
+      <div key={`${fromId}->${targetId}-${type}`} className="space-y-1.5">
         <FamilyRowItem
-          name={fam.name || ""}
-          relationship={fam.relationship || undefined}
-          birthDate={fam._birth_date}
-          calling={fam._current_calling}
-          phone={fam._phone}
-          notes={fam.notes}
-          linkedId={fam._linked_member_id}
+          m={m}
+          label={label}
           indent={indent}
-          onNavigate={fam._linked_member_id && fam.name && onNavigateToMember
-            ? () => onNavigateToMember({ id: fam._linked_member_id!, name: fam.name! })
-            : undefined}
+          isSelf={isSelf}
           editMode={editMode}
-          onEdit={() => setEditingIdx(idx)}
-          onDelete={() => setFamily(f => f.filter((_, j) => j !== idx))}
-          expandable={expandable}
+          onNavigate={onNavigateToMember && !isSelf ? () => onNavigateToMember({ id: targetId, name: m.name }) : undefined}
+          onDelete={!isSelf && type ? () => handleDeleteRelation(fromId, targetId, type) : undefined}
+          expandable={expandable && !editMode}
           expanded={expanded}
-          onToggleExpand={expandable ? () => toggleExpand(fam._linked_member_id!) : undefined}
+          onToggleExpand={() => toggleExpand(targetId)}
         />
-        {expanded && (
-          <ExpandableSubFamily
-            parentMemberId={fam._linked_member_id!}
-            memberList={memberList}
-            indent={indent + 1}
-            onNavigateToMember={onNavigateToMember}
-          />
-        )}
+        {expanded && renderSubFamily(targetId, indent + 1)}
       </div>
     );
   };
 
-  const selfRow = (
-    <FamilyRowItem
-      key="self"
-      isSelf
-      name={member?.name || "본인"}
-      birthDate={member?.birth_date}
-      calling={churchInfo?.current_calling}
-      phone={member?.phone}
-    />
-  );
+  // 클릭 시 펼쳐지는 서브 가족: 배우자 + 자녀
+  const renderSubFamily = (parentId: string, indent: number) => {
+    const spouseIds = relatedOf(parentId, "spouse");
+    const childIds = relatedOf(parentId, "child");
+    if (spouseIds.length === 0 && childIds.length === 0) {
+      return (
+        <div className="text-xs text-muted-foreground px-3 py-1.5" style={{ marginLeft: indent * 16 }}>
+          등록된 배우자·자녀 없음
+        </div>
+      );
+    }
+    return (
+      <>
+        {spouseIds.map(sid => renderMemberRow(sid, parentId, "spouse", indent, false))}
+        {childIds.map(cid => renderMemberRow(cid, parentId, "child", indent, false))}
+      </>
+    );
+  };
 
-  const header = (
-    <div className="flex items-center justify-between mb-3">
-      <p className="text-xs text-muted-foreground">가족 정보</p>
-      <div className="flex items-center gap-2">
-        {editMode && (
-          <Button
-            size="sm" variant="outline" className="h-7 text-xs"
-            onClick={() => {
-              setFamily(f => [...f, {
-                id: "", member_id: memberId, name: "", relationship: "", phone: "",
-                sort_order: f.length,
-                _birth_date: null, _current_calling: null, _linked_member_id: undefined,
-              }]);
-              setEditingIdx(family.length);
-            }}
-          >
-            <Plus className="w-3 h-3 mr-1" />가족 추가
-          </Button>
-        )}
+  if (loading || !self) {
+    return <div className="text-sm text-muted-foreground py-6 text-center">불러오는 중...</div>;
+  }
+
+  // 본인 기준 그룹
+  const parentIds = relatedOf(memberId, "parent");
+  const siblingIds = relatedOf(memberId, "sibling");
+  const spouseIds = relatedOf(memberId, "spouse");
+  const childIds = relatedOf(memberId, "child");
+  // 손자녀 = 자녀의 자녀 (집계)
+  const grandchildIds = Array.from(new Set(
+    childIds.flatMap(cid => relatedOf(cid, "child"))
+  ));
+
+  const hasUpper = parentIds.length > 0 || siblingIds.length > 0;
+
+  // 추가 가능한 회원 목록 (본인 제외 + 이미 동일 타입으로 연결된 사람 제외)
+  const addCandidates = Array.from(members.values()).filter(m => {
+    if (m.id === memberId) return false;
+    return true;
+  });
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-muted-foreground">가족 정보 (관계 기반 자동 동기화)</p>
         <Button
-          size="sm" variant={editMode ? "default" : "outline"} className="h-7 text-xs"
-          onClick={() => { setEditMode(m => !m); setEditingIdx(null); }}
+          size="sm"
+          variant={editMode ? "default" : "outline"}
+          className="h-7 text-xs"
+          onClick={() => setEditMode(m => !m)}
         >
           {editMode ? <><Eye className="w-3 h-3 mr-1" />보기</> : <><Pencil className="w-3 h-3 mr-1" />편집</>}
         </Button>
       </div>
-    </div>
-  );
 
-  if (family.length === 0 && !editMode) {
-    return (
-      <>
-        {header}
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-          <p className="text-sm">가족 정보가 없습니다</p>
-          <p className="text-xs">편집 모드에서 가족을 추가하세요</p>
+      {/* 편집 모드: 관계 추가 폼 */}
+      {editMode && (
+        <div className="mb-3 p-3 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-2">
+          <p className="text-xs font-semibold text-primary">새 가족 관계 추가</p>
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <Select value={addType} onValueChange={(v) => setAddType(v as RelationType)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {RELATION_TYPE_OPTIONS.map(o => (
+                  <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <MemberCombobox members={addCandidates} value={addTarget} onChange={setAddTarget} />
+            <Button size="sm" className="h-8 text-xs" onClick={handleAddRelation}>
+              <Plus className="w-3 h-3 mr-1" />추가
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            ※ 부모/자녀 관계를 추가하면 동일 부모를 가진 자녀들끼리 형제 관계가 자동 연결됩니다.
+          </p>
         </div>
-      </>
-    );
-  }
+      )}
 
-  const hasUpperFamily =
-    parents.length > 0 || grandparents.length > 0 ||
-    siblings.length > 0 || siblingsInLaw.length > 0 || nieces.length > 0;
-  const hasSpouseSide =
-    spouseParents.length > 0 || spouseGrandparents.length > 0 || spouseSiblings.length > 0;
-
-  return (
-    <>
-      {header}
       <div className="space-y-3">
-        {/* 부모님 가족 (조부모-부모-본인 형제) */}
-        {hasUpperFamily && (
+        {/* 부모님 가족 */}
+        {hasUpper && (
           <Section title="부모님 가족">
-            {grandparents.map(r => renderRow(r, 0))}
-            {parents.map(r => renderRow(r, 0))}
-            {siblings.map(r => renderRow(r, 1, true))}
-          </Section>
-        )}
-
-        {/* 형제의 가족 */}
-        {(siblingsInLaw.length > 0 || nieces.length > 0) && (
-          <Section title="형제의 가족">
-            {siblingsInLaw.map(r => renderRow(r, 0, true))}
-            {nieces.map(r => renderRow(r, 1))}
-          </Section>
-        )}
-
-        {/* 배우자측 가족 */}
-        {hasSpouseSide && (
-          <Section title="배우자 가족">
-            {spouseGrandparents.map(r => renderRow(r, 0))}
-            {spouseParents.map(r => renderRow(r, 0))}
-            {spouseSiblings.map(r => renderRow(r, 1, true))}
+            {parentIds.map(pid => renderMemberRow(pid, memberId, "parent", 0, false))}
+            {siblingIds.map(sid => renderMemberRow(sid, memberId, "sibling", 1, true))}
           </Section>
         )}
 
         {/* 본인의 가족 */}
         <Section title="본인의 가족">
-          {selfRow}
-          {spouse.map(r => renderRow(r, 1))}
-          {children.map(r => renderRow(r, 1, true))}
-          {grandchildren.map(r => renderRow(r, 2))}
+          {renderMemberRow(memberId, memberId, null, 0, false, true)}
+          {spouseIds.map(sid => renderMemberRow(sid, memberId, "spouse", 1, false))}
+          {childIds.map(cid => renderMemberRow(cid, memberId, "child", 1, true))}
+          {grandchildIds.map(gid => {
+            // 어떤 자녀의 자녀인지 라벨 계산: 본인 → 손자/손녀
+            const m = members.get(gid);
+            if (!m) return null;
+            // 본인 입장 라벨: 손자/손녀
+            const label = m.gender === "남" ? "손자" : m.gender === "여" ? "손녀" : "손자녀";
+            return (
+              <FamilyRowItem
+                key={`gc-${gid}`}
+                m={m}
+                label={label}
+                indent={2}
+                editMode={false}
+                onNavigate={onNavigateToMember ? () => onNavigateToMember({ id: gid, name: m.name }) : undefined}
+              />
+            );
+          })}
+          {spouseIds.length === 0 && childIds.length === 0 && (
+            <p className="text-xs text-muted-foreground px-3 py-2">
+              {editMode ? "위에서 배우자·자녀를 추가하세요" : "등록된 가족이 없습니다"}
+            </p>
+          )}
         </Section>
-
       </div>
     </>
   );
