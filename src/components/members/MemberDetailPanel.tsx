@@ -159,24 +159,29 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
     });
 
     // 비어있는 관계는 상대방 회원의 family 테이블에서 역추정
-    const myGender = mRes.data?.gender;
     const linkedIdsToFetch = familyRows
       .filter(f => !f.relationship && f._linked_member_id)
       .map(f => f._linked_member_id!);
     if (linkedIdsToFetch.length > 0 && mRes.data) {
-      const { data: reverseRows } = await supabase
-        .from('member_family')
-        .select('member_id, name, relationship')
-        .in('member_id', linkedIdsToFetch)
-        .eq('name', mRes.data.name);
+      const [{ data: reverseRows }, { data: otherMembers }] = await Promise.all([
+        supabase.from('member_family')
+          .select('member_id, name, relationship')
+          .in('member_id', linkedIdsToFetch)
+          .eq('name', mRes.data.name),
+        supabase.from('members')
+          .select('id, gender')
+          .in('id', linkedIdsToFetch),
+      ]);
       const revMap = new Map<string, string>();
       (reverseRows || []).forEach((r: any) => {
         if (r.relationship) revMap.set(r.member_id, r.relationship);
       });
+      const otherGenderMap = new Map<string, string | null>();
+      (otherMembers || []).forEach((m: any) => otherGenderMap.set(m.id, m.gender ?? null));
       for (const fr of familyRows) {
         if (!fr.relationship && fr._linked_member_id) {
           const otherRel = revMap.get(fr._linked_member_id);
-          const inferred = reverseRelationship(otherRel, myGender);
+          const inferred = reverseRelationship(otherRel, otherGenderMap.get(fr._linked_member_id));
           if (inferred) fr.relationship = inferred;
         }
       }
