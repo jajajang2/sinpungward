@@ -475,10 +475,63 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                   </tr>
                 </thead>
                 <tbody>
-                  {family.map((fam, i) => {
-                    const famAge = calcAge(fam._birth_date);
-                    return (
-                      <tr key={i} className="border-t border-border hover:bg-muted/30">
+                  {(() => {
+                    const indexed = family.map((fam, i) => ({ fam, i }));
+                    const above = indexed
+                      .filter(x => familyGroup(x.fam.relationship) === 'above')
+                      .sort((a, b) => {
+                        const r = familyRank(a.fam.relationship) - familyRank(b.fam.relationship);
+                        if (r !== 0) return r;
+                        // 같은 등급: 나이 많은 순
+                        const ad = a.fam._birth_date || '9999';
+                        const bd = b.fam._birth_date || '9999';
+                        return ad.localeCompare(bd);
+                      });
+                    const below = indexed
+                      .filter(x => familyGroup(x.fam.relationship) === 'below')
+                      .sort((a, b) => {
+                        const r = familyRank(a.fam.relationship) - familyRank(b.fam.relationship);
+                        if (r !== 0) return r;
+                        // 자녀/손자녀: 나이 많은 순 (첫째 → 막내)
+                        const ad = a.fam._birth_date || '9999-12-31';
+                        const bd = b.fam._birth_date || '9999-12-31';
+                        return ad.localeCompare(bd);
+                      });
+                    const ordered = [...above, { self: true as const }, ...below] as Array<{ fam: FamilyRow; i: number } | { self: true }>;
+
+                    return ordered.map((row, idx) => {
+                      if ('self' in row) {
+                        const meAge = calcAge(member?.birth_date);
+                        return (
+                          <tr key={`self-${idx}`} className="border-t border-border bg-primary/5">
+                            <td className="px-2 py-1.5 align-middle font-semibold text-primary">{member?.name} (본인)</td>
+                            <td className="px-2 py-1.5 align-middle text-muted-foreground">—</td>
+                            <td className="px-3 py-2 align-middle">
+                              {member?.birth_date ? (
+                                <span className="text-foreground whitespace-nowrap">
+                                  {member.birth_date}
+                                  {meAge != null && <span className="text-muted-foreground ml-1">({meAge}세)</span>}
+                                </span>
+                              ) : <span className="text-muted-foreground">—</span>}
+                            </td>
+                            <td className="px-3 py-2 align-middle">
+                              <div className="flex flex-col gap-0.5">
+                                {churchInfo?.current_calling?.length ? (
+                                  <span className="text-foreground">{churchInfo.current_calling.join(', ')}</span>
+                                ) : null}
+                                {member?.phone ? <span className="text-muted-foreground">{member.phone}</span> : null}
+                                {!churchInfo?.current_calling?.length && !member?.phone && <span className="text-muted-foreground">—</span>}
+                              </div>
+                            </td>
+                            <td className="px-2 py-1.5 align-middle text-muted-foreground">—</td>
+                            <td className="px-2 py-2"></td>
+                          </tr>
+                        );
+                      }
+                      const { fam, i } = row;
+                      const famAge = calcAge(fam._birth_date);
+                      return (
+                        <tr key={i} className="border-t border-border hover:bg-muted/30">
                         {/* 이름 */}
                         <td className="px-2 py-1.5 align-top">
                           <FamilyNameCombobox
