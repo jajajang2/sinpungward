@@ -799,7 +799,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
 };
 
 // ── Family Name Combobox ──────────────────────────────────────
-const FamilyNameCombobox = ({
+export const FamilyNameCombobox = ({
   value,
   memberList,
   onChange,
