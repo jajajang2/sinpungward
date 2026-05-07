@@ -273,7 +273,7 @@ const ExpandableSubFamily = ({
       setLoading(false);
     })();
     return () => { cancel = true; };
-  });
+  }, [parentMemberId, memberList]);
 
   if (loading) {
     return (
