@@ -390,7 +390,7 @@ const FamilyTree = ({
             <div className="flex items-end gap-4 relative">
               {/* 형제→본인 가로 연결선 (parents가 있을 때) */}
               {parents.length > 0 && siblings.length > 0 && (
-                <Connector className="absolute -top-3 left-1/2 right-1/2 h-px" style={undefined as any} />
+                <Connector className="absolute -top-3 left-1/2 right-1/2 h-px" />
               )}
               {siblings.map(renderCard)}
               {selfCard}
