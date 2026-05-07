@@ -280,6 +280,45 @@ export type Database = {
           },
         ]
       }
+      member_relations: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string
+          related_member_id: string
+          relation_type: Database["public"]["Enums"]["family_relation_type"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id: string
+          related_member_id: string
+          relation_type: Database["public"]["Enums"]["family_relation_type"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string
+          related_member_id?: string
+          relation_type?: Database["public"]["Enums"]["family_relation_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_relations_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_relations_related_member_id_fkey"
+            columns: ["related_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           address: string | null
@@ -366,10 +405,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reverse_relation_type: {
+        Args: { t: Database["public"]["Enums"]["family_relation_type"] }
+        Returns: Database["public"]["Enums"]["family_relation_type"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      family_relation_type: "spouse" | "parent" | "child" | "sibling"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -496,6 +538,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      family_relation_type: ["spouse", "parent", "child", "sibling"],
+    },
   },
 } as const
