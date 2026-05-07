@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Member, MemberFamily, MemberChurchInfo, MemberNote } from "@/types/church";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,59 @@ function calcAge(birth?: string | null): number | null {
   let a = today.getFullYear() - b.getFullYear();
   if (today.getMonth() - b.getMonth() < 0 || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) a--;
   return a;
+}
+
+// 관계 역추론: A가 B를 rel 로 부를 때, B는 A(성별 fromGender)를 무엇이라 부르는가
+function reverseRelationship(rel: string | null | undefined, fromGender?: string | null): string | null {
+  if (!rel) return null;
+  const g = fromGender;
+  const map: Record<string, string | null> = {
+    '배우자 (남편)': '배우자 (아내)',
+    '배우자 (아내)': '배우자 (남편)',
+    '아들': g === '남' ? '아버지' : g === '여' ? '어머니' : null,
+    '딸': g === '남' ? '아버지' : g === '여' ? '어머니' : null,
+    '아버지': g === '남' ? '아들' : g === '여' ? '딸' : null,
+    '어머니': g === '남' ? '아들' : g === '여' ? '딸' : null,
+    '할아버지': g === '남' ? '손자' : g === '여' ? '손녀' : null,
+    '할머니': g === '남' ? '손자' : g === '여' ? '손녀' : null,
+    '외할아버지': g === '남' ? '외손자' : g === '여' ? '외손녀' : null,
+    '외할머니': g === '남' ? '외손자' : g === '여' ? '외손녀' : null,
+    '손자': g === '남' ? '할아버지' : g === '여' ? '할머니' : null,
+    '손녀': g === '남' ? '할아버지' : g === '여' ? '할머니' : null,
+    '외손자': g === '남' ? '외할아버지' : g === '여' ? '외할머니' : null,
+    '외손녀': g === '남' ? '외할아버지' : g === '여' ? '외할머니' : null,
+    '형': g === '남' ? '남동생' : g === '여' ? '여동생' : null,
+    '오빠': g === '남' ? '남동생' : g === '여' ? '여동생' : null,
+    '누나': g === '남' ? '남동생' : g === '여' ? '여동생' : null,
+    '언니': g === '남' ? '남동생' : g === '여' ? '여동생' : null,
+    '남동생': g === '남' ? '형' : g === '여' ? '누나' : null,
+    '여동생': g === '남' ? '오빠' : g === '여' ? '언니' : null,
+  };
+  return map[rel] ?? null;
+}
+
+// 가족 표시 그룹: 본인 위(above) / 본인 아래(below)
+function familyGroup(rel?: string | null): 'above' | 'below' {
+  if (!rel) return 'below';
+  if (/^배우자|^아들$|^딸$|손자|손녀|외손/.test(rel)) return 'below';
+  return 'above';
+}
+
+// 가족 정렬 우선순위
+function familyRank(rel?: string | null): number {
+  if (!rel) return 99;
+  if (/할아버지|할머니|외할/.test(rel)) return 1;
+  if (rel === '아버지' || rel === '어머니') return 2;
+  if (/시아버지|시어머니|장인|장모/.test(rel)) return 3;
+  if (/^형$|^오빠$|^누나$|^언니$/.test(rel)) return 4;
+  if (/^남동생$|^여동생$/.test(rel)) return 5;
+  if (/큰아버지|작은아버지|고모|외삼촌|이모/.test(rel)) return 6;
+  if (/사촌/.test(rel)) return 7;
+  if (/시누이|시동생|처남|처제|형수|제수|올케/.test(rel)) return 8;
+  if (rel.startsWith('배우자')) return 20;
+  if (rel === '아들' || rel === '딸') return 21;
+  if (/손자|손녀|외손/.test(rel)) return 22;
+  return 50;
 }
 
 // FamilyRow: DB 가족 + UI 전용 자동완성 필드
@@ -167,42 +220,72 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
     // ── 양방향 가족 동기화 ──
     // 가족으로 등록된 회원들끼리 서로의 가족정보에 자동으로 포함되도록 한다.
     try {
-      const linkedIds = Array.from(new Set(
-        family.filter(f => f._linked_member_id && f.name).map(f => f._linked_member_id!)
-      ));
+      const linkedRows = family.filter(f => f._linked_member_id && f.name);
+      const linkedIds = Array.from(new Set(linkedRows.map(f => f._linked_member_id!)));
       const groupIds = Array.from(new Set([memberId, ...linkedIds]));
 
       if (groupIds.length > 1) {
-        // 그룹 내 회원 정보 조회 (이름 기준)
+        // 그룹 내 회원 정보 조회 (이름·성별 기준)
         const { data: groupMembers } = await supabase
           .from('members')
-          .select('id, name')
+          .select('id, name, gender, birth_date')
           .in('id', groupIds);
-        const idToName = new Map<string, string>((groupMembers || []).map((m: any) => [m.id, m.name]));
+        const idToInfo = new Map<string, { name: string; gender?: string | null; birth_date?: string | null }>(
+          (groupMembers || []).map((m: any) => [m.id, { name: m.name, gender: m.gender, birth_date: m.birth_date }])
+        );
+
+        // 본인 → 각 가족원의 관계 매핑 (현재 저장한 family 기준)
+        const myRelTo = new Map<string, string | null>();
+        for (const f of linkedRows) {
+          myRelTo.set(f._linked_member_id!, f.relationship || null);
+        }
+        const myInfo = idToInfo.get(memberId);
 
         for (const gid of groupIds) {
-          if (gid === memberId) continue; // 본인은 이미 위에서 저장됨
+          if (gid === memberId) continue;
           const otherIds = groupIds.filter(x => x !== gid);
           const { data: existing } = await supabase
             .from('member_family')
             .select('*')
             .eq('member_id', gid)
             .order('sort_order');
-          const existingNames = new Set((existing || []).map((e: any) => e.name));
-          const toAdd = otherIds
-            .map(id => idToName.get(id))
-            .filter((n): n is string => !!n && !existingNames.has(n));
-          if (toAdd.length > 0) {
-            const startOrder = (existing || []).length;
-            await supabase.from('member_family').insert(
-              toAdd.map((name, i) => ({
+          const existingByName = new Map<string, any>((existing || []).map((e: any) => [e.name, e]));
+          const gidInfo = idToInfo.get(gid);
+
+          // 추가/업데이트할 행들
+          const newOrder = (existing || []).length;
+          let added = 0;
+          for (const oid of otherIds) {
+            const oInfo = idToInfo.get(oid);
+            if (!oInfo) continue;
+            // gid 기준 oid 와의 관계 추정
+            let rel: string | null = null;
+            if (oid === memberId) {
+              // gid 가 본인을 부르는 관계 = (본인이 gid 를 부르는 관계)의 역
+              rel = reverseRelationship(myRelTo.get(gid) || null, myInfo?.gender);
+            } else {
+              // 두 가족원 사이 관계는 본인 기준 양쪽 관계로 추론하기 어려움 → null 유지
+              rel = null;
+            }
+
+            const existingRow = existingByName.get(oInfo.name);
+            if (existingRow) {
+              // 관계가 비어있고 새 추정값이 있으면 채워준다
+              if (!existingRow.relationship && rel) {
+                await supabase.from('member_family')
+                  .update({ relationship: rel })
+                  .eq('id', existingRow.id);
+              }
+            } else {
+              await supabase.from('member_family').insert({
                 member_id: gid,
-                name,
-                relationship: null,
+                name: oInfo.name,
+                relationship: rel,
                 phone: null,
-                sort_order: startOrder + i,
-              }))
-            );
+                sort_order: newOrder + added,
+              });
+              added++;
+            }
           }
         }
       }
@@ -392,10 +475,63 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                   </tr>
                 </thead>
                 <tbody>
-                  {family.map((fam, i) => {
-                    const famAge = calcAge(fam._birth_date);
-                    return (
-                      <tr key={i} className="border-t border-border hover:bg-muted/30">
+                  {(() => {
+                    const indexed = family.map((fam, i) => ({ fam, i }));
+                    const above = indexed
+                      .filter(x => familyGroup(x.fam.relationship) === 'above')
+                      .sort((a, b) => {
+                        const r = familyRank(a.fam.relationship) - familyRank(b.fam.relationship);
+                        if (r !== 0) return r;
+                        // 같은 등급: 나이 많은 순
+                        const ad = a.fam._birth_date || '9999';
+                        const bd = b.fam._birth_date || '9999';
+                        return ad.localeCompare(bd);
+                      });
+                    const below = indexed
+                      .filter(x => familyGroup(x.fam.relationship) === 'below')
+                      .sort((a, b) => {
+                        const r = familyRank(a.fam.relationship) - familyRank(b.fam.relationship);
+                        if (r !== 0) return r;
+                        // 자녀/손자녀: 나이 많은 순 (첫째 → 막내)
+                        const ad = a.fam._birth_date || '9999-12-31';
+                        const bd = b.fam._birth_date || '9999-12-31';
+                        return ad.localeCompare(bd);
+                      });
+                    const ordered = [...above, { self: true as const }, ...below] as Array<{ fam: FamilyRow; i: number } | { self: true }>;
+
+                    return ordered.map((row, idx) => {
+                      if ('self' in row) {
+                        const meAge = calcAge(member?.birth_date);
+                        return (
+                          <tr key={`self-${idx}`} className="border-t border-border bg-primary/5">
+                            <td className="px-2 py-1.5 align-middle font-semibold text-primary">{member?.name} (본인)</td>
+                            <td className="px-2 py-1.5 align-middle text-muted-foreground">—</td>
+                            <td className="px-3 py-2 align-middle">
+                              {member?.birth_date ? (
+                                <span className="text-foreground whitespace-nowrap">
+                                  {member.birth_date}
+                                  {meAge != null && <span className="text-muted-foreground ml-1">({meAge}세)</span>}
+                                </span>
+                              ) : <span className="text-muted-foreground">—</span>}
+                            </td>
+                            <td className="px-3 py-2 align-middle">
+                              <div className="flex flex-col gap-0.5">
+                                {churchInfo?.current_calling?.length ? (
+                                  <span className="text-foreground">{churchInfo.current_calling.join(', ')}</span>
+                                ) : null}
+                                {member?.phone ? <span className="text-muted-foreground">{member.phone}</span> : null}
+                                {!churchInfo?.current_calling?.length && !member?.phone && <span className="text-muted-foreground">—</span>}
+                              </div>
+                            </td>
+                            <td className="px-2 py-1.5 align-middle text-muted-foreground">—</td>
+                            <td className="px-2 py-2"></td>
+                          </tr>
+                        );
+                      }
+                      const { fam, i } = row;
+                      const famAge = calcAge(fam._birth_date);
+                      return (
+                        <tr key={i} className="border-t border-border hover:bg-muted/30">
                         {/* 이름 */}
                         <td className="px-2 py-1.5 align-top">
                           <FamilyNameCombobox
@@ -482,7 +618,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                         </td>
                       </tr>
                     );
-                  })}
+                  });
+                  })()}
                 </tbody>
               </table>
             </div>
