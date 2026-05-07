@@ -45,6 +45,59 @@ function calcAge(birth?: string | null): number | null {
   return a;
 }
 
+// 관계 역추론: A가 B를 rel 로 부를 때, B는 A(성별 fromGender)를 무엇이라 부르는가
+function reverseRelationship(rel: string | null | undefined, fromGender?: string | null): string | null {
+  if (!rel) return null;
+  const g = fromGender;
+  const map: Record<string, string | null> = {
+    '배우자 (남편)': '배우자 (아내)',
+    '배우자 (아내)': '배우자 (남편)',
+    '아들': g === '남' ? '아버지' : g === '여' ? '어머니' : null,
+    '딸': g === '남' ? '아버지' : g === '여' ? '어머니' : null,
+    '아버지': g === '남' ? '아들' : g === '여' ? '딸' : null,
+    '어머니': g === '남' ? '아들' : g === '여' ? '딸' : null,
+    '할아버지': g === '남' ? '손자' : g === '여' ? '손녀' : null,
+    '할머니': g === '남' ? '손자' : g === '여' ? '손녀' : null,
+    '외할아버지': g === '남' ? '외손자' : g === '여' ? '외손녀' : null,
+    '외할머니': g === '남' ? '외손자' : g === '여' ? '외손녀' : null,
+    '손자': g === '남' ? '할아버지' : g === '여' ? '할머니' : null,
+    '손녀': g === '남' ? '할아버지' : g === '여' ? '할머니' : null,
+    '외손자': g === '남' ? '외할아버지' : g === '여' ? '외할머니' : null,
+    '외손녀': g === '남' ? '외할아버지' : g === '여' ? '외할머니' : null,
+    '형': g === '남' ? '남동생' : g === '여' ? '여동생' : null,
+    '오빠': g === '남' ? '남동생' : g === '여' ? '여동생' : null,
+    '누나': g === '남' ? '남동생' : g === '여' ? '여동생' : null,
+    '언니': g === '남' ? '남동생' : g === '여' ? '여동생' : null,
+    '남동생': g === '남' ? '형' : g === '여' ? '누나' : null,
+    '여동생': g === '남' ? '오빠' : g === '여' ? '언니' : null,
+  };
+  return map[rel] ?? null;
+}
+
+// 가족 표시 그룹: 본인 위(above) / 본인 아래(below)
+function familyGroup(rel?: string | null): 'above' | 'below' {
+  if (!rel) return 'below';
+  if (/^배우자|^아들$|^딸$|손자|손녀|외손/.test(rel)) return 'below';
+  return 'above';
+}
+
+// 가족 정렬 우선순위
+function familyRank(rel?: string | null): number {
+  if (!rel) return 99;
+  if (/할아버지|할머니|외할/.test(rel)) return 1;
+  if (rel === '아버지' || rel === '어머니') return 2;
+  if (/시아버지|시어머니|장인|장모/.test(rel)) return 3;
+  if (/^형$|^오빠$|^누나$|^언니$/.test(rel)) return 4;
+  if (/^남동생$|^여동생$/.test(rel)) return 5;
+  if (/큰아버지|작은아버지|고모|외삼촌|이모/.test(rel)) return 6;
+  if (/사촌/.test(rel)) return 7;
+  if (/시누이|시동생|처남|처제|형수|제수|올케/.test(rel)) return 8;
+  if (rel.startsWith('배우자')) return 20;
+  if (rel === '아들' || rel === '딸') return 21;
+  if (/손자|손녀|외손/.test(rel)) return 22;
+  return 50;
+}
+
 // FamilyRow: DB 가족 + UI 전용 자동완성 필드
 interface FamilyRow extends MemberFamily {
   _birth_date?: string | null;
