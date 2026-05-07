@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Member, MemberChurchInfo } from "@/types/church";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Edit2, Trash2, ExternalLink, Plus, Eye, Pencil, X } from "lucide-react";
+import { Edit2, Trash2, ExternalLink, Plus, Eye, Pencil, X, ChevronRight, ChevronDown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   calcAge,
@@ -76,11 +77,15 @@ interface RowProps {
   onDelete?: () => void;
   editMode?: boolean;
   indent?: number;
+  expandable?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const FamilyRowItem = ({
   name, relationship, birthDate, calling, phone, notes,
   isSelf, linkedId, onNavigate, onEdit, onDelete, editMode, indent = 0,
+  expandable, expanded, onToggleExpand,
 }: RowProps) => {
   const age = calcAge(birthDate);
   return (
@@ -88,11 +93,20 @@ const FamilyRowItem = ({
       <HoverCardTrigger asChild>
         <div
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-md border transition-colors hover:bg-muted/40",
-            isSelf ? "border-primary bg-primary/5" : "border-border bg-card"
+            "flex items-center gap-2 px-3 py-2 rounded-md border transition-colors hover:bg-muted/40",
+            isSelf ? "border-primary bg-primary/5" : "border-border bg-card",
+            expandable && "cursor-pointer"
           )}
           style={{ marginLeft: indent * 16 }}
+          onClick={expandable ? onToggleExpand : undefined}
         >
+          {expandable ? (
+            <span className="shrink-0 text-muted-foreground">
+              {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </span>
+          ) : (
+            <span className="shrink-0 w-3.5" />
+          )}
           <span className={cn(
             "shrink-0 inline-block text-[10px] font-medium px-1.5 py-0.5 rounded min-w-[3.5rem] text-center",
             isSelf ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
@@ -113,7 +127,7 @@ const FamilyRowItem = ({
               {phone || "—"}
             </div>
           </div>
-          <div className="flex items-center gap-0.5 shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
             {linkedId && onNavigate && (
               <button type="button" onClick={onNavigate} className="p-1 rounded hover:bg-accent text-primary" title="회원카드 이동">
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -197,12 +211,120 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </section>
 );
 
+// ── 서브 가족 (배우자/자녀) 행 ─────────────────────────────
+interface SubFamilyRow {
+  id: string;
+  name: string;
+  relationship: string;
+  birth_date: string | null;
+  current_calling: string[] | null;
+  phone: string | null;
+  linked_id?: string;
+}
+
+const ExpandableSubFamily = ({
+  parentMemberId,
+  memberList,
+  indent,
+  onNavigateToMember,
+}: {
+  parentMemberId: string;
+  memberList: MemberListItem[];
+  indent: number;
+  onNavigateToMember?: (m: { id: string; name: string }) => void;
+}) => {
+  const [rows, setRows] = useState<SubFamilyRow[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const { data } = await supabase
+        .from("member_family")
+        .select("id, name, relationship")
+        .eq("member_id", parentMemberId)
+        .order("sort_order");
+      if (cancel) return;
+      const filtered = (data || []).filter((r: any) => {
+        const lv = classifyLevel(r.relationship);
+        return lv === "spouse" || lv === "children";
+      });
+      const enriched: SubFamilyRow[] = filtered.map((r: any) => {
+        const linked = memberList.find(m => m.name === r.name);
+        return {
+          id: r.id,
+          name: r.name,
+          relationship: r.relationship,
+          birth_date: linked?.birth_date ?? null,
+          current_calling: linked?.current_calling ?? null,
+          phone: linked?.phone ?? null,
+          linked_id: linked?.id,
+        };
+      });
+      // 배우자 먼저, 그다음 자녀
+      enriched.sort((a, b) => {
+        const ord = (lv: Level) => (lv === "spouse" ? 0 : 1);
+        const la = classifyLevel(a.relationship);
+        const lb = classifyLevel(b.relationship);
+        if (la !== lb) return ord(la) - ord(lb);
+        return (a.birth_date || "9999").localeCompare(b.birth_date || "9999");
+      });
+      setRows(enriched);
+      setLoading(false);
+    })();
+    return () => { cancel = true; };
+  }, [parentMemberId, memberList]);
+
+  if (loading) {
+    return (
+      <div className="text-xs text-muted-foreground px-3 py-1.5" style={{ marginLeft: indent * 16 }}>
+        불러오는 중...
+      </div>
+    );
+  }
+  if (!rows || rows.length === 0) {
+    return (
+      <div className="text-xs text-muted-foreground px-3 py-1.5" style={{ marginLeft: indent * 16 }}>
+        등록된 배우자·자녀 없음
+      </div>
+    );
+  }
+  return (
+    <>
+      {rows.map(r => (
+        <FamilyRowItem
+          key={r.id}
+          name={r.name}
+          relationship={r.relationship}
+          birthDate={r.birth_date}
+          calling={r.current_calling}
+          phone={r.phone}
+          linkedId={r.linked_id}
+          indent={indent}
+          onNavigate={r.linked_id && onNavigateToMember
+            ? () => onNavigateToMember({ id: r.linked_id!, name: r.name })
+            : undefined}
+        />
+      ))}
+    </>
+  );
+};
+
 // ── 메인 ───────────────────────────────────────────────────
 const FamilyTree = ({
   member, memberId, churchInfo, family, setFamily, memberList, onNavigateToMember,
 }: FamilyTreeProps) => {
   const [editMode, setEditMode] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
 
   const byLevel = (lv: Level) => sortByAge(family.filter(f => classifyLevel(f.relationship) === lv));
   const grandparents = byLevel("grandparents");
@@ -220,7 +342,7 @@ const FamilyTree = ({
 
   const indexOfFam = (fam: FamilyRow) => family.indexOf(fam);
 
-  const renderRow = (fam: FamilyRow, indent = 0) => {
+  const renderRow = (fam: FamilyRow, indent = 0, allowExpand = false) => {
     const idx = indexOfFam(fam);
     if (editMode && editingIdx === idx) {
       return (
@@ -232,24 +354,38 @@ const FamilyTree = ({
         />
       );
     }
+    const expandable = allowExpand && !!fam._linked_member_id && !editMode;
+    const expanded = expandable && expandedIds.has(fam._linked_member_id!);
     return (
-      <FamilyRowItem
-        key={fam.id || `f-${idx}`}
-        name={fam.name || ""}
-        relationship={fam.relationship || undefined}
-        birthDate={fam._birth_date}
-        calling={fam._current_calling}
-        phone={fam._phone}
-        notes={fam.notes}
-        linkedId={fam._linked_member_id}
-        indent={indent}
-        onNavigate={fam._linked_member_id && fam.name && onNavigateToMember
-          ? () => onNavigateToMember({ id: fam._linked_member_id!, name: fam.name! })
-          : undefined}
-        editMode={editMode}
-        onEdit={() => setEditingIdx(idx)}
-        onDelete={() => setFamily(f => f.filter((_, j) => j !== idx))}
-      />
+      <div key={fam.id || `f-${idx}`} className="space-y-1.5">
+        <FamilyRowItem
+          name={fam.name || ""}
+          relationship={fam.relationship || undefined}
+          birthDate={fam._birth_date}
+          calling={fam._current_calling}
+          phone={fam._phone}
+          notes={fam.notes}
+          linkedId={fam._linked_member_id}
+          indent={indent}
+          onNavigate={fam._linked_member_id && fam.name && onNavigateToMember
+            ? () => onNavigateToMember({ id: fam._linked_member_id!, name: fam.name! })
+            : undefined}
+          editMode={editMode}
+          onEdit={() => setEditingIdx(idx)}
+          onDelete={() => setFamily(f => f.filter((_, j) => j !== idx))}
+          expandable={expandable}
+          expanded={expanded}
+          onToggleExpand={expandable ? () => toggleExpand(fam._linked_member_id!) : undefined}
+        />
+        {expanded && (
+          <ExpandableSubFamily
+            parentMemberId={fam._linked_member_id!}
+            memberList={memberList}
+            indent={indent + 1}
+            onNavigateToMember={onNavigateToMember}
+          />
+        )}
+      </div>
     );
   };
 
@@ -320,14 +456,14 @@ const FamilyTree = ({
           <Section title="부모님 가족">
             {grandparents.map(r => renderRow(r, 0))}
             {parents.map(r => renderRow(r, 0))}
-            {siblings.map(r => renderRow(r, 1))}
+            {siblings.map(r => renderRow(r, 1, true))}
           </Section>
         )}
 
         {/* 형제의 가족 */}
         {(siblingsInLaw.length > 0 || nieces.length > 0) && (
           <Section title="형제의 가족">
-            {siblingsInLaw.map(r => renderRow(r, 0))}
+            {siblingsInLaw.map(r => renderRow(r, 0, true))}
             {nieces.map(r => renderRow(r, 1))}
           </Section>
         )}
@@ -337,7 +473,7 @@ const FamilyTree = ({
           <Section title="배우자 가족">
             {spouseGrandparents.map(r => renderRow(r, 0))}
             {spouseParents.map(r => renderRow(r, 0))}
-            {spouseSiblings.map(r => renderRow(r, 1))}
+            {spouseSiblings.map(r => renderRow(r, 1, true))}
           </Section>
         )}
 
@@ -345,7 +481,7 @@ const FamilyTree = ({
         <Section title="본인의 가족">
           {selfRow}
           {spouse.map(r => renderRow(r, 1))}
-          {children.map(r => renderRow(r, 1))}
+          {children.map(r => renderRow(r, 1, true))}
           {grandchildren.map(r => renderRow(r, 2))}
         </Section>
 
