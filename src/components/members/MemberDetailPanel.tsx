@@ -99,7 +99,7 @@ function familyRank(rel?: string | null): number {
 }
 
 // FamilyRow: DB 가족 + UI 전용 자동완성 필드
-interface FamilyRow extends MemberFamily {
+export interface FamilyRow extends MemberFamily {
   _birth_date?: string | null;
   _current_calling?: string[] | null;
   _phone?: string | null;
@@ -107,7 +107,7 @@ interface FamilyRow extends MemberFamily {
 }
 
 // 회원 목록 타입
-interface MemberListItem {
+export interface MemberListItem {
   id: string;
   name: string;
   birth_date?: string | null;
