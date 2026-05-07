@@ -36,7 +36,7 @@ const RELATIONSHIP_OPTIONS = [
 ];
 
 // 나이 계산
-function calcAge(birth?: string | null): number | null {
+export function calcAge(birth?: string | null): number | null {
   if (!birth) return null;
   const today = new Date();
   const b = new Date(birth);
