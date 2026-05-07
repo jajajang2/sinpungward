@@ -47,7 +47,7 @@ export function calcAge(birth?: string | null): number | null {
 }
 
 // 관계 역추론: A가 B를 rel 로 부를 때, B는 A(성별 fromGender)를 무엇이라 부르는가
-function reverseRelationship(rel: string | null | undefined, fromGender?: string | null): string | null {
+export function reverseRelationship(rel: string | null | undefined, fromGender?: string | null): string | null {
   if (!rel) return null;
   const g = fromGender;
   const map: Record<string, string | null> = {
