@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import PhotoUpload from "./PhotoUpload";
 import { CALLING_GROUPS } from "@/data/callings";
 import { useCallingMembers } from "@/hooks/useCallingMembers";
+import FamilyTree from "./FamilyTree";
 
 interface MemberDetailPanelProps {
   memberId: string;
