@@ -77,11 +77,15 @@ interface RowProps {
   onDelete?: () => void;
   editMode?: boolean;
   indent?: number;
+  expandable?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const FamilyRowItem = ({
   name, relationship, birthDate, calling, phone, notes,
   isSelf, linkedId, onNavigate, onEdit, onDelete, editMode, indent = 0,
+  expandable, expanded, onToggleExpand,
 }: RowProps) => {
   const age = calcAge(birthDate);
   return (
@@ -89,11 +93,20 @@ const FamilyRowItem = ({
       <HoverCardTrigger asChild>
         <div
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-md border transition-colors hover:bg-muted/40",
-            isSelf ? "border-primary bg-primary/5" : "border-border bg-card"
+            "flex items-center gap-2 px-3 py-2 rounded-md border transition-colors hover:bg-muted/40",
+            isSelf ? "border-primary bg-primary/5" : "border-border bg-card",
+            expandable && "cursor-pointer"
           )}
           style={{ marginLeft: indent * 16 }}
+          onClick={expandable ? onToggleExpand : undefined}
         >
+          {expandable ? (
+            <span className="shrink-0 text-muted-foreground">
+              {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </span>
+          ) : (
+            <span className="shrink-0 w-3.5" />
+          )}
           <span className={cn(
             "shrink-0 inline-block text-[10px] font-medium px-1.5 py-0.5 rounded min-w-[3.5rem] text-center",
             isSelf ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
@@ -114,7 +127,7 @@ const FamilyRowItem = ({
               {phone || "—"}
             </div>
           </div>
-          <div className="flex items-center gap-0.5 shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
             {linkedId && onNavigate && (
               <button type="button" onClick={onNavigate} className="p-1 rounded hover:bg-accent text-primary" title="회원카드 이동">
                 <ExternalLink className="w-3.5 h-3.5" />
