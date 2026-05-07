@@ -12,6 +12,7 @@ import {
   MemberListItem,
   FamilyNameCombobox,
   RelationshipSelect,
+  reverseRelationship,
 } from "./MemberDetailPanel";
 
 interface FamilyTreeProps {
