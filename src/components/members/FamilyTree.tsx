@@ -3,7 +3,8 @@ import { Member, MemberChurchInfo } from "@/types/church";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Edit2, Trash2, ExternalLink, Plus, Eye, Pencil, X } from "lucide-react";
+import { Edit2, Trash2, ExternalLink, Plus, Eye, Pencil, X, ChevronRight, ChevronDown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   calcAge,
