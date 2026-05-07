@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import PhotoUpload from "./PhotoUpload";
 import { CALLING_GROUPS } from "@/data/callings";
 import { useCallingMembers } from "@/hooks/useCallingMembers";
+import FamilyTree from "./FamilyTree";
 
 interface MemberDetailPanelProps {
   memberId: string;
@@ -36,7 +37,7 @@ const RELATIONSHIP_OPTIONS = [
 ];
 
 // 나이 계산
-function calcAge(birth?: string | null): number | null {
+export function calcAge(birth?: string | null): number | null {
   if (!birth) return null;
   const today = new Date();
   const b = new Date(birth);
@@ -99,7 +100,7 @@ function familyRank(rel?: string | null): number {
 }
 
 // FamilyRow: DB 가족 + UI 전용 자동완성 필드
-interface FamilyRow extends MemberFamily {
+export interface FamilyRow extends MemberFamily {
   _birth_date?: string | null;
   _current_calling?: string[] | null;
   _phone?: string | null;
@@ -107,7 +108,7 @@ interface FamilyRow extends MemberFamily {
 }
 
 // 회원 목록 타입
-interface MemberListItem {
+export interface MemberListItem {
   id: string;
   name: string;
   birth_date?: string | null;
@@ -436,194 +437,15 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
 
         {/* ── 가족정보 ── */}
         <TabsContent value="family" className="flex-1 overflow-y-auto px-5 pb-5 mt-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-muted-foreground">가족 구성원을 추가하세요</p>
-            <Button
-              size="sm" variant="outline" className="h-7 text-xs"
-              onClick={() => setFamily(f => [...f, {
-                id: '',
-                member_id: memberId,
-                name: '',
-                relationship: '',
-                phone: '',
-                sort_order: f.length,
-                _birth_date: null,
-                _current_calling: null,
-                _linked_member_id: undefined,
-              }])}
-            >
-              <Plus className="w-3 h-3 mr-1" />추가
-            </Button>
-          </div>
-
-          {family.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-              <p className="text-sm">가족 정보가 없습니다</p>
-              <p className="text-xs">위 추가 버튼을 눌러 가족을 등록하세요</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-xs min-w-[640px]">
-                <thead>
-                  <tr className="bg-[hsl(var(--table-header))] border-b border-border">
-                    <th className="px-3 py-2 text-left font-semibold w-36">이름</th>
-                    <th className="px-2 py-2 text-left font-semibold w-32">관계</th>
-                    <th className="px-3 py-2 text-left font-semibold w-32">생년월일 (나이)</th>
-                    <th className="px-3 py-2 text-left font-semibold">현재 부름 / 연락처</th>
-                    <th className="px-2 py-2 text-left font-semibold w-44">비고</th>
-                    <th className="px-2 py-2 w-7"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const indexed = family.map((fam, i) => ({ fam, i }));
-                    const above = indexed
-                      .filter(x => familyGroup(x.fam.relationship) === 'above')
-                      .sort((a, b) => {
-                        const r = familyRank(a.fam.relationship) - familyRank(b.fam.relationship);
-                        if (r !== 0) return r;
-                        // 같은 등급: 나이 많은 순
-                        const ad = a.fam._birth_date || '9999';
-                        const bd = b.fam._birth_date || '9999';
-                        return ad.localeCompare(bd);
-                      });
-                    const below = indexed
-                      .filter(x => familyGroup(x.fam.relationship) === 'below')
-                      .sort((a, b) => {
-                        const r = familyRank(a.fam.relationship) - familyRank(b.fam.relationship);
-                        if (r !== 0) return r;
-                        // 자녀/손자녀: 나이 많은 순 (첫째 → 막내)
-                        const ad = a.fam._birth_date || '9999-12-31';
-                        const bd = b.fam._birth_date || '9999-12-31';
-                        return ad.localeCompare(bd);
-                      });
-                    const ordered = [...above, { self: true as const }, ...below] as Array<{ fam: FamilyRow; i: number } | { self: true }>;
-
-                    return ordered.map((row, idx) => {
-                      if ('self' in row) {
-                        const meAge = calcAge(member?.birth_date);
-                        return (
-                          <tr key={`self-${idx}`} className="border-t border-border bg-primary/5">
-                            <td className="px-2 py-1.5 align-middle font-semibold text-primary">{member?.name} (본인)</td>
-                            <td className="px-2 py-1.5 align-middle text-muted-foreground">—</td>
-                            <td className="px-3 py-2 align-middle">
-                              {member?.birth_date ? (
-                                <span className="text-foreground whitespace-nowrap">
-                                  {member.birth_date}
-                                  {meAge != null && <span className="text-muted-foreground ml-1">({meAge}세)</span>}
-                                </span>
-                              ) : <span className="text-muted-foreground">—</span>}
-                            </td>
-                            <td className="px-3 py-2 align-middle">
-                              <div className="flex flex-col gap-0.5">
-                                {churchInfo?.current_calling?.length ? (
-                                  <span className="text-foreground">{churchInfo.current_calling.join(', ')}</span>
-                                ) : null}
-                                {member?.phone ? <span className="text-muted-foreground">{member.phone}</span> : null}
-                                {!churchInfo?.current_calling?.length && !member?.phone && <span className="text-muted-foreground">—</span>}
-                              </div>
-                            </td>
-                            <td className="px-2 py-1.5 align-middle text-muted-foreground">—</td>
-                            <td className="px-2 py-2"></td>
-                          </tr>
-                        );
-                      }
-                      const { fam, i } = row;
-                      const famAge = calcAge(fam._birth_date);
-                      return (
-                        <tr key={i} className="border-t border-border hover:bg-muted/30">
-                        {/* 이름 */}
-                        <td className="px-2 py-1.5 align-top">
-                          <FamilyNameCombobox
-                            value={fam.name || ''}
-                            memberList={memberList}
-                            onChange={(name, linked) => {
-                              setFamily(f => f.map((x, j) => j === i ? {
-                                ...x,
-                                name,
-                                _birth_date: linked?.birth_date ?? (linked ? null : x._birth_date),
-                                _current_calling: linked?.current_calling ?? (linked ? null : x._current_calling),
-                                _phone: linked?.phone ?? (linked ? null : x._phone),
-                                _linked_member_id: linked?.id ?? x._linked_member_id,
-                              } : x));
-                            }}
-                          />
-                        </td>
-                        {/* 관계 */}
-                        <td className="px-2 py-1.5 align-top">
-                          <RelationshipSelect
-                            value={fam.relationship || ''}
-                            onChange={v => setFamily(f => f.map((x, j) => j === i ? { ...x, relationship: v } : x))}
-                          />
-                        </td>
-                        {/* 생년월일 (나이) */}
-                        <td className="px-3 py-2 align-middle">
-                          {fam._birth_date ? (
-                            <span className="text-foreground whitespace-nowrap">
-                              {fam._birth_date}
-                              {famAge != null && <span className="text-muted-foreground ml-1">({famAge}세)</span>}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        {/* 현재 부름 / 연락처 */}
-                        <td className="px-3 py-2 align-middle">
-                          {fam._current_calling?.length || fam._phone ? (
-                            <div className="flex flex-col gap-0.5">
-                              {fam._current_calling?.length ? (
-                                <span className="text-foreground">{(fam._current_calling as string[]).join(', ')}</span>
-                              ) : null}
-                              {fam._phone ? (
-                                <span className="text-muted-foreground">{fam._phone}</span>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        {/* 비고 + 회원카드 이동 */}
-                        <td className="px-2 py-1.5 align-middle">
-                          <div className="flex items-center gap-1.5">
-                            {fam._linked_member_id ? (
-                              <span className="text-muted-foreground flex-1">—</span>
-                            ) : (
-                              <Input
-                                value={fam.notes || ''}
-                                onChange={e => setFamily(f => f.map((x, j) => j === i ? { ...x, notes: e.target.value } : x))}
-                                placeholder="비고 입력..."
-                                className="h-7 text-xs flex-1"
-                              />
-                            )}
-                            {fam._linked_member_id && onNavigateToMember && fam.name && (
-                              <button
-                                type="button"
-                                onClick={() => onNavigateToMember({ id: fam._linked_member_id!, name: fam.name! })}
-                                title={`${fam.name} 회원카드로 이동`}
-                                className="shrink-0 p-1 rounded hover:bg-accent text-primary"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                        {/* 삭제 */}
-                        <td className="px-2 py-2 align-middle">
-                          <button
-                            onClick={() => setFamily(f => f.filter((_, j) => j !== i))}
-                            className="text-destructive hover:text-destructive/70"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  });
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <FamilyTree
+            member={member}
+            memberId={memberId}
+            churchInfo={churchInfo}
+            family={family}
+            setFamily={setFamily}
+            memberList={memberList}
+            onNavigateToMember={onNavigateToMember}
+          />
         </TabsContent>
 
         {/* ── 교회정보 ── */}
@@ -799,7 +621,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
 };
 
 // ── Family Name Combobox ──────────────────────────────────────
-const FamilyNameCombobox = ({
+export const FamilyNameCombobox = ({
   value,
   memberList,
   onChange,
@@ -894,7 +716,7 @@ const FamilyNameCombobox = ({
 };
 
 // ── Relationship Select ───────────────────────────────────────
-const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+export const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
   const [open, setOpen] = useState(false);
 
   return (
