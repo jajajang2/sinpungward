@@ -456,14 +456,14 @@ const FamilyTree = ({
           <Section title="부모님 가족">
             {grandparents.map(r => renderRow(r, 0))}
             {parents.map(r => renderRow(r, 0))}
-            {siblings.map(r => renderRow(r, 1))}
+            {siblings.map(r => renderRow(r, 1, true))}
           </Section>
         )}
 
         {/* 형제의 가족 */}
         {(siblingsInLaw.length > 0 || nieces.length > 0) && (
           <Section title="형제의 가족">
-            {siblingsInLaw.map(r => renderRow(r, 0))}
+            {siblingsInLaw.map(r => renderRow(r, 0, true))}
             {nieces.map(r => renderRow(r, 1))}
           </Section>
         )}
@@ -473,7 +473,7 @@ const FamilyTree = ({
           <Section title="배우자 가족">
             {spouseGrandparents.map(r => renderRow(r, 0))}
             {spouseParents.map(r => renderRow(r, 0))}
-            {spouseSiblings.map(r => renderRow(r, 1))}
+            {spouseSiblings.map(r => renderRow(r, 1, true))}
           </Section>
         )}
 
@@ -481,7 +481,7 @@ const FamilyTree = ({
         <Section title="본인의 가족">
           {selfRow}
           {spouse.map(r => renderRow(r, 1))}
-          {children.map(r => renderRow(r, 1))}
+          {children.map(r => renderRow(r, 1, true))}
           {grandchildren.map(r => renderRow(r, 2))}
         </Section>
 
