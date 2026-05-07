@@ -12,6 +12,7 @@ import {
   MemberListItem,
   FamilyNameCombobox,
   RelationshipSelect,
+  reverseRelationship,
 } from "./MemberDetailPanel";
 
 interface FamilyTreeProps {
@@ -239,37 +240,73 @@ const ExpandableSubFamily = ({
   useEffect(() => {
     let cancel = false;
     (async () => {
+      // 1) 부모 회원 자신의 가족 행
+      // 2) 부모 회원의 이름/성별 + 각 가족의 회원이 가진 가족 행에서 역추정
+      const { data: parentMember } = await supabase
+        .from("members")
+        .select("id, name, gender")
+        .eq("id", parentMemberId)
+        .single();
       const { data } = await supabase
         .from("member_family")
         .select("id, name, relationship")
         .eq("member_id", parentMemberId)
         .order("sort_order");
       if (cancel) return;
-      const filtered = (data || []).filter((r: any) => {
-        const lv = classifyLevel(r.relationship);
-        return lv === "spouse" || lv === "children";
-      });
-      const enriched: SubFamilyRow[] = filtered.map((r: any) => {
+
+      const rowsRaw = (data || []) as Array<{ id: string; name: string; relationship: string | null }>;
+
+      // 비어있는 관계는 상대방 가족 테이블에서 역추정
+      const linkedNames = rowsRaw.map(r => r.name).filter(Boolean);
+      const linkedMembers = memberList.filter(m => linkedNames.includes(m.name));
+      const linkedIds = linkedMembers.map(m => m.id);
+      let revMap = new Map<string, string>(); // linkedMemberId -> rel
+      let genderMap = new Map<string, string | null>();
+      if (linkedIds.length > 0 && parentMember?.name) {
+        const [{ data: revRows }, { data: others }] = await Promise.all([
+          supabase.from("member_family")
+            .select("member_id, name, relationship")
+            .in("member_id", linkedIds)
+            .eq("name", parentMember.name),
+          supabase.from("members").select("id, gender").in("id", linkedIds),
+        ]);
+        (revRows || []).forEach((r: any) => {
+          if (r.relationship) revMap.set(r.member_id, r.relationship);
+        });
+        (others || []).forEach((m: any) => genderMap.set(m.id, m.gender ?? null));
+      }
+
+      const enrichedAll = rowsRaw.map(r => {
         const linked = memberList.find(m => m.name === r.name);
+        let rel = r.relationship;
+        if (!rel && linked) {
+          const otherRel = revMap.get(linked.id);
+          rel = reverseRelationship(otherRel, genderMap.get(linked.id)) || null;
+        }
         return {
           id: r.id,
           name: r.name,
-          relationship: r.relationship,
+          relationship: rel || "",
           birth_date: linked?.birth_date ?? null,
           current_calling: linked?.current_calling ?? null,
           phone: linked?.phone ?? null,
           linked_id: linked?.id,
         };
       });
-      // 배우자 먼저, 그다음 자녀
-      enriched.sort((a, b) => {
+
+      const filtered = enrichedAll.filter(r => {
+        const lv = classifyLevel(r.relationship);
+        return lv === "spouse" || lv === "children";
+      });
+
+      filtered.sort((a, b) => {
         const ord = (lv: Level) => (lv === "spouse" ? 0 : 1);
         const la = classifyLevel(a.relationship);
         const lb = classifyLevel(b.relationship);
         if (la !== lb) return ord(la) - ord(lb);
         return (a.birth_date || "9999").localeCompare(b.birth_date || "9999");
       });
-      setRows(enriched);
+      setRows(filtered);
       setLoading(false);
     })();
     return () => { cancel = true; };
@@ -485,12 +522,6 @@ const FamilyTree = ({
           {grandchildren.map(r => renderRow(r, 2))}
         </Section>
 
-        {/* 기타 친족 */}
-        {extended.length > 0 && (
-          <Section title="기타 친족">
-            {extended.map(r => renderRow(r, 0))}
-          </Section>
-        )}
       </div>
     </>
   );
