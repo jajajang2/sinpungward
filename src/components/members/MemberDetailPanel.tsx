@@ -894,7 +894,7 @@ export const FamilyNameCombobox = ({
 };
 
 // ── Relationship Select ───────────────────────────────────────
-const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+export const RelationshipSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
   const [open, setOpen] = useState(false);
 
   return (
