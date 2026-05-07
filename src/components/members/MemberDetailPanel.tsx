@@ -220,42 +220,72 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
     // ── 양방향 가족 동기화 ──
     // 가족으로 등록된 회원들끼리 서로의 가족정보에 자동으로 포함되도록 한다.
     try {
-      const linkedIds = Array.from(new Set(
-        family.filter(f => f._linked_member_id && f.name).map(f => f._linked_member_id!)
-      ));
+      const linkedRows = family.filter(f => f._linked_member_id && f.name);
+      const linkedIds = Array.from(new Set(linkedRows.map(f => f._linked_member_id!)));
       const groupIds = Array.from(new Set([memberId, ...linkedIds]));
 
       if (groupIds.length > 1) {
-        // 그룹 내 회원 정보 조회 (이름 기준)
+        // 그룹 내 회원 정보 조회 (이름·성별 기준)
         const { data: groupMembers } = await supabase
           .from('members')
-          .select('id, name')
+          .select('id, name, gender, birth_date')
           .in('id', groupIds);
-        const idToName = new Map<string, string>((groupMembers || []).map((m: any) => [m.id, m.name]));
+        const idToInfo = new Map<string, { name: string; gender?: string | null; birth_date?: string | null }>(
+          (groupMembers || []).map((m: any) => [m.id, { name: m.name, gender: m.gender, birth_date: m.birth_date }])
+        );
+
+        // 본인 → 각 가족원의 관계 매핑 (현재 저장한 family 기준)
+        const myRelTo = new Map<string, string | null>();
+        for (const f of linkedRows) {
+          myRelTo.set(f._linked_member_id!, f.relationship || null);
+        }
+        const myInfo = idToInfo.get(memberId);
 
         for (const gid of groupIds) {
-          if (gid === memberId) continue; // 본인은 이미 위에서 저장됨
+          if (gid === memberId) continue;
           const otherIds = groupIds.filter(x => x !== gid);
           const { data: existing } = await supabase
             .from('member_family')
             .select('*')
             .eq('member_id', gid)
             .order('sort_order');
-          const existingNames = new Set((existing || []).map((e: any) => e.name));
-          const toAdd = otherIds
-            .map(id => idToName.get(id))
-            .filter((n): n is string => !!n && !existingNames.has(n));
-          if (toAdd.length > 0) {
-            const startOrder = (existing || []).length;
-            await supabase.from('member_family').insert(
-              toAdd.map((name, i) => ({
+          const existingByName = new Map<string, any>((existing || []).map((e: any) => [e.name, e]));
+          const gidInfo = idToInfo.get(gid);
+
+          // 추가/업데이트할 행들
+          const newOrder = (existing || []).length;
+          let added = 0;
+          for (const oid of otherIds) {
+            const oInfo = idToInfo.get(oid);
+            if (!oInfo) continue;
+            // gid 기준 oid 와의 관계 추정
+            let rel: string | null = null;
+            if (oid === memberId) {
+              // gid 가 본인을 부르는 관계 = (본인이 gid 를 부르는 관계)의 역
+              rel = reverseRelationship(myRelTo.get(gid) || null, myInfo?.gender);
+            } else {
+              // 두 가족원 사이 관계는 본인 기준 양쪽 관계로 추론하기 어려움 → null 유지
+              rel = null;
+            }
+
+            const existingRow = existingByName.get(oInfo.name);
+            if (existingRow) {
+              // 관계가 비어있고 새 추정값이 있으면 채워준다
+              if (!existingRow.relationship && rel) {
+                await supabase.from('member_family')
+                  .update({ relationship: rel })
+                  .eq('id', existingRow.id);
+              }
+            } else {
+              await supabase.from('member_family').insert({
                 member_id: gid,
-                name,
-                relationship: null,
+                name: oInfo.name,
+                relationship: rel,
                 phone: null,
-                sort_order: startOrder + i,
-              }))
-            );
+                sort_order: newOrder + added,
+              });
+              added++;
+            }
           }
         }
       }
