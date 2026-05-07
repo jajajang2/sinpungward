@@ -157,6 +157,35 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
         _linked_member_id: linked?.id,
       };
     });
+
+    // 비어있는 관계는 상대방 회원의 family 테이블에서 역추정
+    const linkedIdsToFetch = familyRows
+      .filter(f => !f.relationship && f._linked_member_id)
+      .map(f => f._linked_member_id!);
+    if (linkedIdsToFetch.length > 0 && mRes.data) {
+      const [{ data: reverseRows }, { data: otherMembers }] = await Promise.all([
+        supabase.from('member_family')
+          .select('member_id, name, relationship')
+          .in('member_id', linkedIdsToFetch)
+          .eq('name', mRes.data.name),
+        supabase.from('members')
+          .select('id, gender')
+          .in('id', linkedIdsToFetch),
+      ]);
+      const revMap = new Map<string, string>();
+      (reverseRows || []).forEach((r: any) => {
+        if (r.relationship) revMap.set(r.member_id, r.relationship);
+      });
+      const otherGenderMap = new Map<string, string | null>();
+      (otherMembers || []).forEach((m: any) => otherGenderMap.set(m.id, m.gender ?? null));
+      for (const fr of familyRows) {
+        if (!fr.relationship && fr._linked_member_id) {
+          const otherRel = revMap.get(fr._linked_member_id);
+          const inferred = reverseRelationship(otherRel, otherGenderMap.get(fr._linked_member_id));
+          if (inferred) fr.relationship = inferred;
+        }
+      }
+    }
     setFamily(familyRows);
     setChurchInfo(cRes.data || null);
     setNotes((nRes.data as any[]) || []);
@@ -219,14 +248,24 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
     }
 
     // ── 양방향 가족 동기화 ──
-    // 가족으로 등록된 회원들끼리 서로의 가족정보에 자동으로 포함되도록 한다.
+    // 가족으로 등록된 회원들끼리 서로의 가족정보에 자동으로 포함되고 관계를 채워준다.
     try {
-      const linkedRows = family.filter(f => f._linked_member_id && f.name);
-      const linkedIds = Array.from(new Set(linkedRows.map(f => f._linked_member_id!)));
+      // 이름 → 회원 매핑 (수동 입력으로 _linked_member_id 미설정 케이스 보완)
+      const nameToMember = new Map<string, MemberListItem>();
+      for (const m of memberList) nameToMember.set(m.name, m);
+
+      const resolved = family
+        .filter(f => f.name)
+        .map(f => {
+          const linked = nameToMember.get(f.name!);
+          return { name: f.name!, relationship: f.relationship || null, linkedId: f._linked_member_id || linked?.id };
+        })
+        .filter(f => f.linkedId);
+
+      const linkedIds = Array.from(new Set(resolved.map(f => f.linkedId!)));
       const groupIds = Array.from(new Set([memberId, ...linkedIds]));
 
       if (groupIds.length > 1) {
-        // 그룹 내 회원 정보 조회 (이름·성별 기준)
         const { data: groupMembers } = await supabase
           .from('members')
           .select('id, name, gender, birth_date')
@@ -235,11 +274,9 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
           (groupMembers || []).map((m: any) => [m.id, { name: m.name, gender: m.gender, birth_date: m.birth_date }])
         );
 
-        // 본인 → 각 가족원의 관계 매핑 (현재 저장한 family 기준)
+        // 본인 → 각 가족원의 관계 매핑
         const myRelTo = new Map<string, string | null>();
-        for (const f of linkedRows) {
-          myRelTo.set(f._linked_member_id!, f.relationship || null);
-        }
+        for (const f of resolved) myRelTo.set(f.linkedId!, f.relationship);
         const myInfo = idToInfo.get(memberId);
 
         for (const gid of groupIds) {
@@ -253,9 +290,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
           const existingByName = new Map<string, any>((existing || []).map((e: any) => [e.name, e]));
           const gidInfo = idToInfo.get(gid);
 
-          // 추가/업데이트할 행들
-          const newOrder = (existing || []).length;
-          let added = 0;
+          let newOrder = (existing || []).length;
           for (const oid of otherIds) {
             const oInfo = idToInfo.get(oid);
             if (!oInfo) continue;
@@ -265,13 +300,32 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
               // gid 가 본인을 부르는 관계 = (본인이 gid 를 부르는 관계)의 역
               rel = reverseRelationship(myRelTo.get(gid) || null, myInfo?.gender);
             } else {
-              // 두 가족원 사이 관계는 본인 기준 양쪽 관계로 추론하기 어려움 → null 유지
-              rel = null;
+              // 두 가족원 사이 관계: 본인 → gid, 본인 → oid 모두 알면 일부 추정 가능
+              const relMyToGid = myRelTo.get(gid) || null;
+              const relMyToOid = myRelTo.get(oid) || null;
+              // 부부의 자녀 ↔ 부모: 본인이 gid를 배우자로, oid를 자녀로 보면 gid에서 oid는 자녀
+              if (relMyToGid?.startsWith('배우자') && (relMyToOid === '아들' || relMyToOid === '딸')) {
+                rel = relMyToOid;
+              } else if ((relMyToGid === '아들' || relMyToGid === '딸') && relMyToOid?.startsWith('배우자')) {
+                // gid 가 본인의 자녀, oid 가 본인의 배우자 → gid에서 oid는 부모
+                rel = oInfo.gender === '남' ? '아버지' : oInfo.gender === '여' ? '어머니' : null;
+              } else if ((relMyToGid === '아들' || relMyToGid === '딸') && (relMyToOid === '아들' || relMyToOid === '딸')) {
+                // 형제자매: gidInfo 성별 / oid 성별·나이 비교
+                const gidB = gidInfo?.birth_date || '';
+                const oidB = oInfo.birth_date || '';
+                const gidIsOlder = gidB && oidB ? gidB < oidB : false;
+                if (gidInfo?.gender === '남') {
+                  rel = gidIsOlder ? (oInfo.gender === '남' ? '남동생' : '여동생')
+                                   : (oInfo.gender === '남' ? '형' : '누나');
+                } else if (gidInfo?.gender === '여') {
+                  rel = gidIsOlder ? (oInfo.gender === '남' ? '남동생' : '여동생')
+                                   : (oInfo.gender === '남' ? '오빠' : '언니');
+                }
+              }
             }
 
             const existingRow = existingByName.get(oInfo.name);
             if (existingRow) {
-              // 관계가 비어있고 새 추정값이 있으면 채워준다
               if (!existingRow.relationship && rel) {
                 await supabase.from('member_family')
                   .update({ relationship: rel })
@@ -283,9 +337,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                 name: oInfo.name,
                 relationship: rel,
                 phone: null,
-                sort_order: newOrder + added,
+                sort_order: newOrder++,
               });
-              added++;
             }
           }
         }
