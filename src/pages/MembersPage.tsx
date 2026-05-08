@@ -391,6 +391,9 @@ const MembersPage = () => {
             onImported={() => { fetchMembers(); setShowImport(false); }}
           />
         )}
+        {showExport && (
+          <ExcelExportDialog open={showExport} onClose={() => setShowExport(false)} />
+        )}
         <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
           <AlertDialogContent>
             <AlertDialogHeader>
