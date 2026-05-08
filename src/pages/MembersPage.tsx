@@ -433,6 +433,9 @@ const MembersPage = () => {
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowImport(true)}>
                 <Upload className="w-3.5 h-3.5 mr-1" />Excel
               </Button>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowExport(true)}>
+                <Download className="w-3.5 h-3.5 mr-1" />내보내기
+              </Button>
               <Button size="sm" className="h-8 text-xs" onClick={() => setShowAdd(true)}>
                 <Plus className="w-3.5 h-3.5 mr-1" />추가
               </Button>
