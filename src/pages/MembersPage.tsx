@@ -3,11 +3,12 @@ import { supabase } from "@/lib/supabase";
 import { Member } from "@/types/church";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Upload, Search, Users, ChevronRight, ArrowLeft, Trash2, X } from "lucide-react";
+import { Plus, Upload, Search, Users, ChevronRight, ArrowLeft, Trash2, X, Download } from "lucide-react";
 import MemberCard from "@/components/members/MemberCard";
 import AddMemberDialog from "@/components/members/AddMemberDialog";
 import MemberDetailPanel from "@/components/members/MemberDetailPanel";
 import ExcelImportDialog from "@/components/members/ExcelImportDialog";
+import ExcelExportDialog from "@/components/members/ExcelExportDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -127,6 +128,7 @@ const MembersPage = () => {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -302,6 +304,9 @@ const MembersPage = () => {
               <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => setShowImport(true)}>
                 <Upload className="w-3.5 h-3.5" />
               </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => setShowExport(true)}>
+                <Download className="w-3.5 h-3.5" />
+              </Button>
               <Button size="sm" className="h-7 text-xs px-2" onClick={() => setShowAdd(true)}>
                 <Plus className="w-3.5 h-3.5" />
               </Button>
@@ -386,6 +391,9 @@ const MembersPage = () => {
             onImported={() => { fetchMembers(); setShowImport(false); }}
           />
         )}
+        {showExport && (
+          <ExcelExportDialog open={showExport} onClose={() => setShowExport(false)} />
+        )}
         <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -424,6 +432,9 @@ const MembersPage = () => {
               </Button>
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowImport(true)}>
                 <Upload className="w-3.5 h-3.5 mr-1" />Excel
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowExport(true)}>
+                <Download className="w-3.5 h-3.5 mr-1" />내보내기
               </Button>
               <Button size="sm" className="h-8 text-xs" onClick={() => setShowAdd(true)}>
                 <Plus className="w-3.5 h-3.5 mr-1" />추가
@@ -586,6 +597,9 @@ const MembersPage = () => {
           onClose={() => setShowImport(false)}
           onImported={() => { fetchMembers(); setShowImport(false); }}
         />
+      )}
+      {showExport && (
+        <ExcelExportDialog open={showExport} onClose={() => setShowExport(false)} />
       )}
       <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
         <AlertDialogContent>
