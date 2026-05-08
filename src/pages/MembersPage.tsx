@@ -304,6 +304,9 @@ const MembersPage = () => {
               <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => setShowImport(true)}>
                 <Upload className="w-3.5 h-3.5" />
               </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => setShowExport(true)}>
+                <Download className="w-3.5 h-3.5" />
+              </Button>
               <Button size="sm" className="h-7 text-xs px-2" onClick={() => setShowAdd(true)}>
                 <Plus className="w-3.5 h-3.5" />
               </Button>
