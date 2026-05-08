@@ -128,6 +128,7 @@ const MembersPage = () => {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
