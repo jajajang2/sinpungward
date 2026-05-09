@@ -426,10 +426,7 @@ const MembersPage = () => {
             </div>
           </div>
           {!selectedGroupId && (
-            <div className="flex items-center gap-1.5 mt-3">
-              <Button variant="destructive" size="sm" className="h-8 text-xs" onClick={() => setShowDeleteAll(true)}>
-                <Trash2 className="w-3.5 h-3.5 mr-1" />전체삭제
-              </Button>
+            <div className="flex flex-wrap items-center gap-1.5 mt-3">
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowImport(true)}>
                 <Upload className="w-3.5 h-3.5 mr-1" />Excel
               </Button>
