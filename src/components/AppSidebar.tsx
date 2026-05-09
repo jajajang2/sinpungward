@@ -1,9 +1,10 @@
 import { NavLink } from "@/components/NavLink";
-import { Users, Calendar, BarChart3, GitBranch, ChevronLeft, ChevronRight, BookOpen, Menu, X } from "lucide-react";
+import { Users, Calendar, BarChart3, GitBranch, ChevronLeft, ChevronRight, BookOpen, Menu, X, LayoutDashboard } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const mainNavItems = [
+  { to: "/dashboard", label: "대시보드", icon: LayoutDashboard },
   { to: "/members", label: "회원기록양식", icon: Users },
   { to: "/attendance", label: "출석부", icon: Calendar },
   { to: "/attendance-stats", label: "출석통계", icon: BarChart3 },
