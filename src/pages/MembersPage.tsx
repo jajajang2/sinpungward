@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Member } from "@/types/church";
 import { Button } from "@/components/ui/button";
@@ -200,6 +201,19 @@ const MembersPage = () => {
   };
 
   useEffect(() => { fetchMembers(); }, []);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const id = searchParams.get('memberId');
+    if (id && members.length > 0) {
+      const target = members.find(m => m.id === id);
+      if (target) {
+        setSelectedMember(target);
+        searchParams.delete('memberId');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [members, searchParams, setSearchParams]);
 
   // When group changes, reset selected member
   const handleGroupSelect = (groupId: string) => {
