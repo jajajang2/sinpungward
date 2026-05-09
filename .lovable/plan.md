@@ -1,112 +1,66 @@
-# 가계도 확장 — 시댁/처가/조카까지 표시
+## 새 `/dashboard` 페이지 추가
 
-업로드된 가계도 이미지처럼 본인의 직계 가족뿐 아니라 **배우자 쪽 가족(시댁/처가)과 조카까지** 한 가계도 안에서 연결선과 함께 보이도록 `FamilyTree.tsx`를 확장합니다.
+`/members` 안이 아니라 **별도의 `/dashboard` 라우트**로 대시보드 페이지를 만듭니다. 사이드바에 "대시보드" 메뉴를 추가하고 4개 위젯을 한 페이지에 배치합니다.
 
-## 현재 상태
+---
 
-`classifyLevel`이 5개 레벨만 다룹니다:
-- grandparents / parents / siblings / spouse / children / grandchildren / extended
+### 라우팅 & 네비게이션
 
-→ **시아버지·시어머니**는 `parents`로 같이 묶여 본인 부모 줄에 섞여 표시됨
-→ **아주버님·동서·조카**는 전부 `extended`로 떨어져 가계도에서 분리됨
+- `src/App.tsx` — `<Route path="/dashboard" element={<DashboardPage />} />` 추가 (Layout 하위)
+- `src/components/AppSidebar.tsx` — `mainNavItems` 최상단에 "대시보드" (`LayoutDashboard` 아이콘, `/dashboard`) 추가
+- `src/pages/Index.tsx` 또는 루트 진입 시 `/dashboard`로 리다이렉트할지 여부는 현 동작 유지 (별도 변경 없음)
 
-## 목표 레이아웃 (이미지 기준)
+### 페이지 구성 (`src/pages/DashboardPage.tsx`)
 
-```text
-       [본인 부모]    [시부모/장인장모]
-            │              │
-            │       ┌──────┴──────┐
-   [본인 형제·자매] [본인]──[배우자]  [시형제/처형제]──[동서/처남댁]
-            │              │              │
-       [본인 자녀]    [본인 자녀]      [조카(시조카/처조카)]
-```
+데스크톱: 2x2 그리드(`grid-cols-2`), 모바일: 세로 스택. 각 카드는 shadcn `Card` 사용, semantic 디자인 토큰만 사용.
 
-핵심: **배우자 쪽 가족이 본인 가족 옆 줄(별도 컬럼)** 로 표시되고, 부부 가로선을 통해 두 가계가 만남.
+#### 1. 다가오는 생일자 (향후 4주)
+- 오늘부터 28일 이내 생일자 (월/일 기준, 연도 무시)
+- 표시: 이름 · D-day · 만 나이(생일 후) · 가까운 순
+- 클릭 시 `/members`로 이동하며 해당 회원 자동 선택 (router state 또는 query param `?memberId=…`로 전달, `MembersPage`에서 읽어 `setSelectedMember` 호출)
 
-## 변경 사항
+#### 2. 성전추천서 만료 임박자 (6개월 이내)
+- `member_church_info.temple_recommend = true` 회원 중
+- 만료일 = `max(bishop_interview_date, stake_president_interview_date)` + **2년**
+- 오늘 ~ 6개월 후 사이 만료 예정자 + 이미 만료된 회원 모두 표시 (만료됨/만료임박 배지 구분)
+- 만료일 빠른 순으로 정렬, 클릭 시 회원 상세 이동
 
-### 1. `src/components/members/FamilyTree.tsx` — 레벨 분류 확장
+#### 3. 최근 1달 출석 통계 그래프
+- 직전 4주(일요일 4번) 출석 인원 수 막대그래프 (recharts `BarChart`)
+- X축: 일요일 날짜(M/D), Y축: 출석 인원 수
+- 4주 평균 표시
+- 데이터: `attendance` 테이블에서 `is_present = true` 카운트
 
-`Level` 타입과 `classifyLevel`을 확장:
+#### 4. 해당월 달력 + 일정 추가
+- 현재 월 달력 (이전/다음 월 이동)
+- 일정 등록된 날짜에 점 표시 + 갯수 배지
+- 날짜 클릭 → 사이드 패널 또는 다이얼로그로 해당 일자 일정 목록, 추가/수정/삭제
+- "일정 추가" 폼: 제목, 설명, 날짜
 
-```ts
-type Level =
-  | "grandparents"           // 본인 조부모
-  | "spouse_grandparents"    // 배우자 조부모
-  | "parents"                // 본인 부모
-  | "spouse_parents"         // 시부모 / 장인·장모
-  | "siblings"               // 본인 형제자매
-  | "spouse_siblings"        // 시형제 / 처형제 (아주버님/도련님/시누이/처남/처형/처제/형님)
-  | "siblings_in_law"        // 동서·올케·매형·매부 등 (형제의 배우자)
-  | "self"
-  | "spouse"
-  | "children"
-  | "grandchildren"
-  | "nieces_nephews"         // 조카 / 조카딸
-  | "extended";
-```
+### DB 변경
 
-분류 규칙 (정규식):
-- `시아버지|시어머니|장인|장모` → `spouse_parents`
-- `아주버님|도련님|시누이|시동생|형님|처남|처형|처제` → `spouse_siblings`
-- `동서|올케|매형|매부|형부|제부` → `siblings_in_law`
-- `조카(딸)?` → `nieces_nephews`
-- 나머지는 기존 로직 유지
+새 테이블 `calendar_events`:
+- `id` uuid pk
+- `event_date` date NOT NULL
+- `title` text NOT NULL
+- `description` text
+- `created_at`, `updated_at` (트리거)
+- 인덱스: `event_date`
+- RLS: 기존 다른 테이블과 동일 패턴(public read/write — 인증 없는 앱 구조 유지)
 
-### 2. 데스크탑 레이아웃 — 좌(본인 가계) / 우(배우자 가계) 두 컬럼
+### 새 컴포넌트 (모두 `src/components/dashboard/` 하위)
 
-기존 단일 세로 스택을 **두 컬럼 그리드**로 변경:
+- `UpcomingBirthdaysCard.tsx`
+- `TempleRecommendCard.tsx`
+- `RecentAttendanceCard.tsx`
+- `MonthCalendarCard.tsx` + `EventDialog.tsx`
 
-```text
-┌─────────────────────┬─────────────────────┐
-│ [본인 조부모]        │ [배우자 조부모]      │
-│       │             │       │             │
-│ [본인 부모]          │ [시부모/장인장모]    │
-│       │             │       │             │
-│ [형제] [본인] ─── [배우자] [시형제]──[동서] │
-│         │             │             │      │
-│       [자녀]        [자녀]      [조카]      │
-└─────────────────────┴─────────────────────┘
-```
+### MembersPage 연동 (최소 수정)
 
-구현 방식:
-- 최상위는 `flex flex-row gap-12` (배우자가 있을 때만 2-컬럼, 없으면 기존 1-컬럼)
-- **왼쪽 컬럼**: 본인 조부모 → 본인 부모 → (형제 + 본인) → 자녀 → 손자녀
-- **오른쪽 컬럼**: 시(처)조부모 → 시부모/장인장모 → (시형제 + 배우자 + 동서) → 조카
-- 본인-배우자 가로 연결선: 두 컬럼의 L3 줄 사이를 가로지르는 별도 선 (`absolute h-px bg-primary/40`, 두 컬럼 사이 gap을 통과)
-- 시부모 → 배우자 세로선, 시형제 → 조카 세로선은 기존 `Connector` 패턴 재사용
+- `useSearchParams`로 `?memberId=…` 읽어 자동 선택 처리하는 코드 추가 (대시보드 카드에서 회원 클릭 시 사용)
 
-자녀(`children`)는 본인-배우자 사이(부부의 자녀)이므로 **왼쪽 컬럼 본인 아래**가 아닌 **두 컬럼 사이 중앙**에 배치하는 것이 이상적이지만, 단순화를 위해 본인 아래(왼쪽 컬럼 L4)에 두고 자녀→배우자 연결은 부부 가로선이 이미 표현하는 것으로 처리.
+---
 
-### 3. 모바일 레이아웃 — 그룹 추가
+### 확인 필요
 
-`GroupSection`에 새 그룹 추가:
-- `시부모 / 처가 부모` (spouse_parents)
-- `시형제 / 처형제` (spouse_siblings)
-- `형제의 배우자` (siblings_in_law)
-- `조카` (nieces_nephews)
-
-순서: 본인 조부모 → 본인 부모 → 시(처)부모 → 형제자매 → 시(처)형제 → 본인·배우자 → 자녀 → 조카 → 손자녀 → 기타.
-
-### 4. 양방향 동기화 추가 보강 (선택)
-
-`reverseRelationship` 매핑이 시댁/처가 관계까지 커버하는지 확인 후 누락분 추가:
-- 본인이 며느리/사위 관계를 시부모 쪽 카드에 보낼 때
-- 동서/조카 등 인덱스 (이미 본인 카드에 추가만 하면 표시는 가능하므로 1차 범위는 선택 사항)
-
-본 변경의 1차 목표는 **표시 레이아웃**이므로 동기화 보강은 필요 시점에 별도 처리.
-
-## 영향 파일
-
-- `src/components/members/FamilyTree.tsx` — 분류 함수, 데스크탑 2-컬럼 레이아웃, 모바일 그룹 추가
-- (필요 시) `src/components/members/MemberDetailPanel.tsx`의 `reverseRelationship` — 시댁/처가 매핑 추가
-
-## QA 체크포인트
-
-이미지의 강세희 케이스로:
-- 시아버지(박삼곤)·시어머니(이혜란)이 우측 상단에 가로 부부선으로 묶여 표시
-- 시부모 → 박호형(남편), 박우형(아주버님) 두 갈래로 세로선
-- 박우형 - 백하영(동서) 가로 부부선
-- 박우형/백하영 → 박해별(조카) 세로선
-- 강세희(본인) - 박호형(남편) 가로 부부선
-- 강세희·박호형 → 박이한(아들) 세로선
+성전추천서 만료 기간을 **2년** (LDS 표준 유효기간)으로 계산할 예정입니다. 다른 기간이라면 알려주세요. 그 외엔 위 계획대로 진행합니다.
