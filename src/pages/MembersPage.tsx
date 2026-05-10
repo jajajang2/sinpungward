@@ -77,6 +77,15 @@ const GROUPS: MemberGroup[] = [
     },
   },
   {
+    id: "singles_under35",
+    label: "독신 (35세 이하)",
+    description: "19세 ~ 35세 미혼",
+    filter: (m) => {
+      const age = getAge(m.birth_date);
+      return age !== null && age >= 19 && age <= 35 && !m.marriage_date;
+    },
+  },
+  {
     id: "ym",
     label: "청남",
     description: "11세 ~ 18세 남성",
