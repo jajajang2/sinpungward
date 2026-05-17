@@ -310,7 +310,7 @@ export default function MeetingMinutesPage() {
                 </div>
               )}
               <div
-                className="prose prose-sm max-w-none"
+                className="meeting-editor"
                 dangerouslySetInnerHTML={{ __html: selectedMinute.content }}
               />
             </div>
