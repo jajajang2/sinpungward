@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, AlertCircle, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
-import RichTextEditor from "@/components/meeting/RichTextEditor";
+import NotionEditor from "@/components/meeting/NotionEditor";
 
 interface MeetingMinute {
   id: string;
@@ -43,10 +43,52 @@ export default function MeetingMinutesPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [draftKey, setDraftKey] = useState<string | null>(null);
+  const [recoveredDraft, setRecoveredDraft] = useState<{ form: typeof form; isPrivate: boolean; savedAt: string } | null>(null);
+  const [lastDraftAt, setLastDraftAt] = useState<string | null>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchMinutes();
   }, []);
+
+  // Autosave draft to localStorage
+  useEffect(() => {
+    if (!draftKey) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      const savedAt = new Date().toISOString();
+      localStorage.setItem(draftKey, JSON.stringify({ form, isPrivate, savedAt }));
+      setLastDraftAt(savedAt);
+    }, 800);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, [form, isPrivate, draftKey]);
+
+  function openDraft(key: string) {
+    setDraftKey(key);
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        setRecoveredDraft(parsed);
+      } catch {
+        setRecoveredDraft(null);
+      }
+    } else {
+      setRecoveredDraft(null);
+    }
+    setLastDraftAt(null);
+  }
+
+  function clearDraft() {
+    if (draftKey) localStorage.removeItem(draftKey);
+    setDraftKey(null);
+    setRecoveredDraft(null);
+    setLastDraftAt(null);
+  }
+
 
   async function fetchMinutes() {
     setLoading(true);
@@ -80,6 +122,9 @@ export default function MeetingMinutesPage() {
     setSelectedMinute(null);
     setIsEditing(false);
     setIsCreating(false);
+    setDraftKey(null);
+    setRecoveredDraft(null);
+    setLastDraftAt(null);
   }
 
   function handleNewClick() {
@@ -88,6 +133,7 @@ export default function MeetingMinutesPage() {
     setIsCreating(true);
     setIsEditing(false);
     setSelectedMinute(null);
+    openDraft("meeting_draft:new");
   }
 
   function handleEditClick() {
@@ -101,6 +147,7 @@ export default function MeetingMinutesPage() {
     });
     setIsPrivate(false);
     setIsEditing(true);
+    openDraft(`meeting_draft:${selectedMinute.id}`);
   }
 
   async function handleSave() {
@@ -124,6 +171,7 @@ export default function MeetingMinutesPage() {
         setMinutes((prev) => [data as MeetingMinute, ...prev]);
         setSelectedMinute(data as MeetingMinute);
         setIsCreating(false);
+        clearDraft();
       }
     } else if (isEditing && selectedMinute) {
       const { data, error } = await db
@@ -139,6 +187,7 @@ export default function MeetingMinutesPage() {
         setMinutes((prev) => prev.map((m) => (m.id === (data as MeetingMinute).id ? data as MeetingMinute : m)));
         setSelectedMinute(data as MeetingMinute);
         setIsEditing(false);
+        clearDraft();
       }
     }
     setSaving(false);
@@ -319,8 +368,9 @@ export default function MeetingMinutesPage() {
           {/* Form */}
           {showForm && (
             <div className="flex h-full flex-col bg-background">
-              <div className="border-b border-border px-6 py-5 md:px-8">
-                <div className="flex items-center gap-3">
+              {/* Title header */}
+              <div className="px-6 py-5 md:px-10">
+                <div className="mx-auto flex w-full max-w-5xl items-center gap-3">
                   <Button variant="ghost" size="icon" onClick={handleBack} aria-label="뒤로가기" className="shrink-0">
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
@@ -328,68 +378,106 @@ export default function MeetingMinutesPage() {
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                     placeholder="문서제목을 입력하세요"
-                    className="h-auto border-0 bg-transparent px-0 text-3xl font-semibold text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
+                    className="h-auto border-0 bg-transparent px-0 text-3xl font-semibold text-muted-foreground/60 shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+                    style={{ color: form.title ? "hsl(var(--foreground))" : undefined }}
                   />
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8">
-                <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-                  <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)_220px] md:items-center">
-                    <label className="flex h-16 items-center gap-3 rounded-[0.5rem] border border-input bg-card px-4 text-base text-foreground">
-                      <Checkbox checked={isPrivate} onCheckedChange={(checked) => setIsPrivate(checked === true)} />
+              <div className="flex-1 overflow-y-auto px-6 pb-8 md:px-10">
+                <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+                  {/* Recovery banner */}
+                  {recoveredDraft && (
+                    <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        <span>임시저장된 내용이 있습니다. ({new Date(recoveredDraft.savedAt).toLocaleTimeString("ko-KR", { hour12: false })})</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setForm(recoveredDraft.form);
+                            setIsPrivate(recoveredDraft.isPrivate);
+                            setRecoveredDraft(null);
+                          }}
+                        >
+                          불러오기
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => { if (draftKey) localStorage.removeItem(draftKey); setRecoveredDraft(null); }}>
+                          무시
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tag chips row */}
+                  <div className="flex items-center gap-3 rounded-lg border border-input bg-card px-4 py-2.5">
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={isPrivate} onCheckedChange={(c) => setIsPrivate(c === true)} />
                       <span>비공개</span>
                     </label>
-
-                    <div className="rounded-[0.5rem] border border-input bg-card px-4 py-3">
-                      <Label className="mb-1 block text-xs text-muted-foreground">카테고리 검색 및 선택</Label>
-                      <select
-                        value={form.category}
-                        onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                        className="h-8 w-full bg-transparent text-base text-foreground focus:outline-none"
-                      >
-                        {CATEGORIES.filter((c) => c !== "전체").map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
+                    <span className="h-5 w-px bg-border" />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs">
+                        {form.category}
+                        <select
+                          value={form.category}
+                          onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                          className="absolute opacity-0 -ml-2.5 w-16 cursor-pointer"
+                          aria-label="카테고리 변경"
+                        >
+                          {CATEGORIES.filter((c) => c !== "전체").map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                        <X className="h-3 w-3 cursor-pointer opacity-50 hover:opacity-100" onClick={() => setForm((f) => ({ ...f, category: "와드평의회" }))} />
+                      </span>
                     </div>
-
-                    <div className="rounded-[0.5rem] border border-input bg-card px-4 py-3">
-                      <Label className="mb-1 block text-xs text-muted-foreground">회의 날짜</Label>
+                    <span className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                       <Input
                         type="date"
                         value={form.meeting_date}
                         onChange={(e) => setForm((f) => ({ ...f, meeting_date: e.target.value }))}
-                        className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        className="h-7 w-36 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
                       />
-                    </div>
+                    </span>
                   </div>
 
-                  <div className="rounded-[0.5rem] border border-input bg-card p-4">
-                    <Label className="mb-2 block text-xs text-muted-foreground">참석자</Label>
-                    <Input
-                      placeholder="참석자 이름을 입력하세요 (쉼표로 구분)"
-                      value={form.attendees ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))}
-                      className="border-0 px-0 shadow-none focus-visible:ring-0"
+                  {/* Attendees (compact) */}
+                  <Input
+                    placeholder="참석자 (쉼표로 구분, 선택)"
+                    value={form.attendees ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))}
+                    className="border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0"
+                  />
+
+                  {/* Editor */}
+                  <div className="rounded-lg border border-input bg-card">
+                    <NotionEditor
+                      value={form.content}
+                      onChange={(val) => setForm((f) => ({ ...f, content: val }))}
+                      className="min-h-[540px]"
                     />
                   </div>
-
-                  <RichTextEditor
-                    value={form.content}
-                    onChange={(val) => setForm((f) => ({ ...f, content: val }))}
-                    placeholder="텍스트를 입력하거나 /를 입력하여 명령을 입력하세요."
-                    className="min-h-[540px]"
-                  />
                 </div>
               </div>
 
-              <div className="border-t border-border bg-card/80 px-6 py-4 backdrop-blur md:px-8">
-                <div className="mx-auto flex w-full max-w-6xl items-center justify-end gap-3">
-                  <Button size="lg" onClick={handleSave} disabled={saving}>
-                    {saving ? "저장 중..." : "저장"}
-                  </Button>
-                  <Button size="lg" variant="outline" onClick={handleBack}>취소</Button>
+              <div className="border-t border-border bg-card/80 px-6 py-3 backdrop-blur md:px-10">
+                <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    {lastDraftAt ? `임시저장됨 ${new Date(lastDraftAt).toLocaleTimeString("ko-KR", { hour12: false })}` : ""}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSave} disabled={saving}>
+                      <Save className="h-4 w-4" />
+                      {saving ? "저장 중..." : "저장"}
+                    </Button>
+                    <Button variant="outline" onClick={handleBack}>
+                      <X className="h-4 w-4" />
+                      취소
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
