@@ -52,6 +52,44 @@ export default function MeetingMinutesPage() {
     fetchMinutes();
   }, []);
 
+  // Autosave draft to localStorage
+  useEffect(() => {
+    if (!draftKey) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      const savedAt = new Date().toISOString();
+      localStorage.setItem(draftKey, JSON.stringify({ form, isPrivate, savedAt }));
+      setLastDraftAt(savedAt);
+    }, 800);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, [form, isPrivate, draftKey]);
+
+  function openDraft(key: string) {
+    setDraftKey(key);
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        setRecoveredDraft(parsed);
+      } catch {
+        setRecoveredDraft(null);
+      }
+    } else {
+      setRecoveredDraft(null);
+    }
+    setLastDraftAt(null);
+  }
+
+  function clearDraft() {
+    if (draftKey) localStorage.removeItem(draftKey);
+    setDraftKey(null);
+    setRecoveredDraft(null);
+    setLastDraftAt(null);
+  }
+
+
   async function fetchMinutes() {
     setLoading(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
