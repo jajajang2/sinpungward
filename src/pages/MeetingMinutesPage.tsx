@@ -122,6 +122,9 @@ export default function MeetingMinutesPage() {
     setSelectedMinute(null);
     setIsEditing(false);
     setIsCreating(false);
+    setDraftKey(null);
+    setRecoveredDraft(null);
+    setLastDraftAt(null);
   }
 
   function handleNewClick() {
@@ -130,6 +133,7 @@ export default function MeetingMinutesPage() {
     setIsCreating(true);
     setIsEditing(false);
     setSelectedMinute(null);
+    openDraft("meeting_draft:new");
   }
 
   function handleEditClick() {
@@ -143,6 +147,7 @@ export default function MeetingMinutesPage() {
     });
     setIsPrivate(false);
     setIsEditing(true);
+    openDraft(`meeting_draft:${selectedMinute.id}`);
   }
 
   async function handleSave() {
