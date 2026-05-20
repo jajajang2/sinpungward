@@ -49,30 +49,6 @@ export default function MeetingMinutesPage() {
   }, []);
 
 
-  function openDraft(key: string) {
-    setDraftKey(key);
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        setRecoveredDraft(parsed);
-      } catch {
-        setRecoveredDraft(null);
-      }
-    } else {
-      setRecoveredDraft(null);
-    }
-    setLastDraftAt(null);
-  }
-
-  function clearDraft() {
-    if (draftKey) localStorage.removeItem(draftKey);
-    setDraftKey(null);
-    setRecoveredDraft(null);
-    setLastDraftAt(null);
-  }
-
-
   async function fetchMinutes() {
     setLoading(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
