@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, AlertCircle, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
-import RichTextEditor from "@/components/meeting/RichTextEditor";
+import NotionEditor from "@/components/meeting/NotionEditor";
 
 interface MeetingMinute {
   id: string;
