@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, AlertCircle, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotionEditor from "@/components/meeting/NotionEditor";
 
@@ -43,51 +43,10 @@ export default function MeetingMinutesPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [draftKey, setDraftKey] = useState<string | null>(null);
-  const [recoveredDraft, setRecoveredDraft] = useState<{ form: typeof form; isPrivate: boolean; savedAt: string } | null>(null);
-  const [lastDraftAt, setLastDraftAt] = useState<string | null>(null);
-  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchMinutes();
   }, []);
-
-  // Autosave draft to localStorage
-  useEffect(() => {
-    if (!draftKey) return;
-    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-    autosaveTimer.current = setTimeout(() => {
-      const savedAt = new Date().toISOString();
-      localStorage.setItem(draftKey, JSON.stringify({ form, isPrivate, savedAt }));
-      setLastDraftAt(savedAt);
-    }, 800);
-    return () => {
-      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-    };
-  }, [form, isPrivate, draftKey]);
-
-  function openDraft(key: string) {
-    setDraftKey(key);
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        setRecoveredDraft(parsed);
-      } catch {
-        setRecoveredDraft(null);
-      }
-    } else {
-      setRecoveredDraft(null);
-    }
-    setLastDraftAt(null);
-  }
-
-  function clearDraft() {
-    if (draftKey) localStorage.removeItem(draftKey);
-    setDraftKey(null);
-    setRecoveredDraft(null);
-    setLastDraftAt(null);
-  }
 
 
   async function fetchMinutes() {
@@ -122,9 +81,6 @@ export default function MeetingMinutesPage() {
     setSelectedMinute(null);
     setIsEditing(false);
     setIsCreating(false);
-    setDraftKey(null);
-    setRecoveredDraft(null);
-    setLastDraftAt(null);
   }
 
   function handleNewClick() {
@@ -133,7 +89,6 @@ export default function MeetingMinutesPage() {
     setIsCreating(true);
     setIsEditing(false);
     setSelectedMinute(null);
-    openDraft("meeting_draft:new");
   }
 
   function handleEditClick() {
@@ -147,7 +102,6 @@ export default function MeetingMinutesPage() {
     });
     setIsPrivate(false);
     setIsEditing(true);
-    openDraft(`meeting_draft:${selectedMinute.id}`);
   }
 
   async function handleSave() {
@@ -171,7 +125,6 @@ export default function MeetingMinutesPage() {
         setMinutes((prev) => [data as MeetingMinute, ...prev]);
         setSelectedMinute(data as MeetingMinute);
         setIsCreating(false);
-        clearDraft();
       }
     } else if (isEditing && selectedMinute) {
       const { data, error } = await db
@@ -187,7 +140,6 @@ export default function MeetingMinutesPage() {
         setMinutes((prev) => prev.map((m) => (m.id === (data as MeetingMinute).id ? data as MeetingMinute : m)));
         setSelectedMinute(data as MeetingMinute);
         setIsEditing(false);
-        clearDraft();
       }
     }
     setSaving(false);
@@ -417,23 +369,6 @@ export default function MeetingMinutesPage() {
                     />
                   </div>
 
-                  {/* Recovery banner */}
-                  {recoveredDraft && (
-                    <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
-                      <div className="flex items-center gap-2 text-sm">
-                        <AlertCircle className="h-4 w-4 text-primary" />
-                        <span>임시저장된 내용이 있습니다. ({new Date(recoveredDraft.savedAt).toLocaleTimeString("ko-KR", { hour12: false })})</span>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button size="sm" onClick={() => { setForm(recoveredDraft.form); setIsPrivate(recoveredDraft.isPrivate); setRecoveredDraft(null); }}>
-                          불러오기
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { if (draftKey) localStorage.removeItem(draftKey); setRecoveredDraft(null); }}>
-                          무시
-                        </Button>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Editor card */}
                   <div className="rounded-xl border border-border bg-card shadow-sm">
@@ -448,10 +383,7 @@ export default function MeetingMinutesPage() {
 
               {/* Footer */}
               <div className="border-t border-border bg-card/90 px-4 py-3 backdrop-blur md:px-8">
-                <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
-                  <span className="text-xs text-muted-foreground">
-                    {lastDraftAt ? `임시저장됨 · ${new Date(lastDraftAt).toLocaleTimeString("ko-KR", { hour12: false })}` : "자동 저장 대기 중"}
-                  </span>
+                <div className="mx-auto flex w-full max-w-4xl items-center justify-end gap-3">
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={handleBack}>
                       <X className="h-4 w-4" />
