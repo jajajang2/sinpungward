@@ -31,6 +31,7 @@ import {
   Palette,
 } from "lucide-react";
 import { SlashCommand } from "./SlashCommand";
+import { Video, Audio, FileLink } from "./MediaNodes";
 
 interface Props {
   value: string;
