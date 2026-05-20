@@ -171,6 +171,7 @@ export default function MeetingMinutesPage() {
         setMinutes((prev) => [data as MeetingMinute, ...prev]);
         setSelectedMinute(data as MeetingMinute);
         setIsCreating(false);
+        clearDraft();
       }
     } else if (isEditing && selectedMinute) {
       const { data, error } = await db
