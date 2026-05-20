@@ -52,19 +52,6 @@ export default function MeetingMinutesPage() {
     fetchMinutes();
   }, []);
 
-  // Autosave draft to localStorage
-  useEffect(() => {
-    if (!draftKey) return;
-    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-    autosaveTimer.current = setTimeout(() => {
-      const savedAt = new Date().toISOString();
-      localStorage.setItem(draftKey, JSON.stringify({ form, isPrivate, savedAt }));
-      setLastDraftAt(savedAt);
-    }, 800);
-    return () => {
-      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-    };
-  }, [form, isPrivate, draftKey]);
 
   function openDraft(key: string) {
     setDraftKey(key);
