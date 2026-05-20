@@ -187,6 +187,7 @@ export default function MeetingMinutesPage() {
         setMinutes((prev) => prev.map((m) => (m.id === (data as MeetingMinute).id ? data as MeetingMinute : m)));
         setSelectedMinute(data as MeetingMinute);
         setIsEditing(false);
+        clearDraft();
       }
     }
     setSaving(false);
