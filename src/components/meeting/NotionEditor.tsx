@@ -70,6 +70,9 @@ export default function NotionEditor({
       TextStyle,
       Color,
       SlashCommand,
+      Video,
+      Audio,
+      FileLink,
     ],
     content: value,
     onUpdate: ({ editor }) => {
