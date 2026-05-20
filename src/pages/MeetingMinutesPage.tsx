@@ -43,10 +43,6 @@ export default function MeetingMinutesPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [draftKey, setDraftKey] = useState<string | null>(null);
-  const [recoveredDraft, setRecoveredDraft] = useState<{ form: typeof form; isPrivate: boolean; savedAt: string } | null>(null);
-  const [lastDraftAt, setLastDraftAt] = useState<string | null>(null);
-  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchMinutes();
