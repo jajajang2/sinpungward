@@ -31,6 +31,7 @@ import {
   Palette,
 } from "lucide-react";
 import { SlashCommand } from "./SlashCommand";
+import { Video, Audio, FileLink } from "./MediaNodes";
 
 interface Props {
   value: string;
@@ -69,6 +70,9 @@ export default function NotionEditor({
       TextStyle,
       Color,
       SlashCommand,
+      Video,
+      Audio,
+      FileLink,
     ],
     content: value,
     onUpdate: ({ editor }) => {

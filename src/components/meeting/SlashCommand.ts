@@ -18,15 +18,47 @@ export const slashItems: SlashItem[] = [
   { group: "기본 블록", title: "구분선", icon: "—", command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setHorizontalRule().run() },
   // 고급
   { group: "고급", title: "표", icon: "⊞", command: ({ editor, range }) => editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+  {
+    group: "고급", title: "링크", icon: "🔗",
+    command: ({ editor, range }) => {
+      const url = window.prompt("링크 URL을 입력하세요");
+      if (!url) { editor.chain().focus().deleteRange(range).run(); return; }
+      const text = window.prompt("링크 텍스트 (선택)") || url;
+      editor.chain().focus().deleteRange(range).insertContent(`<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a> `).run();
+    },
+  },
   // 미디어
   {
-    group: "미디어",
-    title: "이미지",
-    icon: "🖼",
+    group: "미디어", title: "이미지", icon: "🖼",
     command: ({ editor, range }) => {
       const url = window.prompt("이미지 URL을 입력하세요");
       if (url) editor.chain().focus().deleteRange(range).setImage({ src: url }).run();
       else editor.chain().focus().deleteRange(range).run();
+    },
+  },
+  {
+    group: "미디어", title: "비디오", icon: "▶",
+    command: ({ editor, range }) => {
+      const url = window.prompt("비디오 URL (.mp4 등)을 입력하세요");
+      if (url) editor.chain().focus().deleteRange(range).insertContent({ type: "video", attrs: { src: url } }).run();
+      else editor.chain().focus().deleteRange(range).run();
+    },
+  },
+  {
+    group: "미디어", title: "오디오", icon: "♪",
+    command: ({ editor, range }) => {
+      const url = window.prompt("오디오 URL (.mp3 등)을 입력하세요");
+      if (url) editor.chain().focus().deleteRange(range).insertContent({ type: "audio", attrs: { src: url } }).run();
+      else editor.chain().focus().deleteRange(range).run();
+    },
+  },
+  {
+    group: "미디어", title: "파일", icon: "📎",
+    command: ({ editor, range }) => {
+      const url = window.prompt("파일 URL을 입력하세요");
+      if (!url) { editor.chain().focus().deleteRange(range).run(); return; }
+      const name = window.prompt("파일 이름 (선택)") || url.split("/").pop() || "파일";
+      editor.chain().focus().deleteRange(range).insertContent({ type: "fileLink", attrs: { href: url, name } }).run();
     },
   },
 ];
