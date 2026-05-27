@@ -195,8 +195,11 @@ const AttendancePage = () => {
         }
       });
     });
+    visitors.forEach((v) => {
+      counts[v.attendance_date] = (counts[v.attendance_date] || 0) + 1;
+    });
     return counts;
-  }, [attendance]);
+  }, [attendance, visitors]);
 
   const selectedGroup = GROUPS.find((group) => group.id === selectedGroupId) ?? GROUPS[0];
   const filteredMembers = useMemo(() => {
