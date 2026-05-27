@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
-import NotionEditor from "@/components/meeting/NotionEditor";
+import BlockNoteEditorView from "@/components/meeting/BlockNoteEditor";
+import BlockNoteReadOnly from "@/components/meeting/BlockNoteReadOnly";
 
 interface MeetingMinute {
   id: string;
@@ -310,10 +311,8 @@ export default function MeetingMinutesPage() {
                   <p className="text-sm">{selectedMinute.attendees}</p>
                 </div>
               )}
-              <div
-                className="meeting-editor"
-                dangerouslySetInnerHTML={{ __html: selectedMinute.content }}
-              />
+              <BlockNoteReadOnly content={selectedMinute.content} />
+
             </div>
           )}
 
@@ -371,11 +370,11 @@ export default function MeetingMinutesPage() {
 
 
                   {/* Editor card */}
-                  <div className="rounded-xl border border-border bg-card shadow-sm">
-                    <NotionEditor
+                  <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                    <BlockNoteEditorView
                       value={form.content}
                       onChange={(val) => setForm((f) => ({ ...f, content: val }))}
-                      className="min-h-[560px] rounded-xl"
+                      className="min-h-[560px]"
                     />
                   </div>
                 </div>
