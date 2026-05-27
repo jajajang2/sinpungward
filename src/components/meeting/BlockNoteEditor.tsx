@@ -44,10 +44,12 @@ export default function BlockNoteEditorView({ value, onChange, className }: Prop
 
   useEffect(() => {
     if (!editor) return;
-    const handler = () => {
+    const unsub = editor.onChange(() => {
       onChange(JSON.stringify(editor.document));
+    });
+    return () => {
+      if (typeof unsub === "function") unsub();
     };
-    return editor.onChange(handler) as unknown as () => void;
   }, [editor, onChange]);
 
   return (
