@@ -299,20 +299,34 @@ export default function MeetingMinutesPage() {
           {/* Detail View */}
           {showDetail && selectedMinute && (
             <div className="max-w-3xl mx-auto px-8 py-8">
-              <div className="flex items-center gap-2 mb-6">
-                <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">{selectedMinute.category}</span>
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />{selectedMinute.meeting_date}
-                </span>
-              </div>
-              {selectedMinute.attendees && (
-                <div className="mb-6 p-4 rounded-lg bg-muted/50 border">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">참석자</p>
-                  <p className="text-sm">{selectedMinute.attendees}</p>
-                </div>
-              )}
-              <BlockNoteReadOnly content={selectedMinute.content} />
+              {/* Title */}
+              <h1 className="text-2xl font-bold text-foreground mb-4">
+                {selectedMinute.title}
+              </h1>
 
+              {/* Meta row */}
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  {selectedMinute.category}
+                </span>
+                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  {selectedMinute.meeting_date}
+                </span>
+                {selectedMinute.attendees && (
+                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <span className="h-3.5 w-px bg-border" />
+                    <span className="font-medium text-foreground">참석자:</span>
+                    {selectedMinute.attendees}
+                  </span>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="mb-6 border-t border-border" />
+
+              {/* Content */}
+              <BlockNoteReadOnly content={selectedMinute.content} />
             </div>
           )}
 
