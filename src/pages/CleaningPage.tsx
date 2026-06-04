@@ -257,6 +257,14 @@ export default function CleaningPage() {
   };
 
   const autoAssign = async () => {
+    if (familyViews.length === 0) {
+      toast({
+        title: "가족이 없습니다",
+        description: "먼저 우상단의 '가족 재구성' 버튼을 눌러 회원 관계로부터 가족을 생성해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
     const aTeam = teamByCode.get("A");
     const targetTeams = ["B", "C", "D", "E"].map((c) => teamByCode.get(c)!).filter(Boolean);
     if (targetTeams.length === 0) return;
@@ -520,6 +528,17 @@ export default function CleaningPage() {
 
         {/* ===== 조 편성 ===== */}
         <TabsContent value="teams" className="space-y-4">
+          {familyViews.length === 0 && (
+            <div className="rounded-lg border border-dashed bg-muted/40 p-6 text-center">
+              <p className="text-sm font-medium mb-2">아직 가족이 등록되지 않았습니다</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                회원 관계(부부·부모·자녀)로부터 가족 그룹을 자동 생성한 뒤 조 편성을 시작하세요.
+              </p>
+              <Button size="sm" onClick={() => setRebuildOpen(true)}>
+                <Users className="w-4 h-4" /> 가족 재구성 실행
+              </Button>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={autoAssign}>
               <Wand2 className="w-4 h-4" /> 자동 배분
