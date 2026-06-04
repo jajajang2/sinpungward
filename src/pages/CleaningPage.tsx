@@ -257,6 +257,14 @@ export default function CleaningPage() {
   };
 
   const autoAssign = async () => {
+    if (familyViews.length === 0) {
+      toast({
+        title: "가족이 없습니다",
+        description: "먼저 우상단의 '가족 재구성' 버튼을 눌러 회원 관계로부터 가족을 생성해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
     const aTeam = teamByCode.get("A");
     const targetTeams = ["B", "C", "D", "E"].map((c) => teamByCode.get(c)!).filter(Boolean);
     if (targetTeams.length === 0) return;
