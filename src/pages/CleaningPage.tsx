@@ -516,9 +516,6 @@ export default function CleaningPage() {
             <Button size="sm" onClick={autoAssign}>
               <Wand2 className="w-4 h-4" /> 자동 배분
             </Button>
-            <Button size="sm" variant="outline" onClick={fillBishopric}>
-              <Sparkles className="w-4 h-4" /> 감독단 자동 채우기
-            </Button>
             <Button size="sm" variant="outline" onClick={() => setResetOpen(true)}>
               <RotateCcw className="w-4 h-4" /> 전체 초기화
             </Button>
