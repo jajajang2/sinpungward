@@ -84,7 +84,7 @@ interface FamilyView {
   score: number; // 0~1
 }
 
-const DEFAULT_CYCLE = ["B", "C", "D", "E", "A"];
+const DEFAULT_CYCLE = ["B", "C", "D", "E"];
 
 export default function CleaningPage() {
   const { toast } = useToast();
@@ -265,17 +265,10 @@ export default function CleaningPage() {
       });
       return;
     }
-    const aTeam = teamByCode.get("A");
-    const targetTeams = ["B", "C", "D", "E"].map((c) => teamByCode.get(c)!).filter(Boolean);
+    const targetTeams = [...teams].sort((a, b) => a.sort_order - b.sort_order);
     if (targetTeams.length === 0) return;
 
-    // A조 가족은 그대로 두고, 나머지 모든 가족 재배분
-    const aFamilyIds = new Set(
-      assignments.filter((a) => aTeam && a.team_id === aTeam.id).map((a) => a.family_id)
-    );
-    const candidates = familyViews
-      .filter((f) => !aFamilyIds.has(f.id))
-      .sort((x, y) => y.score - x.score);
+    const candidates = [...familyViews].sort((x, y) => y.score - x.score);
 
     // 스네이크 드래프트
     const buckets: string[][] = targetTeams.map(() => []);
@@ -292,9 +285,8 @@ export default function CleaningPage() {
       }
     }
 
-    // 기존 B~E 배정 삭제 후 새로 삽입
-    const nonATeamIds = targetTeams.map((t) => t.id);
-    await supabase.from("team_assignments").delete().in("team_id", nonATeamIds);
+    // 기존 모든 배정 삭제 후 새로 삽입
+    await supabase.from("team_assignments").delete().not("id", "is", null);
 
     const rows: any[] = [];
     buckets.forEach((famIds, i) => {
@@ -321,25 +313,6 @@ export default function CleaningPage() {
     toast({ title: "초기화 완료", description: "모든 조 배정이 해제되었습니다." });
   };
 
-  const fillBishopric = async () => {
-    const aTeam = teamByCode.get("A");
-    if (!aTeam) return;
-    const keywords = ["감독", "1상담", "2상담", "서기"];
-    const bishopricMemberIds = new Set<string>();
-    memberCallings.forEach((callings, memberId) => {
-      if (callings.some((c) => keywords.some((k) => c.includes(k)))) {
-        bishopricMemberIds.add(memberId);
-      }
-    });
-    const targetFamilyIds = new Set<string>();
-    for (const fm of familyMembers) {
-      if (bishopricMemberIds.has(fm.member_id)) targetFamilyIds.add(fm.family_id);
-    }
-    for (const fid of targetFamilyIds) {
-      await moveFamilyToTeam(fid, aTeam.id, "manual");
-    }
-    toast({ title: "감독단 자동 채우기 완료", description: `${targetFamilyIds.size}개 가족` });
-  };
 
   // ===== Schedule generation =====
   const [genStart, setGenStart] = useState(() => new Date().toISOString().slice(0, 10));
@@ -542,9 +515,6 @@ export default function CleaningPage() {
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={autoAssign}>
               <Wand2 className="w-4 h-4" /> 자동 배분
-            </Button>
-            <Button size="sm" variant="outline" onClick={fillBishopric}>
-              <Sparkles className="w-4 h-4" /> 감독단 자동 채우기
             </Button>
             <Button size="sm" variant="outline" onClick={() => setResetOpen(true)}>
               <RotateCcw className="w-4 h-4" /> 전체 초기화
