@@ -1,9 +1,7 @@
-import type { Member } from "@/types/church";
-
 export interface FamilyForName {
   display_name_override?: string | null;
-  head?: Pick<Member, "name" | "gender"> | null;
-  spouse?: Pick<Member, "name" | "gender"> | null;
+  head?: { name: string; gender: string | null } | null;
+  spouse?: { name: string; gender: string | null } | null;
   /** family에 head 외 다른 회원이 없는 경우 true */
   isSingle?: boolean;
 }
