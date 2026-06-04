@@ -136,6 +136,112 @@ export type Database = {
         }
         Relationships: []
       }
+      cleaning_schedule: {
+        Row: {
+          clean_date: string
+          created_at: string
+          id: string
+          note: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          clean_date: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          clean_date?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_schedule_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      families: {
+        Row: {
+          created_at: string
+          display_name_override: string | null
+          head_member_id: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name_override?: string | null
+          head_member_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name_override?: string | null
+          head_member_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "families_head_member_id_fkey"
+            columns: ["head_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_members: {
+        Row: {
+          created_at: string
+          family_id: string
+          family_role: Database["public"]["Enums"]["family_role"]
+          id: string
+          member_id: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          family_role?: Database["public"]["Enums"]["family_role"]
+          id?: string
+          member_id: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          family_role?: Database["public"]["Enums"]["family_role"]
+          id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_members_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_minutes: {
         Row: {
           attendees: string | null
@@ -427,6 +533,72 @@ export type Database = {
         }
         Relationships: []
       }
+      team_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_method: Database["public"]["Enums"]["team_assign_method"]
+          family_id: string
+          id: string
+          team_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_method?: Database["public"]["Enums"]["team_assign_method"]
+          family_id: string
+          id?: string
+          team_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_method?: Database["public"]["Enums"]["team_assign_method"]
+          family_id?: string
+          id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_assignments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_fixed: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_fixed?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_fixed?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -439,6 +611,8 @@ export type Database = {
     }
     Enums: {
       family_relation_type: "spouse" | "parent" | "child" | "sibling"
+      family_role: "head" | "spouse" | "child" | "single"
+      team_assign_method: "auto" | "manual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -567,6 +741,8 @@ export const Constants = {
   public: {
     Enums: {
       family_relation_type: ["spouse", "parent", "child", "sibling"],
+      family_role: ["head", "spouse", "child", "single"],
+      team_assign_method: ["auto", "manual"],
     },
   },
 } as const
