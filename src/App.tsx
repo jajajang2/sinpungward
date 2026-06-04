@@ -11,6 +11,7 @@ import AttendancePage from "./pages/AttendancePage";
 import AttendanceStatsPage from "./pages/AttendanceStatsPage";
 import OrgChartPage from "./pages/OrgChartPage";
 import MeetingMinutesPage from "./pages/MeetingMinutesPage";
+import CleaningPage from "./pages/CleaningPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/attendance-stats" element={<AttendanceStatsPage />} />
             <Route path="/orgchart" element={<OrgChartPage />} />
             <Route path="/minutes" element={<MeetingMinutesPage />} />
+            <Route path="/cleaning" element={<CleaningPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
