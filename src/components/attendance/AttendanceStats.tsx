@@ -49,6 +49,8 @@ const getSundays = (from: Date, to: Date): Date[] => {
 
 export const AttendanceStats = ({ members, attendance, records }: Props) => {
   const [absentRange, setAbsentRange] = useState<"2w" | "4w" | "3m">("4w");
+  const [exporting, setExporting] = useState(false);
+  const { toast } = useToast();
 
   const totalMembers = members.length;
   const today = new Date();
