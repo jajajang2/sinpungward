@@ -217,6 +217,7 @@ const MembersPage = () => {
     if (id && members.length > 0) {
       const target = members.find(m => m.id === id);
       if (target) {
+        setSelectedGroupId('all');
         setSelectedMember(target);
         searchParams.delete('memberId');
         setSearchParams(searchParams, { replace: true });
