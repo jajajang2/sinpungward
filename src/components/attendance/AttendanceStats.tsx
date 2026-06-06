@@ -382,12 +382,15 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
           ) : (
             <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto">
               {absentees.map(m => (
-                <span
+                <button
                   key={m.id}
-                  className="text-xs px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20"
+                  type="button"
+                  onClick={() => goToMember(m.id)}
+                  className="text-xs px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 hover:underline transition-colors cursor-pointer"
+                  title="회원기록으로 이동"
                 >
                   {m.name}
-                </span>
+                </button>
               ))}
             </div>
           )}
