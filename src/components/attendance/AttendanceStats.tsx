@@ -120,10 +120,18 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
       .map(m => {
         const present = sundays.filter(s => attendance[m.id]?.[toDateStr(s)]).length;
         const rate = sundays.length > 0 ? (present / sundays.length) * 100 : 0;
-        return { id: m.id, name: m.name, present, total: sundays.length, rate };
+        return { id: m.id, name: m.name, age: getAge(m.birth_date), phone: m.phone || "", present, total: sundays.length, rate };
       })
       .sort((a, b) => b.rate - a.rate);
   }, [members, attendance]);
+
+  const filteredPersonalRates = useMemo(() => {
+    const q = personalSearch.trim().toLowerCase();
+    if (!q) return personalRates;
+    return personalRates.filter(p =>
+      p.name.toLowerCase().includes(q) || p.phone.includes(q)
+    );
+  }, [personalRates, personalSearch]);
 
   // ── 불참석자 (해당 기간 내내 0회 출석) ──
   const absentees = useMemo(() => {
