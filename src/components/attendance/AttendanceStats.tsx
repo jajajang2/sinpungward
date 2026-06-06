@@ -120,6 +120,72 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
     });
   }, [members, attendance, absentRange]);
 
+  const exportAbsentees = async () => {
+    if (absentees.length === 0) {
+      toast({ title: "내보낼 회원이 없습니다" });
+      return;
+    }
+    setExporting(true);
+    try {
+      const ids = absentees.map(m => m.id);
+      const [detRes, relRes, notesRes] = await Promise.all([
+        supabase.from("members").select("id, name, birth_date, phone").in("id", ids),
+        supabase.from("member_relations")
+          .select("member_id, relation_type, related:members!member_relations_related_member_id_fkey(name)")
+          .in("member_id", ids),
+        supabase.from("member_notes").select("member_id, note_date, content, author").in("member_id", ids).order("note_date", { ascending: false }),
+      ]);
+      if (detRes.error) throw detRes.error;
+      if (relRes.error) throw relRes.error;
+      if (notesRes.error) throw notesRes.error;
+
+      const detMap = new Map((detRes.data || []).map(d => [d.id, d]));
+      const relMap = new Map<string, string[]>();
+      (relRes.data || []).forEach((r: any) => {
+        const name = r.related?.name;
+        if (!name) return;
+        const label = RELATION_LABEL[r.relation_type] || r.relation_type;
+        const arr = relMap.get(r.member_id) || [];
+        arr.push(`${name}(${label})`);
+        relMap.set(r.member_id, arr);
+      });
+      const notesMap = new Map<string, string[]>();
+      (notesRes.data || []).forEach((n: any) => {
+        const arr = notesMap.get(n.member_id) || [];
+        arr.push(`[${n.note_date}${n.author ? ` · ${n.author}` : ""}] ${n.content}`);
+        notesMap.set(n.member_id, arr);
+      });
+
+      const rows = absentees
+        .sort((a, b) => a.name.localeCompare(b.name, "ko"))
+        .map(m => {
+          const det = detMap.get(m.id) as any;
+          return {
+            이름: m.name,
+            생년월일: det?.birth_date || "-",
+            휴대폰번호: det?.phone || "-",
+            가족관계: (relMap.get(m.id) || []).join(", ") || "-",
+            기록: (notesMap.get(m.id) || []).join("\n") || "-",
+          };
+        });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 30 }, { wch: 60 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "불참석자");
+      const rangeLabel = absentRange === "2w" ? "2주" : absentRange === "4w" ? "4주" : "3개월";
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `불참석자_${rangeLabel}_${today}.xlsx`);
+      toast({ title: "내보내기 완료", description: `${rows.length}명을 내보냈습니다.` });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "오류가 발생했습니다.";
+      toast({ title: "내보내기 실패", description: msg, variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
