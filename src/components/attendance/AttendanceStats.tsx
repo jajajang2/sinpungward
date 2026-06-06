@@ -12,9 +12,20 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { TrendingUp, Users, Percent, UserX, CalendarDays } from "lucide-react";
+import { TrendingUp, Users, Percent, UserX, CalendarDays, Download } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AnnouncementsCard } from "./AnnouncementsCard";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
+
+const RELATION_LABEL: Record<string, string> = {
+  spouse: "배우자",
+  parent: "부모",
+  child: "자녀",
+  sibling: "형제자매",
+};
 
 interface Props {
   members: Member[];
@@ -38,6 +49,8 @@ const getSundays = (from: Date, to: Date): Date[] => {
 
 export const AttendanceStats = ({ members, attendance, records }: Props) => {
   const [absentRange, setAbsentRange] = useState<"2w" | "4w" | "3m">("4w");
+  const [exporting, setExporting] = useState(false);
+  const { toast } = useToast();
 
   const totalMembers = members.length;
   const today = new Date();
@@ -106,6 +119,72 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
       return sundays.every(s => !attendance[m.id]?.[toDateStr(s)]);
     });
   }, [members, attendance, absentRange]);
+
+  const exportAbsentees = async () => {
+    if (absentees.length === 0) {
+      toast({ title: "내보낼 회원이 없습니다" });
+      return;
+    }
+    setExporting(true);
+    try {
+      const ids = absentees.map(m => m.id);
+      const [detRes, relRes, notesRes] = await Promise.all([
+        supabase.from("members").select("id, name, birth_date, phone").in("id", ids),
+        supabase.from("member_relations")
+          .select("member_id, relation_type, related:members!member_relations_related_member_id_fkey(name)")
+          .in("member_id", ids),
+        supabase.from("member_notes").select("member_id, note_date, content, author").in("member_id", ids).order("note_date", { ascending: false }),
+      ]);
+      if (detRes.error) throw detRes.error;
+      if (relRes.error) throw relRes.error;
+      if (notesRes.error) throw notesRes.error;
+
+      const detMap = new Map((detRes.data || []).map(d => [d.id, d]));
+      const relMap = new Map<string, string[]>();
+      (relRes.data || []).forEach((r: any) => {
+        const name = r.related?.name;
+        if (!name) return;
+        const label = RELATION_LABEL[r.relation_type] || r.relation_type;
+        const arr = relMap.get(r.member_id) || [];
+        arr.push(`${name}(${label})`);
+        relMap.set(r.member_id, arr);
+      });
+      const notesMap = new Map<string, string[]>();
+      (notesRes.data || []).forEach((n: any) => {
+        const arr = notesMap.get(n.member_id) || [];
+        arr.push(`[${n.note_date}${n.author ? ` · ${n.author}` : ""}] ${n.content}`);
+        notesMap.set(n.member_id, arr);
+      });
+
+      const rows = absentees
+        .sort((a, b) => a.name.localeCompare(b.name, "ko"))
+        .map(m => {
+          const det = detMap.get(m.id) as any;
+          return {
+            이름: m.name,
+            생년월일: det?.birth_date || "-",
+            휴대폰번호: det?.phone || "-",
+            가족관계: (relMap.get(m.id) || []).join(", ") || "-",
+            기록: (notesMap.get(m.id) || []).join("\n") || "-",
+          };
+        });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 30 }, { wch: 60 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "불참석자");
+      const rangeLabel = absentRange === "2w" ? "2주" : absentRange === "4w" ? "4주" : "3개월";
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `불참석자_${rangeLabel}_${today}.xlsx`);
+      toast({ title: "내보내기 완료", description: `${rows.length}명을 내보냈습니다.` });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "오류가 발생했습니다.";
+      toast({ title: "내보내기 실패", description: msg, variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
 
   return (
     <div className="space-y-4">
@@ -221,13 +300,25 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
               <UserX className="w-5 h-5 text-destructive" />
               <h3 className="text-base font-semibold">불참석자</h3>
             </div>
-            <Tabs value={absentRange} onValueChange={v => setAbsentRange(v as any)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="2w" className="text-xs px-2">2주</TabsTrigger>
-                <TabsTrigger value="4w" className="text-xs px-2">4주</TabsTrigger>
-                <TabsTrigger value="3m" className="text-xs px-2">3개월</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center gap-2">
+              <Tabs value={absentRange} onValueChange={v => setAbsentRange(v as any)}>
+                <TabsList className="h-8">
+                  <TabsTrigger value="2w" className="text-xs px-2">2주</TabsTrigger>
+                  <TabsTrigger value="4w" className="text-xs px-2">4주</TabsTrigger>
+                  <TabsTrigger value="3m" className="text-xs px-2">3개월</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-2"
+                onClick={exportAbsentees}
+                disabled={exporting || absentees.length === 0}
+              >
+                <Download className="w-3.5 h-3.5 mr-1" />
+                <span className="text-xs">{exporting ? "내보내는 중..." : "Excel"}</span>
+              </Button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             해당 기간 동안 한 번도 출석하지 않은 회원 ({absentees.length}명)
