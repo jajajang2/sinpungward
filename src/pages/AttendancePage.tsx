@@ -542,7 +542,15 @@ const AttendancePage = () => {
                   return (
                     <div key={member.id} className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 px-3 py-3 hover:bg-accent/40 md:px-4 md:py-3">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-foreground md:text-base">{member.name}</div>
+                        <div className="truncate text-sm font-medium text-foreground md:text-base">
+                          {member.name}
+                          {(() => {
+                            const a = getAge(member.birth_date);
+                            return a != null ? (
+                              <span className="ml-1.5 text-xs text-muted-foreground font-normal">({a}세)</span>
+                            ) : null;
+                          })()}
+                        </div>
                         <div className="text-[11px] text-muted-foreground md:text-xs">{selectedGroup.description}</div>
                       </div>
                       <div className="flex justify-center">
