@@ -190,6 +190,14 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
     setFamily(familyRows);
     setChurchInfo(cRes.data || null);
     setNotes((nRes.data as any[]) || []);
+
+    const { data: attData } = await supabase
+      .from('attendance')
+      .select('attendance_date, is_present')
+      .eq('member_id', memberId)
+      .eq('is_present', true)
+      .order('attendance_date', { ascending: false });
+    setAttendanceDates(((attData as any[]) || []).map(a => a.attendance_date));
   };
 
   useEffect(() => { fetchData(); }, [memberId]);
