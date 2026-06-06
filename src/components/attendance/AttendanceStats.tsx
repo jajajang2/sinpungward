@@ -156,11 +156,22 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
         notesMap.set(n.member_id, arr);
       });
 
+      const calcAge = (bd?: string) => {
+        if (!bd) return "-";
+        const d = new Date(bd);
+        if (isNaN(d.getTime())) return "-";
+        const now = new Date();
+        let age = now.getFullYear() - d.getFullYear();
+        const m = now.getMonth() - d.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+        return age;
+      };
       const buildRow = (m: typeof absentees[number]) => {
         const det = detMap.get(m.id) as any;
         return {
           이름: m.name,
           생년월일: det?.birth_date || "-",
+          "만 나이": calcAge(det?.birth_date),
           휴대폰번호: det?.phone || "-",
           가족관계: (relMap.get(m.id) || []).join(", ") || "-",
           기록: (notesMap.get(m.id) || []).join("\n") || "-",
