@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Member, AttendanceRecord } from "@/types/church";
 import {
   ResponsiveContainer,
@@ -12,12 +13,13 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { TrendingUp, Users, Percent, UserX, CalendarDays, Download } from "lucide-react";
+import { TrendingUp, Users, Percent, UserX, CalendarDays, Download, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AnnouncementsCard } from "./AnnouncementsCard";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 
 const RELATION_LABEL: Record<string, string> = {
