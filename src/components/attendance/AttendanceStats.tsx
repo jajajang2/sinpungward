@@ -300,13 +300,25 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
               <UserX className="w-5 h-5 text-destructive" />
               <h3 className="text-base font-semibold">불참석자</h3>
             </div>
-            <Tabs value={absentRange} onValueChange={v => setAbsentRange(v as any)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="2w" className="text-xs px-2">2주</TabsTrigger>
-                <TabsTrigger value="4w" className="text-xs px-2">4주</TabsTrigger>
-                <TabsTrigger value="3m" className="text-xs px-2">3개월</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center gap-2">
+              <Tabs value={absentRange} onValueChange={v => setAbsentRange(v as any)}>
+                <TabsList className="h-8">
+                  <TabsTrigger value="2w" className="text-xs px-2">2주</TabsTrigger>
+                  <TabsTrigger value="4w" className="text-xs px-2">4주</TabsTrigger>
+                  <TabsTrigger value="3m" className="text-xs px-2">3개월</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-2"
+                onClick={exportAbsentees}
+                disabled={exporting || absentees.length === 0}
+              >
+                <Download className="w-3.5 h-3.5 mr-1" />
+                <span className="text-xs">{exporting ? "내보내는 중..." : "Excel"}</span>
+              </Button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             해당 기간 동안 한 번도 출석하지 않은 회원 ({absentees.length}명)
