@@ -420,11 +420,12 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
       </div>
 
       <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
-        <TabsList className="mx-5 mt-3 grid grid-cols-4 w-auto">
+        <TabsList className="mx-5 mt-3 grid grid-cols-5 w-auto">
           <TabsTrigger value="basic" className="text-xs">기본정보</TabsTrigger>
           <TabsTrigger value="family" className="text-xs">가족정보</TabsTrigger>
           <TabsTrigger value="church" className="text-xs">교회정보</TabsTrigger>
           <TabsTrigger value="notes" className="text-xs">구체적 정보</TabsTrigger>
+          <TabsTrigger value="attendance" className="text-xs">출석정보</TabsTrigger>
         </TabsList>
 
         {/* ── 기본정보 ── */}
