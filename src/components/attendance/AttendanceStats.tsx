@@ -52,7 +52,22 @@ const getSundays = (from: Date, to: Date): Date[] => {
 export const AttendanceStats = ({ members, attendance, records }: Props) => {
   const [absentRange, setAbsentRange] = useState<"2w" | "4w" | "3m">("4w");
   const [exporting, setExporting] = useState(false);
+  const [personalSearch, setPersonalSearch] = useState("");
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const goToMember = (id: string) => navigate(`/members?memberId=${id}`);
+
+  const getAge = (bd?: string | null): number | null => {
+    if (!bd) return null;
+    const d = new Date(bd);
+    if (isNaN(d.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - d.getFullYear();
+    const m = now.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+    return age;
+  };
 
   const totalMembers = members.length;
   const today = new Date();
