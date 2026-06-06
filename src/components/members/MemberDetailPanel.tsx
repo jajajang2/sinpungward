@@ -125,6 +125,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
   const [saving, setSaving] = useState(false);
   const [newNote, setNewNote] = useState({ note_date: new Date().toISOString().split('T')[0], content: '', author: '' });
   const [memberList, setMemberList] = useState<MemberListItem[]>([]);
+  const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
 
   const fetchData = async () => {
     const [mRes, fRes, cRes, nRes, allMRes] = await Promise.all([
