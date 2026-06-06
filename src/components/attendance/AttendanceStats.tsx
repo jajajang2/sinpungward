@@ -187,7 +187,7 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
       const addSheet = (name: string, list: typeof sorted) => {
         if (list.length === 0) return;
         const ws = XLSX.utils.json_to_sheet(list.map(buildRow));
-        ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 30 }, { wch: 60 }];
+        ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 8 }, { wch: 16 }, { wch: 30 }, { wch: 60 }];
         XLSX.utils.book_append_sheet(wb, ws, name);
       };
       addSheet("장로정원회", elders);
