@@ -12,9 +12,20 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { TrendingUp, Users, Percent, UserX, CalendarDays } from "lucide-react";
+import { TrendingUp, Users, Percent, UserX, CalendarDays, Download } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AnnouncementsCard } from "./AnnouncementsCard";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
+
+const RELATION_LABEL: Record<string, string> = {
+  spouse: "배우자",
+  parent: "부모",
+  child: "자녀",
+  sibling: "형제자매",
+};
 
 interface Props {
   members: Member[];
