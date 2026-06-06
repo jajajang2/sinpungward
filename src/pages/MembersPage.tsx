@@ -211,19 +211,17 @@ const MembersPage = () => {
 
   useEffect(() => { fetchMembers(); }, []);
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   useEffect(() => {
     const id = searchParams.get('memberId');
-    if (id && members.length > 0) {
-      const target = members.find(m => m.id === id);
-      if (target) {
-        setSelectedGroupId('all');
-        setSelectedMember(target);
-        searchParams.delete('memberId');
-        setSearchParams(searchParams, { replace: true });
-      }
+    if (!id || members.length === 0) return;
+    if (selectedMember?.id === id) return;
+    const target = members.find(m => m.id === id);
+    if (target) {
+      setSelectedGroupId('all');
+      setSelectedMember(target);
     }
-  }, [members, searchParams, setSearchParams]);
+  }, [members, searchParams, selectedMember]);
 
   // When group changes, reset selected member
   const handleGroupSelect = (groupId: string) => {
