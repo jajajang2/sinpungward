@@ -156,27 +156,45 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
         notesMap.set(n.member_id, arr);
       });
 
-      const rows = absentees
-        .sort((a, b) => a.name.localeCompare(b.name, "ko"))
-        .map(m => {
-          const det = detMap.get(m.id) as any;
-          return {
-            이름: m.name,
-            생년월일: det?.birth_date || "-",
-            휴대폰번호: det?.phone || "-",
-            가족관계: (relMap.get(m.id) || []).join(", ") || "-",
-            기록: (notesMap.get(m.id) || []).join("\n") || "-",
-          };
-        });
+      const buildRow = (m: typeof absentees[number]) => {
+        const det = detMap.get(m.id) as any;
+        return {
+          이름: m.name,
+          생년월일: det?.birth_date || "-",
+          휴대폰번호: det?.phone || "-",
+          가족관계: (relMap.get(m.id) || []).join(", ") || "-",
+          기록: (notesMap.get(m.id) || []).join("\n") || "-",
+        };
+      };
 
-      const ws = XLSX.utils.json_to_sheet(rows);
-      ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 30 }, { wch: 60 }];
+      const sorted = [...absentees].sort((a, b) => a.name.localeCompare(b.name, "ko"));
+      const elders = sorted.filter(m => m.gender === "남");
+      const reliefSociety = sorted.filter(m => m.gender === "여");
+      const others = sorted.filter(m => m.gender !== "남" && m.gender !== "여");
+
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "불참석자");
+      const addSheet = (name: string, list: typeof sorted) => {
+        if (list.length === 0) return;
+        const ws = XLSX.utils.json_to_sheet(list.map(buildRow));
+        ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 30 }, { wch: 60 }];
+        XLSX.utils.book_append_sheet(wb, ws, name);
+      };
+      addSheet("장로정원회", elders);
+      addSheet("상호부조회", reliefSociety);
+      addSheet("기타", others);
+
+      if (wb.SheetNames.length === 0) {
+        toast({ title: "내보낼 회원이 없습니다" });
+        return;
+      }
+
       const rangeLabel = absentRange === "2w" ? "2주" : absentRange === "4w" ? "4주" : "3개월";
       const today = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(wb, `불참석자_${rangeLabel}_${today}.xlsx`);
-      toast({ title: "내보내기 완료", description: `${rows.length}명을 내보냈습니다.` });
+      toast({
+        title: "내보내기 완료",
+        description: `장로정원회 ${elders.length}명 · 상호부조회 ${reliefSociety.length}명${others.length ? ` · 기타 ${others.length}명` : ""}`,
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "오류가 발생했습니다.";
       toast({ title: "내보내기 실패", description: msg, variant: "destructive" });
