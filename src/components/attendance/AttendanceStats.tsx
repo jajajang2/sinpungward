@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Member, AttendanceRecord } from "@/types/church";
 import {
   ResponsiveContainer,
@@ -12,12 +13,13 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { TrendingUp, Users, Percent, UserX, CalendarDays, Download } from "lucide-react";
+import { TrendingUp, Users, Percent, UserX, CalendarDays, Download, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AnnouncementsCard } from "./AnnouncementsCard";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 
 const RELATION_LABEL: Record<string, string> = {
@@ -50,7 +52,22 @@ const getSundays = (from: Date, to: Date): Date[] => {
 export const AttendanceStats = ({ members, attendance, records }: Props) => {
   const [absentRange, setAbsentRange] = useState<"2w" | "4w" | "3m">("4w");
   const [exporting, setExporting] = useState(false);
+  const [personalSearch, setPersonalSearch] = useState("");
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const goToMember = (id: string) => navigate(`/members?memberId=${id}`);
+
+  const getAge = (bd?: string | null): number | null => {
+    if (!bd) return null;
+    const d = new Date(bd);
+    if (isNaN(d.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - d.getFullYear();
+    const m = now.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+    return age;
+  };
 
   const totalMembers = members.length;
   const today = new Date();
@@ -103,10 +120,18 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
       .map(m => {
         const present = sundays.filter(s => attendance[m.id]?.[toDateStr(s)]).length;
         const rate = sundays.length > 0 ? (present / sundays.length) * 100 : 0;
-        return { id: m.id, name: m.name, present, total: sundays.length, rate };
+        return { id: m.id, name: m.name, age: getAge(m.birth_date), phone: m.phone || "", present, total: sundays.length, rate };
       })
       .sort((a, b) => b.rate - a.rate);
   }, [members, attendance]);
+
+  const filteredPersonalRates = useMemo(() => {
+    const q = personalSearch.trim().toLowerCase();
+    if (!q) return personalRates;
+    return personalRates.filter(p =>
+      p.name.toLowerCase().includes(q) || p.phone.includes(q)
+    );
+  }, [personalRates, personalSearch]);
 
   // ── 불참석자 (해당 기간 내내 0회 출석) ──
   const absentees = useMemo(() => {
@@ -357,12 +382,15 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
           ) : (
             <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto">
               {absentees.map(m => (
-                <span
+                <button
                   key={m.id}
-                  className="text-xs px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20"
+                  type="button"
+                  onClick={() => goToMember(m.id)}
+                  className="text-xs px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 hover:underline transition-colors cursor-pointer"
+                  title="회원기록으로 이동"
                 >
                   {m.name}
-                </span>
+                </button>
               ))}
             </div>
           )}
@@ -371,9 +399,18 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
 
       {/* ── 개인별 출석률 ── */}
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="text-base font-semibold">개인별 출석률</h3>
           <span className="text-xs text-muted-foreground">최근 3개월</span>
+        </div>
+        <div className="relative mb-3">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={personalSearch}
+            onChange={e => setPersonalSearch(e.target.value)}
+            placeholder="이름 또는 연락처로 검색"
+            className="pl-8 h-9 text-sm"
+          />
         </div>
         <div className="max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
@@ -385,9 +422,24 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
               </tr>
             </thead>
             <tbody>
-              {personalRates.map(p => (
-                <tr key={p.id} className="border-b border-border/50 hover:bg-accent/30">
-                  <td className="py-2 font-medium">{p.name}</td>
+              {filteredPersonalRates.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-6 text-center text-muted-foreground text-sm">
+                    검색 결과가 없습니다
+                  </td>
+                </tr>
+              ) : filteredPersonalRates.map(p => (
+                <tr
+                  key={p.id}
+                  className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                  onClick={() => goToMember(p.id)}
+                >
+                  <td className="py-2 font-medium">
+                    <span className="hover:underline">{p.name}</span>
+                    {p.age != null && (
+                      <span className="ml-1.5 text-xs text-muted-foreground font-normal">({p.age}세)</span>
+                    )}
+                  </td>
                   <td className="py-2 text-right text-muted-foreground tabular-nums">
                     {p.present} / {p.total}
                   </td>
