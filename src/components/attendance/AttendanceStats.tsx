@@ -399,9 +399,18 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
 
       {/* ── 개인별 출석률 ── */}
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="text-base font-semibold">개인별 출석률</h3>
           <span className="text-xs text-muted-foreground">최근 3개월</span>
+        </div>
+        <div className="relative mb-3">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={personalSearch}
+            onChange={e => setPersonalSearch(e.target.value)}
+            placeholder="이름 또는 연락처로 검색"
+            className="pl-8 h-9 text-sm"
+          />
         </div>
         <div className="max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
@@ -413,9 +422,24 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
               </tr>
             </thead>
             <tbody>
-              {personalRates.map(p => (
-                <tr key={p.id} className="border-b border-border/50 hover:bg-accent/30">
-                  <td className="py-2 font-medium">{p.name}</td>
+              {filteredPersonalRates.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-6 text-center text-muted-foreground text-sm">
+                    검색 결과가 없습니다
+                  </td>
+                </tr>
+              ) : filteredPersonalRates.map(p => (
+                <tr
+                  key={p.id}
+                  className="border-b border-border/50 hover:bg-accent/30 cursor-pointer"
+                  onClick={() => goToMember(p.id)}
+                >
+                  <td className="py-2 font-medium">
+                    <span className="hover:underline">{p.name}</span>
+                    {p.age != null && (
+                      <span className="ml-1.5 text-xs text-muted-foreground font-normal">({p.age}세)</span>
+                    )}
+                  </td>
                   <td className="py-2 text-right text-muted-foreground tabular-nums">
                     {p.present} / {p.total}
                   </td>
