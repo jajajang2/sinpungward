@@ -125,6 +125,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
   const [saving, setSaving] = useState(false);
   const [newNote, setNewNote] = useState({ note_date: new Date().toISOString().split('T')[0], content: '', author: '' });
   const [memberList, setMemberList] = useState<MemberListItem[]>([]);
+  const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
 
   const fetchData = async () => {
     const [mRes, fRes, cRes, nRes, allMRes] = await Promise.all([
@@ -189,6 +190,14 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
     setFamily(familyRows);
     setChurchInfo(cRes.data || null);
     setNotes((nRes.data as any[]) || []);
+
+    const { data: attData } = await supabase
+      .from('attendance')
+      .select('attendance_date, is_present')
+      .eq('member_id', memberId)
+      .eq('is_present', true)
+      .order('attendance_date', { ascending: false });
+    setAttendanceDates(((attData as any[]) || []).map(a => a.attendance_date));
   };
 
   useEffect(() => { fetchData(); }, [memberId]);
@@ -411,11 +420,12 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
       </div>
 
       <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
-        <TabsList className="mx-5 mt-3 grid grid-cols-4 w-auto">
+        <TabsList className="mx-5 mt-3 grid grid-cols-5 w-auto">
           <TabsTrigger value="basic" className="text-xs">기본정보</TabsTrigger>
           <TabsTrigger value="family" className="text-xs">가족정보</TabsTrigger>
           <TabsTrigger value="church" className="text-xs">교회정보</TabsTrigger>
           <TabsTrigger value="notes" className="text-xs">구체적 정보</TabsTrigger>
+          <TabsTrigger value="attendance" className="text-xs">출석정보</TabsTrigger>
         </TabsList>
 
         {/* ── 기본정보 ── */}
@@ -667,6 +677,45 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
               </tbody>
             </table>
           </div>
+        </TabsContent>
+
+        {/* ── 출석정보 ── */}
+        <TabsContent value="attendance" className="flex-1 overflow-y-auto px-5 pb-5 mt-4 space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-xs font-semibold text-foreground">출석 기록</p>
+            <span className="text-xs text-muted-foreground">총 {attendanceDates.length}회 출석</span>
+          </div>
+          {attendanceDates.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
+              출석 기록이 없습니다
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-[hsl(var(--table-header))]">
+                    <th className="px-3 py-2 text-left font-semibold w-16">#</th>
+                    <th className="px-3 py-2 text-left font-semibold">출석 날짜</th>
+                    <th className="px-3 py-2 text-left font-semibold w-24">요일</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendanceDates.map((d, i) => {
+                    const dateObj = new Date(d);
+                    const weekday = dateObj.toLocaleDateString('ko-KR', { weekday: 'long' });
+                    const formatted = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+                    return (
+                      <tr key={d} className="border-t border-border hover:bg-muted/50">
+                        <td className="px-3 py-2 text-muted-foreground">{attendanceDates.length - i}</td>
+                        <td className="px-3 py-2 font-medium">{formatted}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{weekday}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
