@@ -13,13 +13,34 @@ interface BuildResult {
  * families / family_members 테이블에 upsert.
  *
  * 규칙:
- * - 부부(spouse)와 미혼/미성년 자녀(child)는 같은 가족
- * - 결혼한(marriage_date 있는) 자녀는 부모 가족에서 분리(자기 가족 형성)
+ * - 부부(spouse)는 같은 가족
+ * - 자녀(child)는 결혼하지 않았고 만 19세 미만인 경우에만 부모 가족에 포함
+ *   (결혼했거나 만 19세 이상인 자녀는 부모 가족에서 분리되어 독립 가족 형성)
  * - 가족 내 남성을 head로, 여성을 spouse로
  * - 가족 내 head 외 회원이 없으면 isSingle 가족
  *
  * 기존 데이터는 전부 삭제 후 재구성(파괴적). UI에서 확인 후 호출.
  */
+const calcAge = (bd?: string | null): number | null => {
+  if (!bd) return null;
+  const d = new Date(bd);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+};
+
+const staysWithParents = (m: Member | undefined): boolean => {
+  if (!m) return false;
+  if (m.marriage_date) return false;
+  const age = calcAge(m.birth_date);
+  // 나이를 알 수 없으면 부모와 함께 묶음 (안전 기본값)
+  if (age === null) return true;
+  return age < 19;
+};
+
 export async function rebuildFamilies(): Promise<BuildResult> {
   const { data: members, error: mErr } = await supabase
     .from("members")
@@ -34,7 +55,7 @@ export async function rebuildFamilies(): Promise<BuildResult> {
   const memberMap = new Map<string, Member>(members?.map((m) => [m.id, m as Member]) ?? []);
   const allRels = (rels ?? []) as Rel[];
 
-  // 가족 구성용 인접 리스트: spouse + (부모→자녀, 단 자녀가 미혼인 경우만)
+  // 가족 구성용 인접 리스트: spouse + (부모↔자녀, 단 자녀가 미혼이고 만 19세 미만)
   const adj = new Map<string, Set<string>>();
   const addEdge = (a: string, b: string) => {
     if (!adj.has(a)) adj.set(a, new Set());
@@ -49,11 +70,13 @@ export async function rebuildFamilies(): Promise<BuildResult> {
       addEdge(r.member_id, r.related_member_id);
     } else if (r.relation_type === "parent") {
       // member is parent of related
-      const child = memberMap.get(r.related_member_id);
-      if (child && !child.marriage_date) addEdge(r.member_id, r.related_member_id);
+      if (staysWithParents(memberMap.get(r.related_member_id))) {
+        addEdge(r.member_id, r.related_member_id);
+      }
     } else if (r.relation_type === "child") {
-      const child = memberMap.get(r.member_id);
-      if (child && !child.marriage_date) addEdge(r.member_id, r.related_member_id);
+      if (staysWithParents(memberMap.get(r.member_id))) {
+        addEdge(r.member_id, r.related_member_id);
+      }
     }
   }
 
