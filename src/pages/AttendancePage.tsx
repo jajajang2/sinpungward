@@ -129,7 +129,6 @@ const AttendancePage = () => {
   const [visitorDraft, setVisitorDraft] = useState<VisitorDraft>(emptyVisitorDraft);
   const [focusedMonth, setFocusedMonth] = useState(() => monthOffset(new Date(), 0));
   const [motionDirection, setMotionDirection] = useState<"prev" | "next">("next");
-  const [isVisitorPanelOpen, setIsVisitorPanelOpen] = useState(false);
   const [isVisitorDialogOpen, setIsVisitorDialogOpen] = useState(false);
   const isMobile = useIsMobile();
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
