@@ -1,6 +1,6 @@
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
-import { locales } from "@blocknote/core/locales";
+import { ko } from "@blocknote/core/locales";
 import { useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import "@blocknote/core/fonts/inter.css";
