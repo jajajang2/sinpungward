@@ -162,7 +162,9 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
     if (!a) return "";
     if (a.member_id) {
       const m = members.find((x) => x.id === a.member_id);
-      return m?.name || "(삭제된 회원)";
+      if (!m) return "(삭제된 회원)";
+      const age = calcAge(m.birth_date);
+      return age !== null ? `${m.name} (${age})` : m.name;
     }
     return a.custom_name || "";
   };
