@@ -543,6 +543,7 @@ export type Database = {
           member_id: string | null
           role: string
           slot: number
+          status: string | null
           talk_content: string | null
           talk_topic: string | null
           updated_at: string
@@ -556,6 +557,7 @@ export type Database = {
           member_id?: string | null
           role: string
           slot?: number
+          status?: string | null
           talk_content?: string | null
           talk_topic?: string | null
           updated_at?: string
@@ -569,6 +571,7 @@ export type Database = {
           member_id?: string | null
           role?: string
           slot?: number
+          status?: string | null
           talk_content?: string | null
           talk_topic?: string | null
           updated_at?: string
