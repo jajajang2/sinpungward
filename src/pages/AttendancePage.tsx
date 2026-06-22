@@ -481,7 +481,17 @@ const AttendancePage = () => {
               </Button>
               <div className="min-w-0">
                 <h1 className="text-lg font-bold text-foreground md:text-xl">{formatSelectedDate(selectedDate)}</h1>
-                <p className="text-xs text-muted-foreground md:text-sm">전체 출석 {selectedPresentCount}명 · 방문자 {selectedVisitors.length}명</p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    전체 출석 {selectedTotalCount}명
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                    전체회원 출석 {selectedMemberPresentCount}명
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                    방문자 {selectedVisitors.length}명
+                  </span>
+                </div>
               </div>
             </div>
             <Button variant="outline" onClick={() => setSelectedDate(undefined)} className="w-full md:w-auto">다른 날짜 선택</Button>
