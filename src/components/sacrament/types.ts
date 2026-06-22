@@ -1,4 +1,4 @@
-export type EventType = "일반" | "금식간증" | "연차대회" | "부활절" | "기타";
+export type EventType = "일반" | "금식간증" | "연차대회" | "부활절" | "와드대회" | "스테이크대회" | "크리스마스모임" | "기타";
 
 export interface SacramentMeeting {
   id: string;
