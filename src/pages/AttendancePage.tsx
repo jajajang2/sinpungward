@@ -217,7 +217,8 @@ const AttendancePage = () => {
     return visitors.filter((visitor) => visitor.attendance_date === selectedDateStr);
   }, [selectedDateStr, visitors]);
 
-  const selectedPresentCount = selectedDateStr ? attendanceCountsByDate[selectedDateStr] || 0 : 0;
+  const selectedTotalCount = selectedDateStr ? attendanceCountsByDate[selectedDateStr] || 0 : 0;
+  const selectedMemberPresentCount = Math.max(0, selectedTotalCount - selectedVisitors.length);
 
   useEffect(() => {
     setIsVisitorPanelOpen(!isMobile);
