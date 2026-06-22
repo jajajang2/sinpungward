@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import MonthSacramentTable from "@/components/sacrament/MonthSacramentTable";
 import SacramentTalkHistory from "@/components/sacrament/SacramentTalkHistory";
 import SacramentImportExport from "@/components/sacrament/SacramentImportExport";
+import AutoLinkMembers from "@/components/sacrament/AutoLinkMembers";
 import type { MemberLite } from "@/components/sacrament/types";
 
 export default function SacramentPage() {
@@ -27,7 +28,10 @@ export default function SacramentPage() {
     <div className="space-y-2 p-2 md:p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-base font-bold md:text-lg leading-tight">성찬식 순서</h1>
-        <SacramentImportExport onChanged={() => setRefreshKey((k) => k + 1)} />
+        <div className="flex items-center gap-1">
+          <AutoLinkMembers onChanged={() => setRefreshKey((k) => k + 1)} />
+          <SacramentImportExport onChanged={() => setRefreshKey((k) => k + 1)} />
+        </div>
       </div>
 
       <Tabs defaultValue="schedule">

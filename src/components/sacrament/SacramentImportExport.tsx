@@ -251,13 +251,21 @@ export default function SacramentImportExport({ onChanged }: Props) {
       }
       const json: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-      const { data: members } = await supabase.from("members").select("id, name");
-      const nameCount = new Map<string, { id: string; count: number }[]>();
+      const { data: members } = await supabase.from("members").select("id, name").range(0, 99999);
+      const norm = (s: string) => (s || "").replace(/\s+/g, "").trim();
+      const exactMap = new Map<string, { id: string }[]>();
+      const normMap = new Map<string, { id: string }[]>();
       (members || []).forEach((m: any) => {
-        const k = (m.name || "").trim();
-        if (!k) return;
-        if (!nameCount.has(k)) nameCount.set(k, []);
-        nameCount.get(k)!.push({ id: m.id, count: 0 });
+        const n1 = (m.name || "").trim();
+        if (n1) {
+          if (!exactMap.has(n1)) exactMap.set(n1, []);
+          exactMap.get(n1)!.push({ id: m.id });
+        }
+        const n2 = norm(m.name);
+        if (n2) {
+          if (!normMap.has(n2)) normMap.set(n2, []);
+          normMap.get(n2)!.push({ id: m.id });
+        }
       });
 
       const rows: ImportRow[] = [];
@@ -294,14 +302,16 @@ export default function SacramentImportExport({ onChanged }: Props) {
           if (internal.kind === "hymn" || valueType === "찬송") {
             matchKind = "hymn";
           } else {
-            const candidates = nameCount.get(value) || [];
-            if (candidates.length === 1) {
+            let candidates = exactMap.get(value) || [];
+            if (candidates.length === 0) candidates = normMap.get(norm(value)) || [];
+            const uniq = Array.from(new Map(candidates.map((c) => [c.id, c])).values());
+            if (uniq.length === 1) {
               matchKind = "member";
-              matched_member_id = candidates[0].id;
+              matched_member_id = uniq[0].id;
               matched_name = value;
-            } else if (candidates.length > 1) {
+            } else if (uniq.length > 1) {
               matchKind = "duplicate";
-              duplicate_names = candidates.map(() => value);
+              duplicate_names = uniq.map(() => value);
             } else {
               matchKind = "custom";
             }
