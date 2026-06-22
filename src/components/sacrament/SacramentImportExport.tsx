@@ -251,13 +251,21 @@ export default function SacramentImportExport({ onChanged }: Props) {
       }
       const json: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-      const { data: members } = await supabase.from("members").select("id, name");
-      const nameCount = new Map<string, { id: string; count: number }[]>();
+      const { data: members } = await supabase.from("members").select("id, name").range(0, 99999);
+      const norm = (s: string) => (s || "").replace(/\s+/g, "").trim();
+      const exactMap = new Map<string, { id: string }[]>();
+      const normMap = new Map<string, { id: string }[]>();
       (members || []).forEach((m: any) => {
-        const k = (m.name || "").trim();
-        if (!k) return;
-        if (!nameCount.has(k)) nameCount.set(k, []);
-        nameCount.get(k)!.push({ id: m.id, count: 0 });
+        const n1 = (m.name || "").trim();
+        if (n1) {
+          if (!exactMap.has(n1)) exactMap.set(n1, []);
+          exactMap.get(n1)!.push({ id: m.id });
+        }
+        const n2 = norm(m.name);
+        if (n2) {
+          if (!normMap.has(n2)) normMap.set(n2, []);
+          normMap.get(n2)!.push({ id: m.id });
+        }
       });
 
       const rows: ImportRow[] = [];
