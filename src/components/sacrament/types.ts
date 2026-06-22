@@ -7,6 +7,8 @@ export interface SacramentMeeting {
   event_custom_name: string | null;
 }
 
+export type AssignStatus = "승인" | "부탁" | "거절";
+
 export interface SacramentAssignment {
   id: string;
   meeting_id: string;
@@ -17,6 +19,7 @@ export interface SacramentAssignment {
   hymn_number: string | null;
   talk_topic: string | null;
   talk_content: string | null;
+  status: AssignStatus | null;
 }
 
 export interface MemberLite {

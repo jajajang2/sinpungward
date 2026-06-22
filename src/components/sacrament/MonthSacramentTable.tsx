@@ -8,7 +8,14 @@ import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import PersonPicker from "./PersonPicker";
 import TalkDetailModal from "./TalkDetailModal";
-import { ROWS, SPECIAL_MERGE_ROLES, calcAge, type EventType, type MemberLite, type SacramentAssignment, type SacramentMeeting } from "./types";
+import { ROWS, SPECIAL_MERGE_ROLES, calcAge, type AssignStatus, type EventType, type MemberLite, type SacramentAssignment, type SacramentMeeting } from "./types";
+
+const statusBg = (s?: AssignStatus | null) => {
+  if (s === "승인") return "bg-sky-100";
+  if (s === "부탁") return "bg-yellow-100";
+  if (s === "거절") return "bg-red-100";
+  return "";
+};
 
 interface Props {
   year: number;
@@ -365,7 +372,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${filled ? "bg-yellow-50" : ""}`}
+              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${statusBg(a?.status)}`}
             >
               {nameOf(a) || <span className="text-muted-foreground">+</span>}
             </button>
@@ -378,6 +385,9 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
               onPick={(mid, cn) => upsertAssign(date, row.role, 0, { member_id: mid, custom_name: cn })}
               showClear={filled}
               onClear={() => deleteAssign(date, row.role, 0)}
+              showStatus={filled}
+              currentStatus={a?.status ?? null}
+              onStatus={(s) => upsertAssign(date, row.role, 0, { status: s })}
             />
           </PopoverContent>
         </Popover>
@@ -387,7 +397,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
     if (row.kind === "talk") {
       const filled = !!(a?.member_id || a?.custom_name);
       return (
-        <div className={`flex flex-col gap-0.5 p-0.5 ${filled ? "bg-yellow-50" : ""}`}>
+        <div className={`flex flex-col gap-0.5 p-0.5 ${statusBg(a?.status)}`}>
           <Popover>
             <PopoverTrigger asChild>
               <button type="button" className="h-6 w-full px-1 text-left text-xs hover:bg-muted">
@@ -402,6 +412,9 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                 onPick={(mid, cn) => upsertAssign(date, row.role, 0, { member_id: mid, custom_name: cn })}
                 showClear={filled}
                 onClear={() => deleteAssign(date, row.role, 0)}
+                showStatus={filled}
+                currentStatus={a?.status ?? null}
+                onStatus={(s) => upsertAssign(date, row.role, 0, { status: s })}
               />
             </PopoverContent>
           </Popover>
@@ -431,7 +444,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           {list.map((a) => {
             const filled = !!(a.member_id || a.custom_name);
             return (
-              <div key={a.id} className={`flex items-center gap-0.5 ${filled ? "bg-yellow-50" : ""}`}>
+              <div key={a.id} className={`flex items-center gap-0.5 ${statusBg(a.status)}`}>
                 <Popover>
                   <PopoverTrigger asChild>
                     <button type="button" className="h-6 flex-1 px-1 text-left text-xs hover:bg-muted">
@@ -444,6 +457,11 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                       currentMemberId={a.member_id}
                       currentCustomName={a.custom_name}
                       onPick={(mid, cn) => upsertAssign(date, "성찬전달", a.slot, { member_id: mid, custom_name: cn })}
+                      showStatus={filled}
+                      currentStatus={a.status ?? null}
+                      onStatus={(s) => upsertAssign(date, "성찬전달", a.slot, { status: s })}
+                      showClear={filled}
+                      onClear={() => deleteAssign(date, "성찬전달", a.slot)}
                     />
                   </PopoverContent>
                 </Popover>
@@ -468,6 +486,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
         </div>
       );
     }
+
 
     return null;
   }
