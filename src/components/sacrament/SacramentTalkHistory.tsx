@@ -53,29 +53,50 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
 
   useEffect(() => {
     (async () => {
-      // page through attendance
-      const map = new Map<string, { present: number; total: number }>();
+      // 최근 3개월 일요일 기준 (출석통계의 개인별 출석률과 동일)
+      const today = new Date();
+      const start = new Date(today); start.setMonth(start.getMonth() - 3);
+      const sundays: string[] = [];
+      const d = new Date(start);
+      while (d <= today) {
+        if (d.getDay() === 0) {
+          const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
+          sundays.push(`${y}-${m}-${dd}`);
+        }
+        d.setDate(d.getDate() + 1);
+      }
+      const sundaySet = new Set(sundays);
+      const total = sundays.length;
+
+      // 페이지네이션으로 전체 출석 기록 로드 후 일요일만 집계
+      const present = new Map<string, Set<string>>();
       let from = 0;
       const size = 1000;
+      const startStr = sundays[0];
       while (true) {
         const { data, error } = await supabase
           .from("attendance")
-          .select("member_id, is_present")
+          .select("member_id, attendance_date, is_present")
+          .gte("attendance_date", startStr)
           .range(from, from + size - 1);
         if (error || !data || data.length === 0) break;
         for (const r of data as any[]) {
-          if (!r.member_id) continue;
-          const cur = map.get(r.member_id) || { present: 0, total: 0 };
-          cur.total += 1;
-          if (r.is_present) cur.present += 1;
-          map.set(r.member_id, cur);
+          if (!r.member_id || !r.is_present) continue;
+          if (!sundaySet.has(r.attendance_date)) continue;
+          if (!present.has(r.member_id)) present.set(r.member_id, new Set());
+          present.get(r.member_id)!.add(r.attendance_date);
         }
         if (data.length < size) break;
         from += size;
       }
+
+      const map = new Map<string, { present: number; total: number }>();
+      members.forEach((m) => {
+        map.set(m.id, { present: present.get(m.id)?.size || 0, total });
+      });
       setAttendance(map);
     })();
-  }, []);
+  }, [members]);
 
   const memberGroups = useMemo(() => {
     const byMember = new Map<string, TalkRow[]>();
