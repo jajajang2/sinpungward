@@ -8,7 +8,7 @@ import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import PersonPicker from "./PersonPicker";
 import TalkDetailModal from "./TalkDetailModal";
-import { ROWS, SPECIAL_MERGE_ROLES, type EventType, type MemberLite, type SacramentAssignment, type SacramentMeeting } from "./types";
+import { ROWS, SPECIAL_MERGE_ROLES, calcAge, type EventType, type MemberLite, type SacramentAssignment, type SacramentMeeting } from "./types";
 
 interface Props {
   year: number;
