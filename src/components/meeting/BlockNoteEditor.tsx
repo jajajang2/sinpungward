@@ -41,6 +41,7 @@ export default function BlockNoteEditorView({ value, onChange, className }: Prop
 
   const editor = useCreateBlockNote({
     initialContent: initialContent as any,
+    dictionary: ko,
     tables: {
       headers: true,
       splitCells: true,
