@@ -663,10 +663,6 @@ const AttendancePage = () => {
             </div>
           </DialogContent>
         </Dialog>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
