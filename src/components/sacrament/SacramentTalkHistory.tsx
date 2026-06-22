@@ -80,9 +80,9 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-card">
-        <div className="border-b bg-muted/50 px-3 py-2 text-sm font-semibold">회원 말씀 히스토리</div>
-        <ul className="divide-y">
+      <div className="flex h-[600px] flex-col rounded-lg border bg-card">
+        <div className="shrink-0 border-b bg-muted/50 px-3 py-2 text-sm font-semibold">회원 말씀 히스토리</div>
+        <ul className="flex-1 divide-y overflow-y-auto">
           {sortedMembers.map((m) => {
             const list = memberGroups.get(m.id) || [];
             return (
