@@ -29,13 +29,12 @@ export default function SacramentPage() {
       </div>
 
       <Tabs defaultValue="schedule">
-        <TabsList className="h-8">
-          <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
-          <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="schedule" className="space-y-2 mt-2">
-          <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <TabsList className="h-8">
+            <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setAnchor((p) => addMonths(p, -2))}>
               <ChevronLeft className="h-3 w-3" /> 이전
             </Button>
@@ -46,7 +45,9 @@ export default function SacramentPage() {
               다음 <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
+        </div>
 
+        <TabsContent value="schedule" className="space-y-2 mt-2">
           <div className="grid gap-2 lg:grid-cols-2">
 
             <MonthSacramentTable
