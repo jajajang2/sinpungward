@@ -29,7 +29,7 @@ function sundaysOf(year: number, month: number): string[] {
   return result;
 }
 
-const EVENT_OPTIONS: EventType[] = ["일반", "금식간증", "연차대회", "부활절", "기타"];
+const EVENT_OPTIONS: EventType[] = ["일반", "금식간증", "연차대회", "부활절", "와드대회", "스테이크대회", "크리스마스모임", "기타"];
 
 type AssignKey = string; // `${meeting_id}|${role}|${slot}`
 const keyOf = (m: string, r: string, s: number) => `${m}|${r}|${s}`;
