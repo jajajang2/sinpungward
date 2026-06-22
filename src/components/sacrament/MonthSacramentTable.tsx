@@ -8,7 +8,14 @@ import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import PersonPicker from "./PersonPicker";
 import TalkDetailModal from "./TalkDetailModal";
-import { ROWS, SPECIAL_MERGE_ROLES, calcAge, type EventType, type MemberLite, type SacramentAssignment, type SacramentMeeting } from "./types";
+import { ROWS, SPECIAL_MERGE_ROLES, calcAge, type AssignStatus, type EventType, type MemberLite, type SacramentAssignment, type SacramentMeeting } from "./types";
+
+const statusBg = (s?: AssignStatus | null) => {
+  if (s === "승인") return "bg-sky-100";
+  if (s === "부탁") return "bg-yellow-100";
+  if (s === "거절") return "bg-red-100";
+  return "";
+};
 
 interface Props {
   year: number;
