@@ -529,9 +529,9 @@ const AttendancePage = () => {
                   <h2 className="text-base font-semibold text-foreground">{selectedGroup.label}</h2>
                 </div>
                 <Button
-                  variant={isVisitorPanelOpen ? "default" : "outline"}
+                  variant="default"
                   size="sm"
-                  onClick={() => setIsVisitorPanelOpen((prev) => !prev)}
+                  onClick={() => setIsVisitorDialogOpen(true)}
                   className="h-8 px-3 md:hidden"
                 >
                   <UserPlus className="mr-1 h-4 w-4" />방문자 입력
