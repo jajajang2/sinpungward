@@ -31,6 +31,18 @@ function sundaysOf(year: number, month: number): string[] {
 
 const EVENT_OPTIONS: EventType[] = ["일반", "금식간증", "연차대회", "부활절", "와드대회", "스테이크대회", "크리스마스모임", "기타"];
 
+const DISPLAY_LABELS: Record<EventType, string> = {
+  "일반": "일반",
+  "금식간증": "금식간증",
+  "연차대회": "연차대회",
+  "부활절": "부활절",
+  "와드대회": "와드 대회",
+  "스테이크대회": "스테이크 대회",
+  "크리스마스모임": "크리스마스 모임",
+  "기타": "기타",
+};
+const displayLabel = (t: EventType) => DISPLAY_LABELS[t] || t;
+
 type AssignKey = string; // `${meeting_id}|${role}|${slot}`
 const keyOf = (m: string, r: string, s: number) => `${m}|${r}|${s}`;
 
@@ -177,7 +189,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                 const dayNum = parseInt(d.split("-")[2], 10);
                 const m = meetings[d];
                 const label = m && m.event_type !== "일반"
-                  ? (m.event_type === "기타" ? (m.event_custom_name || "기타") : m.event_type)
+                  ? (m.event_type === "기타" ? (m.event_custom_name || "기타") : displayLabel(m.event_type as EventType))
                   : null;
                 return (
                   <th key={d} className="border bg-muted px-1 py-0.5 text-center font-medium">
@@ -197,7 +209,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                             onClick={() => t !== "기타" && setEventType(d, t)}
                             className={`block w-full rounded px-2 py-1 text-left text-sm hover:bg-muted ${m?.event_type === t ? "bg-muted font-semibold" : ""}`}
                           >
-                            {t}
+                            {displayLabel(t)}
                           </button>
                         ))}
                         <div className="mt-2 border-t pt-2">
@@ -244,8 +256,8 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                     const m = meetings[d];
                     const evt: EventType = (m?.event_type as EventType) || "일반";
 
-                    // 연차대회: cover all rows with first row spanning rest; skip subsequent rows
-                    if (evt === "연차대회") {
+                    // 연차대회 / 스테이크대회: cover all rows
+                    if (evt === "연차대회" || evt === "스테이크대회") {
                       if (row === ROWS[0]) {
                         return (
                           <td
@@ -254,17 +266,20 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                             className="border bg-amber-50 text-center align-middle font-semibold text-amber-900"
                             style={{ writingMode: "vertical-rl" as any, textOrientation: "upright" as any }}
                           >
-                            연차대회
+                            {displayLabel(evt)}
                           </td>
                         );
                       }
                       return null;
                     }
 
-                    // 금식간증/부활절/기타: merge SPECIAL_MERGE_ROLES rows
-                    if (evt !== "일반" && SPECIAL_MERGE_ROLES.includes(row.role)) {
+                    // 금식간증/부활절/크리스마스모임/기타: merge SPECIAL_MERGE_ROLES rows.
+                    // 와드대회 behaves like 일반 (no merging).
+                    const mergesTalkRows =
+                      evt === "금식간증" || evt === "부활절" || evt === "크리스마스모임" || evt === "기타";
+                    if (mergesTalkRows && SPECIAL_MERGE_ROLES.includes(row.role)) {
                       if (row.role === SPECIAL_MERGE_ROLES[0]) {
-                        const label = evt === "기타" ? (m?.event_custom_name || "기타") : evt;
+                        const label = evt === "기타" ? (m?.event_custom_name || "기타") : displayLabel(evt);
                         return (
                           <td
                             key={d}
