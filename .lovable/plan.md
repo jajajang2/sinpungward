@@ -1,143 +1,85 @@
-# BlockNote 0.15.11 → 0.51.4 업그레이드 계획
+# 성찬식 순서 기능 추가 계획
 
-## 1. 대상 버전 결정
+## 1. 네비게이션
+- `src/components/AppSidebar.tsx` `mainNavItems` 의 "출석통계" 바로 아래에 `{ to: "/sacrament", label: "성찬식 순서", icon: ListOrdered }` 추가.
+- `src/App.tsx` 라우트 `/sacrament` → 새 페이지 `SacramentPage`.
 
-- `@blocknote/core` / `@blocknote/react` / `@blocknote/mantine` → **0.51.4** (현재 최신 안정, 세 패키지 모두 동일 버전)
-- 신규 peer 의존성: `@mantine/core`, `@mantine/hooks` `^8.3.11`
-- React 18은 그대로 호환 (peer: `^18.0 || ^19.0`)
-- 0.15 → 0.51 사이에 표 기능이 대폭 확장됨: `tableContent.headerRows`, `headerCols`, 셀별 `backgroundColor`/`textColor`, `colspan`/`rowspan`, splitCells 메뉴 모두 지원.
+## 2. 데이터베이스 (Lovable Cloud)
 
-## 2. 백업 / 안전장치 (코드 베이스 차원)
+마이그레이션 1건으로 두 테이블 추가:
 
-Lovable 환경에는 git 브랜치를 직접 다루지 않으므로 동일 효과를 다음으로 대체합니다.
+- `sacrament_meetings`
+  - `id uuid pk default gen_random_uuid()`
+  - `meeting_date date unique not null` (해당 주 일요일)
+  - `event_type text not null default '일반'` (`일반|금식간증|연차대회|부활절|기타`)
+  - `event_custom_name text`
+  - `created_at`, `updated_at`
+- `sacrament_assignments`
+  - `id uuid pk`
+  - `meeting_id uuid fk → sacrament_meetings on delete cascade`
+  - `role text not null` (감리자/사회자/지휘자/반주자/개회기도/성찬축복1/성찬축복2/성찬전달/말씀_3분/말씀_7분/말씀_10분/마지막연사/폐회기도/개회찬송/성찬찬송/중간찬송/폐회찬송)
+  - `slot int default 0` (성찬전달 멀티 입력용)
+  - `member_id uuid` (members FK nullable, on delete set null)
+  - `custom_name text`
+  - `hymn_number text`
+  - `talk_topic text`
+  - `talk_content text`
+  - unique(meeting_id, role, slot)
+- 두 테이블 모두:
+  - `GRANT SELECT,INSERT,UPDATE,DELETE … TO authenticated; GRANT ALL … TO service_role;`
+  - RLS 활성화 + authenticated 전체 허용 정책(앱 다른 테이블 패턴과 동일).
 
-- 현재 상태에서 "Publish" 또는 채팅 히스토리 revert 포인트가 자연스러운 백업 지점이 됩니다. 작업 시작 직전 메시지의 revert 버튼을 백업 포인트로 안내.
-- 실제 DB(회의록 `content` 컬럼)는 **건드리지 않음**. 마이그레이션 없이 신구 JSON 모두 읽기/쓰기 호환되도록 코드 레벨에서만 처리.
-- 작업은 다음 3가지 검증을 통과한 뒤에만 사용자에게 완료 보고:
-  1. `npm run build` (또는 자동 빌드)에서 타입/빌드 에러 없음
-  2. 기존 0.15 JSON 회의록이 새 에디터에서 그대로 열리고 저장됨
-  3. `BlockNoteReadOnly`가 신/구 표 JSON을 모두 정상 렌더링
+## 3. 페이지 구조 — `src/pages/SacramentPage.tsx`
 
-## 3. 패키지 변경
+탭 2개: **순서표** / **말씀 히스토리**.
 
-`package.json`:
+### 3-1. 순서표 탭
+- 상단 컨트롤: `이전 2개월` / `현재 라벨` / `다음 2개월` 버튼.
+- 화면에 2개월 (기본 이번 달 + 다음 달) `MonthSacramentTable` 카드 가로 배치 (모바일은 세로 스택, 가로 스크롤).
+- `MonthSacramentTable`
+  - 해당 달 일요일들을 `date-fns`로 계산 → 열.
+  - 행은 명세 1-2 순서. 행 그룹:
+    - 사람 선택 행 / 찬송가 번호 행 / 사람+주제 행 / 성찬전달(멀티) 행.
+  - 한 달치 `meetings` + `assignments`를 한 번에 fetch, (date, role, slot) 키로 인덱싱.
+  - 셀 클릭 → 셀 종류별 팝오버:
+    - **PersonCellPopover**: 회원 검색 입력 + 결과 리스트(members 테이블) + "직접 입력" 입력란 + 삭제 버튼. 선택 시 upsert assignment.
+    - **HymnCellPopover**: 숫자/텍스트 input, blur 시 upsert.
+    - **TalkCellPopover**: 사람 선택 영역 + 주제 textarea (+ 내용은 히스토리 모달에서 편집). upsert.
+    - **DeliverersCell**: 멀티 슬롯, 각 슬롯이 person cell처럼 동작 + "추가" 버튼.
+  - 사람 칸 채워지면 연한 노랑(`bg-yellow-50`) 배경.
+- 날짜 헤더 클릭 → `EventTypePopover` (일반/금식간증/연차대회/부활절/기타+이름). 선택 시 `sacrament_meetings` upsert.
+  - **연차대회**: 그 열의 모든 데이터 셀을 단일 병합 셀(`rowSpan`)로 바꿔 세로 "연차대회" 표시.
+  - **금식간증/부활절/기타**: 말씀3분~마지막연사(중간찬송 포함) 구간만 하나의 병합 셀로 → 행사명 표시. 나머지 행은 정상 입력.
+- 모든 변경은 즉시 supabase upsert (자동 저장). 변경 후 로컬 캐시 업데이트.
 
-```
-"@blocknote/core": "0.51.4",
-"@blocknote/react": "0.51.4",
-"@blocknote/mantine": "0.51.4",
-"@mantine/core": "^8.3.11",
-"@mantine/hooks": "^8.3.11",
-```
+### 3-2. 말씀 히스토리 탭 — `SacramentTalkHistory.tsx`
+- 모든 members fetch + 말씀 관련 role(`말씀_3분|말씀_7분|말씀_10분|마지막연사`) assignments fetch.
+- 회원별 행: 이름 / 오른쪽에 `YYYY.MM.DD` 칩 리스트 (해당 회원이 맡은 미팅 날짜).
+- 하단 별도 섹션 "비회원(직접 입력)": custom_name 기준 그룹.
+- 날짜 칩 클릭 → `TalkDetailModal`: `talk_topic`, `talk_content` 편집 후 `sacrament_assignments` 업데이트. 순서표와 동일 row 갱신.
 
-설치는 `bun add`로 한 번에 처리.
+## 4. 공통 컴포넌트 (신규, `src/components/sacrament/`)
+- `MonthSacramentTable.tsx`
+- `PersonCellPopover.tsx`
+- `HymnCell.tsx`
+- `TalkCell.tsx`
+- `DeliverersCell.tsx`
+- `EventTypePopover.tsx`
+- `SacramentTalkHistory.tsx`
+- `TalkDetailModal.tsx`
 
-## 4. `BlockNoteEditor.tsx` 수정
+shadcn 의 Popover / Dialog / Command / Input / Button 재사용.
 
-- CSS import 경로 변경
-  - `@blocknote/core/fonts/inter.css` → `@blocknote/core/fonts/inter.css` (유지)
-  - `@blocknote/mantine/style.css` → 0.51에서도 `./style.css` export가 살아있어 **그대로 사용 가능**. 변경 불필요.
-- `useCreateBlockNote` 옵션
-  - 0.51에서도 `initialContent` 시그니처 동일. 단 내부 스키마가 엄격해져 빈 배열이면 에러 → 현재 `parseInitialContent`가 이미 `undefined` 반환하므로 안전.
-  - `dictionary: undefined` 옵션은 그대로 두되, 한국어 UI가 필요하면 `locales.ko`로 교체 가능 (이번 작업 범위 외).
-- `editor.onChange` 콜백: 0.51부터 시그니처가 `(editor, { getChanges }) => void`로 바뀜. 현재 사용 방식(`editor.document` 직접 읽기)은 그대로 동작하지만, 반환값이 unsubscribe 함수가 아니라 `{ unsubscribe }` 객체로 변경되었을 가능성 → 빌드/런타임에서 확인 후 다음과 같이 안전 처리:
+## 5. 디자인
+- 기존 카드/사이드바 톤 유지. 표는 `border-collapse`, header `bg-muted`, 채워진 사람 셀 `bg-yellow-50`. 모바일에서는 표 `overflow-x-auto`.
 
-```ts
-const sub = editor.onChange(() => onChange(JSON.stringify(editor.document)));
-return () => {
-  if (typeof sub === "function") sub();
-  else if (sub && typeof (sub as any).unsubscribe === "function") (sub as any).unsubscribe();
-};
-```
+## 6. 검증
+- 빌드/타입 통과 확인.
+- 사용자가 셀 입력 → 새로고침 후 유지.
+- 연차대회/금식간증 선택 시 병합 표시 정상.
+- 말씀 히스토리 탭에서 입력된 사람과 날짜가 정확히 매핑되는지.
 
-- 표 기능을 켜기 위한 에디터 옵션:
-
-```ts
-useCreateBlockNote({
-  initialContent,
-  tables: {
-    headers: true,
-    splitCells: true,
-    cellBackgroundColor: true,
-    cellTextColor: true,
-  },
-});
-```
-
-## 5. `BlockNoteReadOnly.tsx` 수정
-
-0.15의 표 JSON은 `block.children`에 row/cell 블록이 들어있는 구조였지만, **0.51의 표는 다른 구조**입니다.
-
-- 0.51 표 블록 형태:
-
-```jsonc
-{
-  "type": "table",
-  "content": {
-    "type": "tableContent",
-    "columnWidths": [null, null],
-    "headerRows": 1,
-    "headerCols": 0,
-    "rows": [
-      { "cells": [ { "type": "tableCell", "content": [...], "props": { "colspan": 1, "rowspan": 1, "backgroundColor": "default", "textColor": "default" } }, ... ] }
-    ]
-  }
-}
-```
-
-readonly 렌더러를 두 형태 모두 지원하도록 확장:
-
-1. `Block` 타입을 `content?: InlineContent[] | TableContent`로 일반화.
-2. `case "table"`에서:
-   - `block.content`가 객체이고 `rows`를 가지면 **새 포맷**으로 렌더 (아래 a).
-   - 아니면 기존 `block.children` 기반 **레거시 포맷**으로 렌더 (현재 코드 유지).
-3. 새 포맷 렌더링 a):
-   - `headerRows` / `headerCols` 값을 보고 `<thead>` 행과 `<th>` 셀 분리.
-   - 각 cell에 대해 `props.colspan`, `props.rowspan`, `props.backgroundColor`, `props.textColor` 적용.
-   - cell `content`(InlineContent[])는 기존 `renderInline`로 재사용.
-   - `columnWidths` 배열은 `<colgroup><col style="width">`로 매핑.
-4. 표 외 블록은 변경 없음. 신/구 회의록 모두 동일하게 동작 확인.
-
-## 6. 마이그레이션 / 호환성
-
-- DB 저장 포맷은 BlockNote가 알아서 호환 처리합니다. 0.15에서 저장된 JSON을 0.51 `useCreateBlockNote({ initialContent })`에 그대로 넣으면 내부적으로 새 스키마로 정규화. 첫 편집·저장 시점에 새 포맷 JSON이 DB에 덮어쓰기됨 → 자연스러운 점진적 마이그레이션.
-- 별도 일괄 마이그레이션 스크립트는 **만들지 않음** (요청 범위 외, 위험만 추가).
-
-## 7. 검증 절차
-
-순서대로 수행하고 각 단계 통과 후에만 다음 단계 진행:
-
-1. 의존성 설치 후 빌드 통과 확인 (TS/Vite 에러 0).
-2. 새 회의록을 만들어 표를 삽입 → header rows, split cells, 셀 배경/글자색이 동작.
-3. 0.15에서 저장된 기존 회의록 열기:
-   - 본문이 깨지지 않는다.
-   - 표가 있는 회의록은 표가 그대로 보인다(레거시 readonly 분기에서 렌더).
-   - 한 번 편집 후 저장 → 신 포맷으로 저장되고 다시 열어도 정상.
-4. `BlockNoteReadOnly`로 신/구 회의록 모두 렌더 확인 (목록·체크리스트·이미지 회귀 없음).
-
-위 1·2·3이 모두 통과하면 사용자에게 완료 보고.
-
-## 8. 영향 범위 (파일)
-
-- `package.json` (의존성)
-- `src/components/meeting/BlockNoteEditor.tsx` (옵션·구독 정리, tables 옵션 추가)
-- `src/components/meeting/BlockNoteReadOnly.tsx` (신 표 포맷 렌더 분기 추가)
-- 기타 파일 변경 없음. 사용 안 하는 Tiptap 관련 파일은 이번 작업에서 손대지 않음.
-
-## 9. 롤백 전략
-
-문제 발생 시:
-- 패키지 3개 + `@mantine/*` 2개를 0.15.11 / 제거로 되돌리고
-- 위 두 컴포넌트 파일을 이전 상태로 복구
-- 또는 작업 시작 메시지의 revert 버튼으로 일괄 복구
-
-## 기술 요약 (개발자 참고)
-
-| 영역 | 0.15.11 | 0.51.4 |
-|---|---|---|
-| 표 JSON | `children: row[] -> children: cell[]` | `content: { rows, headerRows, headerCols, columnWidths }` |
-| 셀 스타일 | 미지원 | `props.backgroundColor`, `props.textColor`, `colspan`, `rowspan` |
-| 에디터 옵션 | 표 관련 옵션 없음 | `tables: { headers, splitCells, cellBackgroundColor, cellTextColor }` |
-| peer deps | 없음(추가) | `@mantine/core@^8`, `@mantine/hooks@^8` |
-| CSS import | `@blocknote/mantine/style.css` | 동일 (변경 없음) |
-| `onChange` 반환 | 함수 | 객체일 수 있음 → 양쪽 처리 |
+## 7. 영향 파일
+- 신규: `src/pages/SacramentPage.tsx`, `src/components/sacrament/*`, 마이그레이션 1건.
+- 수정: `src/components/AppSidebar.tsx`, `src/App.tsx`.
+- 다른 기능(회원/출석/회의록 등)에는 영향 없음.
