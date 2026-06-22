@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import TalkDetailModal from "./TalkDetailModal";
-import { TALK_ROLES, type MemberLite } from "./types";
+import { TALK_ROLES, calcAge, type MemberLite } from "./types";
 
 interface Props {
   members: MemberLite[];
