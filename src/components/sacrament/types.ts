@@ -22,6 +22,18 @@ export interface SacramentAssignment {
 export interface MemberLite {
   id: string;
   name: string;
+  birth_date?: string | null;
+}
+
+export function calcAge(birth_date?: string | null): number | null {
+  if (!birth_date) return null;
+  const b = new Date(birth_date);
+  if (isNaN(b.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age;
 }
 
 export type RowKind = "person" | "hymn" | "talk" | "deliverers";

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import TalkDetailModal from "./TalkDetailModal";
-import { TALK_ROLES, type MemberLite } from "./types";
+import { TALK_ROLES, calcAge, type MemberLite } from "./types";
 
 interface Props {
   members: MemberLite[];
@@ -88,9 +88,13 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
           <ul className="flex-1 divide-y overflow-x-hidden overflow-y-auto">
             {sortedMembers.map((m) => {
               const list = memberGroups.get(m.id) || [];
+              const age = calcAge(m.birth_date);
               return (
                 <li key={m.id} className="flex items-start gap-3 px-3 py-2">
-                  <div className="w-24 shrink-0 text-sm font-medium">{m.name}</div>
+                  <div className="w-24 shrink-0 text-sm font-medium">
+                    {m.name}
+                    {age !== null && <span className="ml-1 text-xs text-muted-foreground">({age})</span>}
+                  </div>
                   <div className="flex min-w-0 flex-1 flex-wrap gap-1">
                     {list.length === 0 && <span className="text-xs text-muted-foreground">-</span>}
                     {list.map((r) => (
