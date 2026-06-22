@@ -1,5 +1,6 @@
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
+import { ko } from "@blocknote/core/locales";
 import { useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import "@blocknote/core/fonts/inter.css";
@@ -40,6 +41,7 @@ export default function BlockNoteEditorView({ value, onChange, className }: Prop
 
   const editor = useCreateBlockNote({
     initialContent: initialContent as any,
+    dictionary: ko,
     tables: {
       headers: true,
       splitCells: true,
