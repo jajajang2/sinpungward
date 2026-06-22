@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX IF NOT EXISTS sacrament_meetings_meeting_date_key ON public.sacrament_meetings(meeting_date);
+CREATE UNIQUE INDEX IF NOT EXISTS sacrament_assignments_meeting_role_slot_key ON public.sacrament_assignments(meeting_id, role, slot);
