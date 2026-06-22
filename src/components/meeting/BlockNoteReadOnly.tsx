@@ -31,11 +31,34 @@ interface InlineMention {
 
 type InlineContent = InlineText | InlineLink | InlineMention;
 
+interface TableCell {
+  type?: "tableCell";
+  content?: InlineContent[];
+  props?: {
+    colspan?: number;
+    rowspan?: number;
+    backgroundColor?: string;
+    textColor?: string;
+  };
+}
+
+interface TableRow {
+  cells: Array<InlineContent[] | TableCell>;
+}
+
+interface TableContent {
+  type: "tableContent";
+  columnWidths?: (number | null)[];
+  headerRows?: number;
+  headerCols?: number;
+  rows: TableRow[];
+}
+
 interface Block {
   id?: string;
   type: string;
   props?: Record<string, any>;
-  content?: InlineContent[];
+  content?: InlineContent[] | TableContent;
   children?: Block[];
 }
 
