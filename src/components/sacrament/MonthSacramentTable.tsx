@@ -165,14 +165,14 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
 
   return (
     <div className="rounded-lg border bg-card">
-      <div className="border-b bg-muted/50 px-3 py-2 text-sm font-semibold">
+      <div className="border-b bg-muted/50 px-2 py-1 text-xs font-semibold">
         {year}년 {month}월 성찬식 계획표
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] border-collapse text-xs">
           <thead>
             <tr>
-              <th className="border bg-muted px-2 py-1.5 text-left font-medium w-24 sticky left-0 z-10">항목</th>
+              <th className="border bg-muted px-1.5 py-0.5 text-left font-medium w-20 sticky left-0 z-10">항목</th>
               {sundays.map((d) => {
                 const dayNum = parseInt(d.split("-")[2], 10);
                 const m = meetings[d];
@@ -180,7 +180,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                   ? (m.event_type === "기타" ? (m.event_custom_name || "기타") : m.event_type)
                   : null;
                 return (
-                  <th key={d} className="border bg-muted px-1 py-1.5 text-center font-medium">
+                  <th key={d} className="border bg-muted px-1 py-0.5 text-center font-medium">
                     <Popover>
                       <PopoverTrigger asChild>
                         <button className="w-full hover:underline">
@@ -239,7 +239,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
               // Track skip cells due to rowSpan merges from prior rows
               return (
                 <tr key={row.role}>
-                  <td className="border bg-muted/30 px-2 py-1 font-medium sticky left-0 z-10">{row.label}</td>
+                  <td className="border bg-muted/30 px-1.5 py-0.5 font-medium sticky left-0 z-10">{row.label}</td>
                   {sundays.map((d) => {
                     const m = meetings[d];
                     const evt: EventType = (m?.event_type as EventType) || "일반";
@@ -327,7 +327,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
         <Input
           defaultValue={a?.hymn_number || ""}
           placeholder="번호"
-          className="h-7 border-0 text-xs"
+          className="h-6 border-0 text-[11px] px-1"
           onBlur={(e) => {
             const v = e.target.value.trim();
             if ((a?.hymn_number || "") === v) return;
@@ -348,7 +348,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`h-7 w-full px-1 text-left text-xs hover:bg-muted ${filled ? "bg-yellow-50" : ""}`}
+              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${filled ? "bg-yellow-50" : ""}`}
             >
               {nameOf(a) || <span className="text-muted-foreground">+</span>}
             </button>
