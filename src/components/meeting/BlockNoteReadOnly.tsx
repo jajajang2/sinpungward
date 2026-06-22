@@ -31,11 +31,34 @@ interface InlineMention {
 
 type InlineContent = InlineText | InlineLink | InlineMention;
 
+interface TableCell {
+  type?: "tableCell";
+  content?: InlineContent[];
+  props?: {
+    colspan?: number;
+    rowspan?: number;
+    backgroundColor?: string;
+    textColor?: string;
+  };
+}
+
+interface TableRow {
+  cells: Array<InlineContent[] | TableCell>;
+}
+
+interface TableContent {
+  type: "tableContent";
+  columnWidths?: (number | null)[];
+  headerRows?: number;
+  headerCols?: number;
+  rows: TableRow[];
+}
+
 interface Block {
   id?: string;
   type: string;
   props?: Record<string, any>;
-  content?: InlineContent[];
+  content?: InlineContent[] | TableContent;
   children?: Block[];
 }
 
@@ -112,8 +135,17 @@ function renderInline(content: InlineContent, idx: number): React.ReactNode {
   return null;
 }
 
+function isTableContent(c: any): c is TableContent {
+  return c && typeof c === "object" && !Array.isArray(c) && Array.isArray(c.rows);
+}
+
+function inlineArray(c: Block["content"] | undefined): InlineContent[] {
+  return Array.isArray(c) ? c : [];
+}
+
 function renderBlock(block: Block, index: number): React.ReactNode {
-  const contentNodes = (block.content || []).map((c, i) => renderInline(c, i));
+  const inline = inlineArray(block.content);
+  const contentNodes = inline.map((c, i) => renderInline(c, i));
   const childrenNodes = (block.children || []).map((child, i) => renderBlock(child, i));
 
   switch (block.type) {
@@ -161,6 +193,82 @@ function renderBlock(block: Block, index: number): React.ReactNode {
       );
     }
     case "table": {
+      // New format (BlockNote 0.51+): block.content = { rows, headerRows, headerCols, columnWidths }
+      if (isTableContent(block.content)) {
+        const tc = block.content;
+        const headerRows = tc.headerRows ?? 0;
+        const headerCols = tc.headerCols ?? 0;
+        const columnWidths = tc.columnWidths || [];
+
+        const renderCell = (
+          cell: InlineContent[] | TableCell,
+          ri: number,
+          ci: number,
+        ) => {
+          const isCellObj = !Array.isArray(cell) && cell && typeof cell === "object";
+          const cellContent: InlineContent[] = isCellObj
+            ? ((cell as TableCell).content || [])
+            : (cell as InlineContent[]);
+          const props = isCellObj ? (cell as TableCell).props || {} : {};
+          const isHeader = ri < headerRows || ci < headerCols;
+          const Tag = (isHeader ? "th" : "td") as "th" | "td";
+          const style: React.CSSProperties = {};
+          if (props.backgroundColor && props.backgroundColor !== "default") {
+            style.backgroundColor = props.backgroundColor;
+          }
+          if (props.textColor && props.textColor !== "default") {
+            style.color = props.textColor;
+          }
+          return (
+            <Tag
+              key={ci}
+              colSpan={props.colspan && props.colspan > 1 ? props.colspan : undefined}
+              rowSpan={props.rowspan && props.rowspan > 1 ? props.rowspan : undefined}
+              style={style}
+              className={
+                isHeader
+                  ? "border px-3 py-2 align-top bg-muted font-semibold text-left"
+                  : "border px-3 py-2 align-top"
+              }
+            >
+              {cellContent.map((c, i) => renderInline(c, i))}
+            </Tag>
+          );
+        };
+
+        const headRows = tc.rows.slice(0, headerRows);
+        const bodyRows = tc.rows.slice(headerRows);
+
+        return (
+          <table key={index} className="my-4 w-full border-collapse text-sm">
+            {columnWidths.length > 0 && (
+              <colgroup>
+                {columnWidths.map((w, i) => (
+                  <col key={i} style={w ? { width: `${w}px` } : undefined} />
+                ))}
+              </colgroup>
+            )}
+            {headRows.length > 0 && (
+              <thead>
+                {headRows.map((row, ri) => (
+                  <tr key={ri} className="border-b">
+                    {row.cells.map((cell, ci) => renderCell(cell, ri, ci))}
+                  </tr>
+                ))}
+              </thead>
+            )}
+            <tbody>
+              {bodyRows.map((row, ri) => (
+                <tr key={ri} className="border-b">
+                  {row.cells.map((cell, ci) => renderCell(cell, ri + headerRows, ci))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+      }
+
+      // Legacy format (BlockNote 0.15): block.children = row[] -> children = cell[]
       const rows = block.children || [];
       return (
         <table key={index} className="my-4 w-full border-collapse text-sm">
@@ -169,7 +277,7 @@ function renderBlock(block: Block, index: number): React.ReactNode {
               <tr key={ri} className="border-b">
                 {(row.children || []).map((cell, ci) => (
                   <td key={ci} className="border px-3 py-2 align-top">
-                    {cell.content?.map((c, i) => renderInline(c, i))}
+                    {inlineArray(cell.content).map((c, i) => renderInline(c, i))}
                   </td>
                 ))}
               </tr>

@@ -14,7 +14,8 @@ interface Props {
 /**
  * Parses stored content. We persist BlockNote documents as a JSON string in the
  * existing `content` text column. Legacy rows are plain text (or HTML) and are
- * shown as a single paragraph block on first edit.
+ * shown as a single paragraph block on first edit. BlockNote 0.51 internally
+ * normalizes 0.15-era JSON when fed via initialContent.
  */
 function parseInitialContent(value: string) {
   if (!value) return undefined;
@@ -39,16 +40,22 @@ export default function BlockNoteEditorView({ value, onChange, className }: Prop
 
   const editor = useCreateBlockNote({
     initialContent: initialContent as any,
-    dictionary: undefined,
+    tables: {
+      headers: true,
+      splitCells: true,
+      cellBackgroundColor: true,
+      cellTextColor: true,
+    },
   });
 
   useEffect(() => {
     if (!editor) return;
-    const unsub = editor.onChange(() => {
+    const sub = editor.onChange(() => {
       onChange(JSON.stringify(editor.document));
     });
     return () => {
-      if (typeof unsub === "function") unsub();
+      if (typeof sub === "function") (sub as any)();
+      else if (sub && typeof (sub as any).unsubscribe === "function") (sub as any).unsubscribe();
     };
   }, [editor, onChange]);
 
