@@ -580,20 +580,21 @@ const AttendancePage = () => {
             </div>
           </Card>
 
-          <Card className="order-2 hidden border-border md:sticky md:top-4 md:block md:self-start">
+          <Card className="order-2 hidden border-border md:sticky md:top-4 md:flex md:max-h-[calc(100vh-2rem)] md:flex-col md:self-start md:overflow-hidden">
             <div className="border-b border-border p-3 md:p-4">
-              <div className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4 text-primary" />
-                <h2 className="text-base font-semibold text-foreground">방문자</h2>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-primary" />
+                  <h2 className="text-base font-semibold text-foreground">방문자</h2>
+                </div>
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
+                  {selectedVisitors.length}명
+                </span>
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground md:text-sm">이름, 연락처, 메모를 기록할 수 있습니다.</p>
             </div>
 
-            <div className="space-y-3 p-3 md:space-y-4 md:p-4">
-              <div className="rounded-lg border border-border bg-background p-2.5 md:p-3">
-                <div className="text-sm font-medium text-foreground">방문자 {selectedVisitors.length}명</div>
-              </div>
-
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 md:p-4">
               <div className="space-y-2">
                 {selectedVisitors.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
@@ -612,7 +613,9 @@ const AttendancePage = () => {
                   ))
                 )}
               </div>
+            </div>
 
+            <div className="border-t border-border bg-card p-3 md:p-4">
               <Button onClick={() => setIsVisitorDialogOpen(true)} className="w-full">
                 <Plus className="mr-1 h-4 w-4" />방문자 추가
               </Button>
