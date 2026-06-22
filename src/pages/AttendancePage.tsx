@@ -220,9 +220,6 @@ const AttendancePage = () => {
   const selectedTotalCount = selectedDateStr ? attendanceCountsByDate[selectedDateStr] || 0 : 0;
   const selectedMemberPresentCount = Math.max(0, selectedTotalCount - selectedVisitors.length);
 
-  useEffect(() => {
-    setIsVisitorPanelOpen(!isMobile);
-  }, [isMobile, selectedDateStr]);
 
   const handleSelectDate = (date?: Date) => {
     if (!date) return;
