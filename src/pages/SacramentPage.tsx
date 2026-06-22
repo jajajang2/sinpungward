@@ -23,31 +23,32 @@ export default function SacramentPage() {
   const second = useMemo(() => addMonths(anchor, 1), [anchor]);
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="space-y-2 p-2 md:p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold md:text-2xl">성찬식 순서</h1>
+        <h1 className="text-base font-bold md:text-lg leading-tight">성찬식 순서</h1>
       </div>
 
       <Tabs defaultValue="schedule">
-        <TabsList>
-          <TabsTrigger value="schedule">순서표</TabsTrigger>
-          <TabsTrigger value="history">말씀 히스토리</TabsTrigger>
+        <TabsList className="h-8">
+          <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
+          <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="schedule" className="space-y-4">
+        <TabsContent value="schedule" className="space-y-2 mt-2">
           <div className="flex items-center justify-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setAnchor((p) => addMonths(p, -2))}>
-              <ChevronLeft className="h-4 w-4" /> 이전
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setAnchor((p) => addMonths(p, -2))}>
+              <ChevronLeft className="h-3 w-3" /> 이전
             </Button>
-            <div className="min-w-[180px] text-center text-sm font-medium">
+            <div className="min-w-[160px] text-center text-xs font-medium">
               {anchor.getFullYear()}년 {anchor.getMonth() + 1}월 · {second.getFullYear()}년 {second.getMonth() + 1}월
             </div>
-            <Button variant="outline" size="sm" onClick={() => setAnchor((p) => addMonths(p, 2))}>
-              다음 <ChevronRight className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setAnchor((p) => addMonths(p, 2))}>
+              다음 <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-2 lg:grid-cols-2">
+
             <MonthSacramentTable
               year={anchor.getFullYear()}
               month={anchor.getMonth() + 1}
