@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import type { MemberLite } from "./types";
+import { type MemberLite, calcAge } from "./types";
 
 interface Props {
   members: MemberLite[];
