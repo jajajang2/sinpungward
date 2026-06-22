@@ -28,16 +28,20 @@ export default function PersonPicker({ members, currentMemberId, currentCustomNa
       <Input placeholder="이름 검색" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
       <div className="max-h-56 overflow-y-auto rounded border">
         {filtered.length === 0 && <div className="px-2 py-3 text-xs text-muted-foreground">결과 없음</div>}
-        {filtered.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onPick(m.id, null)}
-            className={`block w-full px-2 py-1.5 text-left text-sm hover:bg-muted ${m.id === currentMemberId ? "bg-muted font-semibold" : ""}`}
-          >
-            {m.name}
-          </button>
-        ))}
+        {filtered.map((m) => {
+          const age = calcAge(m.birth_date);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onPick(m.id, null)}
+              className={`block w-full px-2 py-1.5 text-left text-sm hover:bg-muted ${m.id === currentMemberId ? "bg-muted font-semibold" : ""}`}
+            >
+              {m.name}
+              {age !== null && <span className="ml-1 text-xs text-muted-foreground">({age}세)</span>}
+            </button>
+          );
+        })}
       </div>
       <div className="border-t pt-2">
         <div className="mb-1 text-xs text-muted-foreground">직접 입력 (비회원)</div>
