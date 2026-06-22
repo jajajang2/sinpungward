@@ -17,7 +17,7 @@ export default function SacramentPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("members").select("id, name").order("name");
+      const { data } = await supabase.from("members").select("id, name, birth_date").order("name");
       setMembers((data as MemberLite[]) || []);
     })();
   }, []);
