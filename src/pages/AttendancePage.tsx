@@ -288,13 +288,13 @@ const AttendancePage = () => {
     }
   };
 
-  const handleSaveVisitor = async () => {
-    if (!selectedDateStr) return;
+  const handleSaveVisitor = async (options: { closeAfter: boolean } = { closeAfter: true }) => {
+    if (!selectedDateStr) return false;
 
     const parsed = visitorSchema.safeParse(visitorDraft);
     if (!parsed.success) {
       toast({ title: "입력 확인", description: parsed.error.issues[0]?.message ?? "방문자 정보를 확인해주세요.", variant: "destructive" });
-      return;
+      return false;
     }
 
     setSavingVisitor(true);
@@ -311,12 +311,21 @@ const AttendancePage = () => {
 
     if (error) {
       toast({ title: "저장 오류", description: error.message, variant: "destructive" });
-      return;
+      return false;
     }
 
     setVisitors((prev) => [...prev, data as AttendanceVisitor]);
     setVisitorDraft(emptyVisitorDraft);
     toast({ title: "저장 완료", description: "방문자 정보가 추가되었습니다." });
+    if (options.closeAfter) {
+      setIsVisitorDialogOpen(false);
+    }
+    return true;
+  };
+
+  const handleCloseVisitorDialog = () => {
+    setVisitorDraft(emptyVisitorDraft);
+    setIsVisitorDialogOpen(false);
   };
 
   const handleDeleteVisitor = async (visitorId: string) => {
