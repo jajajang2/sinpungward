@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import MonthSacramentTable from "@/components/sacrament/MonthSacramentTable";
 import SacramentTalkHistory from "@/components/sacrament/SacramentTalkHistory";
 import SacramentImportExport from "@/components/sacrament/SacramentImportExport";
+import AutoLinkMembers from "@/components/sacrament/AutoLinkMembers";
 import type { MemberLite } from "@/components/sacrament/types";
 
 export default function SacramentPage() {
