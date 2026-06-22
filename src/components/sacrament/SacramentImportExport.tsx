@@ -302,14 +302,16 @@ export default function SacramentImportExport({ onChanged }: Props) {
           if (internal.kind === "hymn" || valueType === "찬송") {
             matchKind = "hymn";
           } else {
-            const candidates = nameCount.get(value) || [];
-            if (candidates.length === 1) {
+            let candidates = exactMap.get(value) || [];
+            if (candidates.length === 0) candidates = normMap.get(norm(value)) || [];
+            const uniq = Array.from(new Map(candidates.map((c) => [c.id, c])).values());
+            if (uniq.length === 1) {
               matchKind = "member";
-              matched_member_id = candidates[0].id;
+              matched_member_id = uniq[0].id;
               matched_name = value;
-            } else if (candidates.length > 1) {
+            } else if (uniq.length > 1) {
               matchKind = "duplicate";
-              duplicate_names = candidates.map(() => value);
+              duplicate_names = uniq.map(() => value);
             } else {
               matchKind = "custom";
             }
