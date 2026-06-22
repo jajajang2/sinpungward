@@ -533,6 +533,90 @@ export type Database = {
         }
         Relationships: []
       }
+      sacrament_assignments: {
+        Row: {
+          created_at: string
+          custom_name: string | null
+          hymn_number: string | null
+          id: string
+          meeting_id: string
+          member_id: string | null
+          role: string
+          slot: number
+          talk_content: string | null
+          talk_topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_name?: string | null
+          hymn_number?: string | null
+          id?: string
+          meeting_id: string
+          member_id?: string | null
+          role: string
+          slot?: number
+          talk_content?: string | null
+          talk_topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_name?: string | null
+          hymn_number?: string | null
+          id?: string
+          meeting_id?: string
+          member_id?: string | null
+          role?: string
+          slot?: number
+          talk_content?: string | null
+          talk_topic?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sacrament_assignments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "sacrament_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sacrament_assignments_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sacrament_meetings: {
+        Row: {
+          created_at: string
+          event_custom_name: string | null
+          event_type: string
+          id: string
+          meeting_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_custom_name?: string | null
+          event_type?: string
+          id?: string
+          meeting_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_custom_name?: string | null
+          event_type?: string
+          id?: string
+          meeting_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_assignments: {
         Row: {
           assigned_at: string
