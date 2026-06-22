@@ -580,8 +580,8 @@ const AttendancePage = () => {
             </div>
           </Card>
 
-          <Card className="order-2 hidden border-border md:sticky md:top-4 md:flex md:max-h-[calc(100vh-2rem)] md:flex-col md:self-start md:overflow-hidden">
-            <div className="border-b border-border p-3 md:p-4">
+          <Card className="order-2 hidden min-h-0 border-border md:flex md:h-full md:flex-col md:overflow-hidden">
+            <div className="shrink-0 border-b border-border p-3 md:p-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <UserPlus className="h-4 w-4 text-primary" />
@@ -591,31 +591,42 @@ const AttendancePage = () => {
                   {selectedVisitors.length}명
                 </span>
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground md:text-sm">이름, 연락처, 메모를 기록할 수 있습니다.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">이름, 연락처, 메모를 기록할 수 있습니다.</p>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-3 md:p-4">
               <div className="space-y-2">
                 {selectedVisitors.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
+                  <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">아직 기록된 방문자가 없습니다.</div>
                 ) : (
                   selectedVisitors.map((visitor) => (
-                    <div key={visitor.id} className="rounded-lg border border-border bg-background p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <div className="text-sm font-medium text-foreground">{visitor.name}</div>
-                          <div className="text-xs text-muted-foreground md:text-sm">{visitor.phone || "연락처 없음"}</div>
-                          {visitor.notes && <p className="text-xs text-foreground/80 md:text-sm">{visitor.notes}</p>}
+                    <div key={visitor.id} className="rounded-lg border border-border bg-background px-2.5 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="truncate text-xs font-medium text-foreground">{visitor.name}</span>
+                          <span className="truncate text-[11px] text-muted-foreground">{visitor.phone || "연락처 없음"}</span>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteVisitor(visitor.id)}>삭제</Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 shrink-0 px-2 text-[11px]"
+                          onClick={() => handleDeleteVisitor(visitor.id)}
+                        >
+                          삭제
+                        </Button>
                       </div>
+                      {visitor.notes && (
+                        <p className="mt-1 whitespace-pre-wrap break-words text-[7px] leading-snug text-foreground/70">
+                          {visitor.notes}
+                        </p>
+                      )}
                     </div>
                   ))
                 )}
               </div>
             </div>
 
-            <div className="border-t border-border bg-card p-3 md:p-4">
+            <div className="shrink-0 border-t border-border bg-card p-3 md:p-4">
               <Button onClick={() => setIsVisitorDialogOpen(true)} className="w-full">
                 <Plus className="mr-1 h-4 w-4" />방문자 추가
               </Button>
