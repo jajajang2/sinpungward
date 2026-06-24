@@ -88,6 +88,21 @@ interface FamilyView {
 
 const DEFAULT_CYCLE = ["B", "C", "D", "E"];
 
+const calcAge = (bd?: string | null): number | null => {
+  if (!bd) return null;
+  const d = new Date(bd);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+};
+const nameWithAge = (m: { name: string; birth_date?: string | null }) => {
+  const a = calcAge(m.birth_date ?? null);
+  return a === null ? m.name : `${m.name}(${a}세)`;
+};
+
 export default function CleaningPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
