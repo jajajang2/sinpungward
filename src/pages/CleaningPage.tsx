@@ -111,7 +111,7 @@ export default function CleaningPage() {
   const loadAll = async () => {
     setLoading(true);
     const [m, t, f, fm, a, s, att, ci] = await Promise.all([
-      supabase.from("members").select("id, name, gender"),
+      supabase.from("members").select("id, name, gender, birth_date"),
       supabase.from("teams").select("*").order("sort_order"),
       supabase.from("families").select("*"),
       supabase.from("family_members").select("*"),
