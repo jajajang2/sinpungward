@@ -35,7 +35,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { formatFamilyName } from "@/lib/familyName";
+
 import { buildScheduleAssignments, listSaturdays } from "@/lib/cleaningSchedule";
 import { rebuildFamilies } from "@/lib/familyAutoBuild";
 
