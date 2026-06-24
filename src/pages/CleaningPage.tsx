@@ -566,7 +566,7 @@ export default function CleaningPage() {
               {/* 미배정 */}
               <DropColumn id="unassigned" title="미배정" subtitle={`${unassignedFamilies.length}가족`}>
                 {unassignedFamilies.map((f) => (
-                  <FamilyChip key={f.id} family={f} />
+                  <FamilyChip key={f.id} family={f} label={teamBoxLabel(f)} onOpen={() => setMemberDialogFamily(f)} />
                 ))}
               </DropColumn>
 
@@ -582,7 +582,7 @@ export default function CleaningPage() {
                     accent={t.is_fixed}
                   >
                     {list.map((f) => (
-                      <FamilyChip key={f.id} family={f} />
+                      <FamilyChip key={f.id} family={f} label={teamBoxLabel(f)} onOpen={() => setMemberDialogFamily(f)} />
                     ))}
                   </DropColumn>
                 );
@@ -591,7 +591,7 @@ export default function CleaningPage() {
             <DragOverlay>
               {draggingId && familyById.get(draggingId) ? (
                 <div className="px-2 py-1.5 rounded-md bg-primary text-primary-foreground text-xs shadow-lg">
-                  {formatFamilyName(familyById.get(draggingId)!)}
+                  {teamBoxLabel(familyById.get(draggingId)!)}
                 </div>
               ) : null}
             </DragOverlay>
@@ -600,7 +600,10 @@ export default function CleaningPage() {
 
         {/* ===== 명단 ===== */}
         <TabsContent value="roster" className="space-y-3">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={exportRoster}>
+              <Download className="w-4 h-4" /> Excel 내보내기
+            </Button>
             <Button size="sm" variant="outline" onClick={() => window.print()}>
               <Printer className="w-4 h-4" /> 인쇄
             </Button>
@@ -624,7 +627,14 @@ export default function CleaningPage() {
                     ) : (
                       <ul className="space-y-1 text-sm">
                         {list.map((f) => (
-                          <li key={f.id}>• {formatFamilyName(f)}</li>
+                          <li key={f.id}>
+                            <span className="font-medium">• {teamBoxLabel(f)}</span>
+                            {!f.isSingle && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                ({f.members.map((m) => m.name).join(", ")})
+                              </span>
+                            )}
+                          </li>
                         ))}
                       </ul>
                     )}
