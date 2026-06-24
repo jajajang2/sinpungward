@@ -712,7 +712,8 @@ export default function CleaningPage() {
             {memberDialogFamily?.members.map((m) => (
               <li key={m.id} className="flex items-center gap-2">
                 <span className="font-medium">{m.name}</span>
-                {m.gender && <span className="text-xs text-muted-foreground">({m.gender})</span>}
+                {(() => { const a = calcAge(m.birth_date); return a !== null && <span className="text-xs text-muted-foreground">({a}세)</span>; })()}
+                {m.gender && <span className="text-xs text-muted-foreground">· {m.gender}</span>}
               </li>
             ))}
           </ul>
