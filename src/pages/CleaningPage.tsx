@@ -683,6 +683,28 @@ export default function CleaningPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!memberDialogFamily} onOpenChange={(o) => !o && setMemberDialogFamily(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {memberDialogFamily ? teamBoxLabel(memberDialogFamily) : ""}
+            </DialogTitle>
+            <DialogDescription>가족 구성원 ({memberDialogFamily?.members.length ?? 0}명)</DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-1 text-sm">
+            {memberDialogFamily?.members.map((m) => (
+              <li key={m.id} className="flex items-center gap-2">
+                <span className="font-medium">{m.name}</span>
+                {m.gender && <span className="text-xs text-muted-foreground">({m.gender})</span>}
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMemberDialogFamily(null)}>닫기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -717,19 +739,20 @@ function DropColumn({
   );
 }
 
-function FamilyChip({ family }: { family: FamilyView }) {
+function FamilyChip({ family, label, onOpen }: { family: FamilyView; label: string; onOpen: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: family.id });
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onDoubleClick={onOpen}
       className={`px-2 py-1.5 rounded-md border bg-background text-xs cursor-grab active:cursor-grabbing ${
         isDragging ? "opacity-40" : ""
       }`}
-      title={`출석 점수: ${(family.score * 100).toFixed(0)}%`}
+      title={`더블클릭: 가족 보기 · 출석 점수: ${(family.score * 100).toFixed(0)}%`}
     >
-      <div className="font-medium truncate">{formatFamilyName(family)}</div>
+      <div className="font-medium truncate">{label}</div>
       <div className="text-[10px] text-muted-foreground">
         {family.members.length}명 · {Math.round(family.score * 100)}%
       </div>
