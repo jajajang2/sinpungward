@@ -43,6 +43,7 @@ type Member = {
   id: string;
   name: string;
   gender: string | null;
+  birth_date: string | null;
 };
 type Team = {
   id: string;
