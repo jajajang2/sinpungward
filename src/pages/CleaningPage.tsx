@@ -647,7 +647,7 @@ export default function CleaningPage() {
                             <span className="font-medium">• {teamBoxLabel(f)}</span>
                             {!f.isSingle && (
                               <span className="text-xs text-muted-foreground ml-1">
-                                ({f.members.map((m) => m.name).join(", ")})
+                                ({f.members.map(nameWithAge).join(", ")})
                               </span>
                             )}
                           </li>
