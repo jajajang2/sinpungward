@@ -423,7 +423,7 @@ export default function CleaningPage() {
         return;
       }
       list.forEach((f) => {
-        const memberNames = f.members.map((m) => m.name).join(", ");
+        const memberNames = f.members.map(nameWithAge).join(", ");
         rows.push({
           조: `${t.code}조 (${t.name})`,
           가족: teamBoxLabel(f),
