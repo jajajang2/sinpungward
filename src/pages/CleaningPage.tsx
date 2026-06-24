@@ -21,7 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2 } from "lucide-react";
+import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import {
   DndContext,
   DragOverlay,
@@ -34,7 +35,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { formatFamilyName } from "@/lib/familyName";
+
 import { buildScheduleAssignments, listSaturdays } from "@/lib/cleaningSchedule";
 import { rebuildFamilies } from "@/lib/familyAutoBuild";
 
@@ -387,6 +388,42 @@ export default function CleaningPage() {
   const familiesByTeam = (teamId: string) =>
     assignments.filter((a) => a.team_id === teamId).map((a) => familyById.get(a.family_id)).filter(Boolean) as FamilyView[];
 
+  // 팀 박스용 라벨: 가족이면 "{head}의 가족", 독신이면 이름만
+  const teamBoxLabel = (f: FamilyView) => {
+    const headName = f.head?.name ?? "(미지정)";
+    return f.isSingle ? headName : `${headName}의 가족`;
+  };
+
+  // 가족 멤버 보기 다이얼로그
+  const [memberDialogFamily, setMemberDialogFamily] = useState<FamilyView | null>(null);
+
+  // Excel export
+  const exportRoster = () => {
+    const rows: Record<string, string>[] = [];
+    teams.forEach((t) => {
+      const list = familiesByTeam(t.id);
+      if (list.length === 0) {
+        rows.push({ 조: `${t.code}조 (${t.name})`, 가족: "(배정 없음)", 구성원: "" });
+        return;
+      }
+      list.forEach((f) => {
+        const memberNames = f.members.map((m) => m.name).join(", ");
+        rows.push({
+          조: `${t.code}조 (${t.name})`,
+          가족: teamBoxLabel(f),
+          구성원: memberNames,
+        });
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 16 }, { wch: 20 }, { wch: 50 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "청소조 명단");
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `청소조_명단_${today}.xlsx`);
+    toast({ title: "내보내기 완료", description: `${rows.length}행 내보냈습니다.` });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -529,7 +566,7 @@ export default function CleaningPage() {
               {/* 미배정 */}
               <DropColumn id="unassigned" title="미배정" subtitle={`${unassignedFamilies.length}가족`}>
                 {unassignedFamilies.map((f) => (
-                  <FamilyChip key={f.id} family={f} />
+                  <FamilyChip key={f.id} family={f} label={teamBoxLabel(f)} onOpen={() => setMemberDialogFamily(f)} />
                 ))}
               </DropColumn>
 
@@ -545,7 +582,7 @@ export default function CleaningPage() {
                     accent={t.is_fixed}
                   >
                     {list.map((f) => (
-                      <FamilyChip key={f.id} family={f} />
+                      <FamilyChip key={f.id} family={f} label={teamBoxLabel(f)} onOpen={() => setMemberDialogFamily(f)} />
                     ))}
                   </DropColumn>
                 );
@@ -554,7 +591,7 @@ export default function CleaningPage() {
             <DragOverlay>
               {draggingId && familyById.get(draggingId) ? (
                 <div className="px-2 py-1.5 rounded-md bg-primary text-primary-foreground text-xs shadow-lg">
-                  {formatFamilyName(familyById.get(draggingId)!)}
+                  {teamBoxLabel(familyById.get(draggingId)!)}
                 </div>
               ) : null}
             </DragOverlay>
@@ -563,7 +600,10 @@ export default function CleaningPage() {
 
         {/* ===== 명단 ===== */}
         <TabsContent value="roster" className="space-y-3">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={exportRoster}>
+              <Download className="w-4 h-4" /> Excel 내보내기
+            </Button>
             <Button size="sm" variant="outline" onClick={() => window.print()}>
               <Printer className="w-4 h-4" /> 인쇄
             </Button>
@@ -587,7 +627,14 @@ export default function CleaningPage() {
                     ) : (
                       <ul className="space-y-1 text-sm">
                         {list.map((f) => (
-                          <li key={f.id}>• {formatFamilyName(f)}</li>
+                          <li key={f.id}>
+                            <span className="font-medium">• {teamBoxLabel(f)}</span>
+                            {!f.isSingle && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                ({f.members.map((m) => m.name).join(", ")})
+                              </span>
+                            )}
+                          </li>
                         ))}
                       </ul>
                     )}
@@ -636,6 +683,28 @@ export default function CleaningPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!memberDialogFamily} onOpenChange={(o) => !o && setMemberDialogFamily(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {memberDialogFamily ? teamBoxLabel(memberDialogFamily) : ""}
+            </DialogTitle>
+            <DialogDescription>가족 구성원 ({memberDialogFamily?.members.length ?? 0}명)</DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-1 text-sm">
+            {memberDialogFamily?.members.map((m) => (
+              <li key={m.id} className="flex items-center gap-2">
+                <span className="font-medium">{m.name}</span>
+                {m.gender && <span className="text-xs text-muted-foreground">({m.gender})</span>}
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMemberDialogFamily(null)}>닫기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -670,19 +739,20 @@ function DropColumn({
   );
 }
 
-function FamilyChip({ family }: { family: FamilyView }) {
+function FamilyChip({ family, label, onOpen }: { family: FamilyView; label: string; onOpen: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: family.id });
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onDoubleClick={onOpen}
       className={`px-2 py-1.5 rounded-md border bg-background text-xs cursor-grab active:cursor-grabbing ${
         isDragging ? "opacity-40" : ""
       }`}
-      title={`출석 점수: ${(family.score * 100).toFixed(0)}%`}
+      title={`더블클릭: 가족 보기 · 출석 점수: ${(family.score * 100).toFixed(0)}%`}
     >
-      <div className="font-medium truncate">{formatFamilyName(family)}</div>
+      <div className="font-medium truncate">{label}</div>
       <div className="text-[10px] text-muted-foreground">
         {family.members.length}명 · {Math.round(family.score * 100)}%
       </div>
