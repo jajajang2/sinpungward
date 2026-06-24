@@ -21,7 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2 } from "lucide-react";
+import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import {
   DndContext,
   DragOverlay,
