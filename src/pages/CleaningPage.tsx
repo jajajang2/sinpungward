@@ -43,6 +43,7 @@ type Member = {
   id: string;
   name: string;
   gender: string | null;
+  birth_date: string | null;
 };
 type Team = {
   id: string;
@@ -87,6 +88,21 @@ interface FamilyView {
 
 const DEFAULT_CYCLE = ["B", "C", "D", "E"];
 
+const calcAge = (bd?: string | null): number | null => {
+  if (!bd) return null;
+  const d = new Date(bd);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+};
+const nameWithAge = (m: { name: string; birth_date?: string | null }) => {
+  const a = calcAge(m.birth_date ?? null);
+  return a === null ? m.name : `${m.name}(${a}세)`;
+};
+
 export default function CleaningPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -110,7 +126,7 @@ export default function CleaningPage() {
   const loadAll = async () => {
     setLoading(true);
     const [m, t, f, fm, a, s, att, ci] = await Promise.all([
-      supabase.from("members").select("id, name, gender"),
+      supabase.from("members").select("id, name, gender, birth_date"),
       supabase.from("teams").select("*").order("sort_order"),
       supabase.from("families").select("*"),
       supabase.from("family_members").select("*"),
@@ -407,7 +423,7 @@ export default function CleaningPage() {
         return;
       }
       list.forEach((f) => {
-        const memberNames = f.members.map((m) => m.name).join(", ");
+        const memberNames = f.members.map(nameWithAge).join(", ");
         rows.push({
           조: `${t.code}조 (${t.name})`,
           가족: teamBoxLabel(f),
@@ -631,7 +647,7 @@ export default function CleaningPage() {
                             <span className="font-medium">• {teamBoxLabel(f)}</span>
                             {!f.isSingle && (
                               <span className="text-xs text-muted-foreground ml-1">
-                                ({f.members.map((m) => m.name).join(", ")})
+                                ({f.members.map(nameWithAge).join(", ")})
                               </span>
                             )}
                           </li>
@@ -696,7 +712,8 @@ export default function CleaningPage() {
             {memberDialogFamily?.members.map((m) => (
               <li key={m.id} className="flex items-center gap-2">
                 <span className="font-medium">{m.name}</span>
-                {m.gender && <span className="text-xs text-muted-foreground">({m.gender})</span>}
+                {(() => { const a = calcAge(m.birth_date); return a !== null && <span className="text-xs text-muted-foreground">({a}세)</span>; })()}
+                {m.gender && <span className="text-xs text-muted-foreground">· {m.gender}</span>}
               </li>
             ))}
           </ul>

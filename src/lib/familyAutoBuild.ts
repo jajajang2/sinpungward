@@ -32,13 +32,20 @@ const calcAge = (bd?: string | null): number | null => {
   return age;
 };
 
-const staysWithParents = (m: Member | undefined): boolean => {
+/**
+ * 자녀가 부모 가족에 머무는 조건:
+ *  - 본인이 결혼하지 않았고
+ *  - 본인에게 자녀가 없을 때
+ * (나이는 무관. 손주가 생긴 자녀는 분리되어 자신의 가족을 이룸)
+ */
+const staysWithParents = (
+  m: Member | undefined,
+  hasOwnChildren: boolean
+): boolean => {
   if (!m) return false;
   if (m.marriage_date) return false;
-  const age = calcAge(m.birth_date);
-  // 나이를 알 수 없으면 부모와 함께 묶음 (안전 기본값)
-  if (age === null) return true;
-  return age < 19;
+  if (hasOwnChildren) return false;
+  return true;
 };
 
 export async function rebuildFamilies(): Promise<BuildResult> {
@@ -55,7 +62,14 @@ export async function rebuildFamilies(): Promise<BuildResult> {
   const memberMap = new Map<string, Member>(members?.map((m) => [m.id, m as Member]) ?? []);
   const allRels = (rels ?? []) as Rel[];
 
-  // 가족 구성용 인접 리스트: spouse + (부모↔자녀, 단 자녀가 미혼이고 만 19세 미만)
+  // 각 회원의 "본인 자녀 존재 여부" 미리 계산
+  const hasChildren = new Set<string>();
+  for (const r of allRels) {
+    if (r.relation_type === "child") hasChildren.add(r.member_id);
+    if (r.relation_type === "parent") hasChildren.add(r.related_member_id);
+  }
+
+  // 가족 구성용 인접 리스트: spouse + (부모↔자녀, 단 자녀가 미혼이고 본인 자녀 없음)
   const adj = new Map<string, Set<string>>();
   const addEdge = (a: string, b: string) => {
     if (!adj.has(a)) adj.set(a, new Set());
@@ -70,11 +84,13 @@ export async function rebuildFamilies(): Promise<BuildResult> {
       addEdge(r.member_id, r.related_member_id);
     } else if (r.relation_type === "parent") {
       // member is parent of related
-      if (staysWithParents(memberMap.get(r.related_member_id))) {
+      const child = memberMap.get(r.related_member_id);
+      if (staysWithParents(child, hasChildren.has(r.related_member_id))) {
         addEdge(r.member_id, r.related_member_id);
       }
     } else if (r.relation_type === "child") {
-      if (staysWithParents(memberMap.get(r.member_id))) {
+      const child = memberMap.get(r.member_id);
+      if (staysWithParents(child, hasChildren.has(r.member_id))) {
         addEdge(r.member_id, r.related_member_id);
       }
     }
