@@ -388,6 +388,42 @@ export default function CleaningPage() {
   const familiesByTeam = (teamId: string) =>
     assignments.filter((a) => a.team_id === teamId).map((a) => familyById.get(a.family_id)).filter(Boolean) as FamilyView[];
 
+  // 팀 박스용 라벨: 가족이면 "{head}의 가족", 독신이면 이름만
+  const teamBoxLabel = (f: FamilyView) => {
+    const headName = f.head?.name ?? "(미지정)";
+    return f.isSingle ? headName : `${headName}의 가족`;
+  };
+
+  // 가족 멤버 보기 다이얼로그
+  const [memberDialogFamily, setMemberDialogFamily] = useState<FamilyView | null>(null);
+
+  // Excel export
+  const exportRoster = () => {
+    const rows: Record<string, string>[] = [];
+    teams.forEach((t) => {
+      const list = familiesByTeam(t.id);
+      if (list.length === 0) {
+        rows.push({ 조: `${t.code}조 (${t.name})`, 가족: "(배정 없음)", 구성원: "" });
+        return;
+      }
+      list.forEach((f) => {
+        const memberNames = f.members.map((m) => m.name).join(", ");
+        rows.push({
+          조: `${t.code}조 (${t.name})`,
+          가족: teamBoxLabel(f),
+          구성원: memberNames,
+        });
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 16 }, { wch: 20 }, { wch: 50 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "청소조 명단");
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `청소조_명단_${today}.xlsx`);
+    toast({ title: "내보내기 완료", description: `${rows.length}행 내보냈습니다.` });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
