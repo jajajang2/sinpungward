@@ -688,21 +688,9 @@ export default function CleaningPage() {
                             if (m.id !== headId && m.id !== spouseId) ordered.push(m);
                           }
                           const headName = f.head?.name ?? f.members[0]?.name ?? "(미상)";
-                          const rate = f.head
-                            ? Math.round(
-                                ((attendanceDates.get(f.head.id)?.size ?? 0) /
-                                  (allServiceDates.size || 1)) *
-                                  100
-                              )
-                            : 0;
                           return (
                             <li key={f.id} className="border-b border-border/50 pb-1.5 last:border-0">
-                              <div className="font-bold flex items-center justify-between gap-2">
-                                <span>{headName} 가족</span>
-                                <span className="text-[10px] font-normal text-muted-foreground">
-                                  {rate}%
-                                </span>
-                              </div>
+                              <div className="font-bold">{headName} 가족</div>
                               {!f.isSingle && (
                                 <div className="text-xs text-muted-foreground mt-0.5">
                                   {ordered.map(nameWithAge).join(", ")}
