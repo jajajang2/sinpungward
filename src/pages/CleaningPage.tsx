@@ -413,31 +413,61 @@ export default function CleaningPage() {
   // 가족 멤버 보기 다이얼로그
   const [memberDialogFamily, setMemberDialogFamily] = useState<FamilyView | null>(null);
 
-  // Excel export
+  // Excel export — 조별 시트, [조][가족][구성원] 컬럼, 구성원 줄바꿈
   const exportRoster = () => {
-    const rows: Record<string, string>[] = [];
-    teams.forEach((t) => {
-      const list = familiesByTeam(t.id);
-      if (list.length === 0) {
-        rows.push({ 조: `${t.code}조 (${t.name})`, 가족: "(배정 없음)", 구성원: "" });
-        return;
-      }
-      list.forEach((f) => {
-        const memberNames = f.members.map(nameWithAge).join(", ");
-        rows.push({
-          조: `${t.code}조 (${t.name})`,
-          가족: teamBoxLabel(f),
-          구성원: memberNames,
-        });
-      });
-    });
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [{ wch: 16 }, { wch: 20 }, { wch: 50 }];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "청소조 명단");
+    const sortedTeams = [...teams].sort((a, b) => a.sort_order - b.sort_order);
+    let totalRows = 0;
+
+    sortedTeams.forEach((t) => {
+      const teamName = t.name || `${t.code}조`;
+      const list = familiesByTeam(t.id);
+      const rows: Record<string, string>[] = [];
+
+      if (list.length === 0) {
+        rows.push({ 조: teamName, 가족: "(배정 없음)", 구성원: "" });
+      } else {
+        list.forEach((f) => {
+          // 구성원 정렬: head → spouse → child
+          const headId = f.head?.id;
+          const spouseId = f.spouse?.id;
+          const ordered: Member[] = [];
+          if (f.head) ordered.push(f.head);
+          if (f.spouse) ordered.push(f.spouse);
+          for (const m of f.members) {
+            if (m.id !== headId && m.id !== spouseId) ordered.push(m);
+          }
+          const familyHeadName = f.head?.name ?? f.members[0]?.name ?? "(미상)";
+          rows.push({
+            조: teamName,
+            가족: `${familyHeadName} 가족`,
+            구성원: ordered.map(nameWithAge).join("\n"),
+          });
+        });
+      }
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws["!cols"] = [{ wch: 12 }, { wch: 18 }, { wch: 40 }];
+      // 줄바꿈이 표시되도록 wrapText 적용
+      const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
+      for (let R = range.s.r; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = ws[addr];
+          if (cell) {
+            cell.s = { alignment: { wrapText: true, vertical: "top" } };
+          }
+        }
+      }
+      // 시트명 안전화 (Excel 시트명 제한 문자 제거, 31자 이내)
+      const safeName = teamName.replace(/[\\/?*:[\]]/g, "").slice(0, 31) || `조${t.sort_order}`;
+      XLSX.utils.book_append_sheet(wb, ws, safeName);
+      totalRows += rows.length;
+    });
+
     const today = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `청소조_명단_${today}.xlsx`);
-    toast({ title: "내보내기 완료", description: `${rows.length}행 내보냈습니다.` });
+    toast({ title: "내보내기 완료", description: `${sortedTeams.length}개 시트, ${totalRows}행 내보냈습니다.` });
   };
 
   if (loading) {
