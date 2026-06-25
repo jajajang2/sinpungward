@@ -1,26 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Member } from "@/types/church";
 
-type Rel = { member_id: string; related_member_id: string; relation_type: "spouse" | "parent" | "child" | "sibling" };
+type Rel = {
+  member_id: string;
+  related_member_id: string;
+  relation_type: "spouse" | "parent" | "child" | "sibling";
+};
 
 interface BuildResult {
   familiesCreated: number;
   membersAssigned: number;
 }
 
-/**
- * member_relations 그래프(부부/부모/자녀)로부터 가족 그룹을 만들고
- * families / family_members 테이블에 upsert.
- *
- * 규칙:
- * - 부부(spouse)는 같은 가족
- * - 자녀(child)는 결혼하지 않았고 만 19세 미만인 경우에만 부모 가족에 포함
- *   (결혼했거나 만 19세 이상인 자녀는 부모 가족에서 분리되어 독립 가족 형성)
- * - 가족 내 남성을 head로, 여성을 spouse로
- * - 가족 내 head 외 회원이 없으면 isSingle 가족
- *
- * 기존 데이터는 전부 삭제 후 재구성(파괴적). UI에서 확인 후 호출.
- */
 const calcAge = (bd?: string | null): number | null => {
   if (!bd) return null;
   const d = new Date(bd);
@@ -33,21 +24,18 @@ const calcAge = (bd?: string | null): number | null => {
 };
 
 /**
- * 자녀가 부모 가족에 머무는 조건:
- *  - 본인이 결혼하지 않았고
- *  - 본인에게 자녀가 없을 때
- * (나이는 무관. 손주가 생긴 자녀는 분리되어 자신의 가족을 이룸)
+ * 가족 단위 재구성 (핵가족 기준).
+ *
+ * 규칙:
+ *  1) 부부는 한 가족. 남편이 head, 아내가 spouse.
+ *  2) 결혼한 사람은 부모 가족에서 분리되어 본인이 head인 새 가족.
+ *  3) 자녀는 본인의 직계 부모(가능하면 아빠)의 가족에 child로 소속.
+ *  4) 미혼·자녀 없음:
+ *      - 만 19세 미만 또는 birth_date 없음 → 부모 가족에 child
+ *      - 만 19세 이상이면서 부모도 명단에 없음(혹은 부모 가족 없음) → single
+ *  5) 배우자 없이 자녀만 있는 사람도 본인이 head인 가족.
+ *  6) birth_date 없으면 미성년으로 간주(어린 자녀가 1인 가족으로 빠지지 않게).
  */
-const staysWithParents = (
-  m: Member | undefined,
-  hasOwnChildren: boolean
-): boolean => {
-  if (!m) return false;
-  if (m.marriage_date) return false;
-  if (hasOwnChildren) return false;
-  return true;
-};
-
 export async function rebuildFamilies(): Promise<BuildResult> {
   const { data: members, error: mErr } = await supabase
     .from("members")
@@ -59,113 +47,169 @@ export async function rebuildFamilies(): Promise<BuildResult> {
     .select("member_id, related_member_id, relation_type");
   if (rErr) throw rErr;
 
-  const memberMap = new Map<string, Member>(members?.map((m) => [m.id, m as Member]) ?? []);
+  const memberMap = new Map<string, Member>(
+    (members ?? []).map((m) => [m.id, m as Member])
+  );
   const allRels = (rels ?? []) as Rel[];
 
-  // 각 회원의 "본인 자녀 존재 여부" 미리 계산
+  // ---- 관계 인덱스 ----
+  // spouse: 양방향
+  const spouseMap = new Map<string, Set<string>>();
+  // parentsOf: childId -> parentIds[]
+  const parentsOf = new Map<string, string[]>();
+  // hasChildren: 본인이 부모인 경우
   const hasChildren = new Set<string>();
-  for (const r of allRels) {
-    if (r.relation_type === "child") hasChildren.add(r.member_id);
-    if (r.relation_type === "parent") hasChildren.add(r.related_member_id);
-  }
 
-  // 가족 구성용 인접 리스트: spouse + (부모↔자녀, 단 자녀가 미혼이고 본인 자녀 없음)
-  const adj = new Map<string, Set<string>>();
-  const addEdge = (a: string, b: string) => {
-    if (!adj.has(a)) adj.set(a, new Set());
-    if (!adj.has(b)) adj.set(b, new Set());
-    adj.get(a)!.add(b);
-    adj.get(b)!.add(a);
+  const addParent = (childId: string, parentId: string) => {
+    if (!parentsOf.has(childId)) parentsOf.set(childId, []);
+    const arr = parentsOf.get(childId)!;
+    if (!arr.includes(parentId)) arr.push(parentId);
   };
-  for (const id of memberMap.keys()) adj.set(id, new Set());
 
   for (const r of allRels) {
     if (r.relation_type === "spouse") {
-      addEdge(r.member_id, r.related_member_id);
+      if (!spouseMap.has(r.member_id)) spouseMap.set(r.member_id, new Set());
+      spouseMap.get(r.member_id)!.add(r.related_member_id);
     } else if (r.relation_type === "parent") {
-      // member is parent of related
-      const child = memberMap.get(r.related_member_id);
-      if (staysWithParents(child, hasChildren.has(r.related_member_id))) {
-        addEdge(r.member_id, r.related_member_id);
-      }
+      // member_id = 자녀, related_member_id = 부모
+      addParent(r.member_id, r.related_member_id);
+      hasChildren.add(r.related_member_id);
     } else if (r.relation_type === "child") {
-      const child = memberMap.get(r.member_id);
-      if (staysWithParents(child, hasChildren.has(r.member_id))) {
-        addEdge(r.member_id, r.related_member_id);
+      // member_id = 부모, related_member_id = 자녀
+      addParent(r.related_member_id, r.member_id);
+      hasChildren.add(r.member_id);
+    }
+  }
+
+  // ---- 가족 구성 ----
+  interface FamilyDraft {
+    headId: string;
+    spouseId?: string;
+    childIds: Set<string>;
+  }
+  const families = new Map<string, FamilyDraft>(); // key -> draft
+  const familyOf = new Map<string, string>(); // memberId -> family key
+
+  const pickHead = (a: Member, b: Member): [Member, Member] => {
+    // 남편(남) 우선, 같으면 나이 많은 쪽
+    if (a.gender === "남" && b.gender !== "남") return [a, b];
+    if (b.gender === "남" && a.gender !== "남") return [b, a];
+    const ab = a.birth_date ?? "9999";
+    const bb = b.birth_date ?? "9999";
+    return ab <= bb ? [a, b] : [b, a];
+  };
+
+  // 1) 부부 가족 형성
+  const visited = new Set<string>();
+  for (const [aId, sps] of spouseMap) {
+    if (visited.has(aId)) continue;
+    const a = memberMap.get(aId);
+    if (!a) continue;
+    // 첫 번째 유효한 배우자만 사용
+    let partner: Member | undefined;
+    for (const bId of sps) {
+      if (visited.has(bId)) continue;
+      const b = memberMap.get(bId);
+      if (b) {
+        partner = b;
+        break;
       }
     }
+    if (!partner) continue;
+    const [head, spouse] = pickHead(a, partner);
+    const key = `c:${head.id}`;
+    families.set(key, { headId: head.id, spouseId: spouse.id, childIds: new Set() });
+    familyOf.set(head.id, key);
+    familyOf.set(spouse.id, key);
+    visited.add(head.id);
+    visited.add(spouse.id);
   }
 
-  // 연결 컴포넌트 탐색
-  const visited = new Set<string>();
-  const components: string[][] = [];
-  for (const id of memberMap.keys()) {
-    if (visited.has(id)) continue;
-    const stack = [id];
-    const comp: string[] = [];
-    while (stack.length) {
-      const cur = stack.pop()!;
-      if (visited.has(cur)) continue;
-      visited.add(cur);
-      comp.push(cur);
-      for (const nb of adj.get(cur) ?? []) if (!visited.has(nb)) stack.push(nb);
+  // 2) 배우자는 없지만 자녀가 있는 사람 → 본인 head 가족
+  for (const m of memberMap.values()) {
+    if (familyOf.has(m.id)) continue;
+    if (hasChildren.has(m.id)) {
+      const key = `h:${m.id}`;
+      families.set(key, { headId: m.id, childIds: new Set() });
+      familyOf.set(m.id, key);
     }
-    components.push(comp);
   }
 
-  // 기존 데이터 클리어
+  // 3) 나머지(미혼·자녀 없음)를 부모 가족에 붙이거나 single
+  for (const m of memberMap.values()) {
+    if (familyOf.has(m.id)) continue;
+
+    const age = calcAge(m.birth_date);
+    const isMinor = age === null || age < 19; // birth_date 없으면 미성년 취급
+
+    // 부모 후보: 명단에 있고, 가족이 만들어진 부모만
+    const parentIds = (parentsOf.get(m.id) ?? []).filter(
+      (pid) => memberMap.has(pid) && familyOf.has(pid)
+    );
+    // 아빠 우선
+    parentIds.sort((x, y) => {
+      const gx = memberMap.get(x)?.gender;
+      const gy = memberMap.get(y)?.gender;
+      if (gx === "남" && gy !== "남") return -1;
+      if (gy === "남" && gx !== "남") return 1;
+      return 0;
+    });
+
+    if (isMinor && parentIds.length > 0) {
+      const famKey = familyOf.get(parentIds[0])!;
+      families.get(famKey)!.childIds.add(m.id);
+      familyOf.set(m.id, famKey);
+    } else {
+      const key = `s:${m.id}`;
+      families.set(key, { headId: m.id, childIds: new Set() });
+      familyOf.set(m.id, key);
+    }
+  }
+
+  // ---- DB 반영: 기존 데이터 삭제 후 재삽입 ----
   await supabase.from("team_assignments").delete().not("id", "is", null);
   await supabase.from("family_members").delete().not("id", "is", null);
   await supabase.from("families").delete().not("id", "is", null);
 
   let membersAssigned = 0;
-  for (const comp of components) {
-    if (comp.length === 0) continue;
-    const compMembers = comp.map((id) => memberMap.get(id)!).filter(Boolean);
+  let familiesCreated = 0;
 
-    // head 선정: 남성 우선, 그 안에서 나이 많은 순
-    const males = compMembers.filter((m) => m.gender === "남");
-    const females = compMembers.filter((m) => m.gender === "여");
-    const byAge = (a: Member, b: Member) =>
-      (a.birth_date ?? "9999") < (b.birth_date ?? "9999") ? -1 : 1;
-    males.sort(byAge);
-    females.sort(byAge);
-
-    let head: Member;
-    let spouse: Member | undefined;
-    if (males.length > 0) {
-      head = males[0];
-      // head의 spouse 관계가 있는 여성을 우선 spouse로
-      const spouseIds = new Set(
-        allRels
-          .filter((r) => r.relation_type === "spouse" && (r.member_id === head.id || r.related_member_id === head.id))
-          .map((r) => (r.member_id === head.id ? r.related_member_id : r.member_id))
-      );
-      spouse = females.find((f) => spouseIds.has(f.id)) ?? females[0];
-    } else {
-      head = compMembers.sort(byAge)[0];
-    }
-
+  for (const draft of families.values()) {
     const { data: fam, error: fErr } = await supabase
       .from("families")
-      .insert({ head_member_id: head.id })
+      .insert({ head_member_id: draft.headId })
       .select("id")
       .single();
     if (fErr || !fam) throw fErr ?? new Error("family insert failed");
 
-    const isSingle = compMembers.length === 1;
-    const rows = compMembers.map((m) => {
-      let role: "head" | "spouse" | "child" | "single";
-      if (m.id === head.id) role = isSingle ? "single" : "head";
-      else if (spouse && m.id === spouse.id) role = "spouse";
-      else role = "child";
-      return { family_id: fam.id, member_id: m.id, family_role: role };
+    const isSingle = !draft.spouseId && draft.childIds.size === 0;
+    const rows: {
+      family_id: string;
+      member_id: string;
+      family_role: "head" | "spouse" | "child" | "single";
+    }[] = [];
+
+    rows.push({
+      family_id: fam.id,
+      member_id: draft.headId,
+      family_role: isSingle ? "single" : "head",
     });
+    if (draft.spouseId) {
+      rows.push({
+        family_id: fam.id,
+        member_id: draft.spouseId,
+        family_role: "spouse",
+      });
+    }
+    for (const cid of draft.childIds) {
+      rows.push({ family_id: fam.id, member_id: cid, family_role: "child" });
+    }
 
     const { error: fmErr } = await supabase.from("family_members").insert(rows);
     if (fmErr) throw fmErr;
     membersAssigned += rows.length;
+    familiesCreated += 1;
   }
 
-  return { familiesCreated: components.length, membersAssigned };
+  return { familiesCreated, membersAssigned };
 }
