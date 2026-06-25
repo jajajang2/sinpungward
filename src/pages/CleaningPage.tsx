@@ -86,7 +86,7 @@ interface FamilyView {
   score: number; // 0~1
 }
 
-const DEFAULT_CYCLE = ["B", "C", "D", "E"];
+const DEFAULT_CYCLE = ["A", "B", "C", "D"];
 
 const calcAge = (bd?: string | null): number | null => {
   if (!bd) return null;
@@ -528,7 +528,7 @@ export default function CleaningPage() {
               </div>
               <div className="md:col-span-1">
                 <Label className="text-xs">순환 순서 (콤마)</Label>
-                <Input value={genCycle} onChange={(e) => setGenCycle(e.target.value)} placeholder="B,C,D,E,A" />
+                <Input value={genCycle} onChange={(e) => setGenCycle(e.target.value)} placeholder="A,B,C,D" />
               </div>
               <Button onClick={generateSchedule}>일정 생성</Button>
             </CardContent>
@@ -654,34 +654,63 @@ export default function CleaningPage() {
               <Printer className="w-4 h-4" /> 인쇄
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 h-[calc(100vh-220px)]">
             {teams.map((t) => {
-              const list = familiesByTeam(t.id);
+              const list = [...familiesByTeam(t.id)].sort((a, b) => {
+                const sa = a.head ? (attendanceDates.get(a.head.id)?.size ?? 0) : 0;
+                const sb = b.head ? (attendanceDates.get(b.head.id)?.size ?? 0) : 0;
+                const denom = allServiceDates.size || 1;
+                const ra = sa / denom;
+                const rb = sb / denom;
+                if (rb !== ra) return rb - ra;
+                return (a.head?.name ?? "").localeCompare(b.head?.name ?? "");
+              });
               return (
-                <Card key={t.id}>
-                  <CardHeader>
+                <Card key={t.id} className="flex flex-col overflow-hidden">
+                  <CardHeader className="pb-2 shrink-0">
                     <CardTitle className="text-base flex items-center justify-between">
-                      <span>
-                        {t.code}조 · {t.name}
-                      </span>
+                      <span>{t.code}조</span>
                       <span className="text-xs text-muted-foreground">{list.length}가족</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 overflow-y-auto pt-0">
                     {list.length === 0 ? (
                       <p className="text-sm text-muted-foreground">배정된 가족 없음</p>
                     ) : (
-                      <ul className="space-y-1 text-sm">
-                        {list.map((f) => (
-                          <li key={f.id}>
-                            <span className="font-medium">• {teamBoxLabel(f)}</span>
-                            {!f.isSingle && (
-                              <span className="text-xs text-muted-foreground ml-1">
-                                ({f.members.map(nameWithAge).join(", ")})
-                              </span>
-                            )}
-                          </li>
-                        ))}
+                      <ul className="space-y-2 text-sm">
+                        {list.map((f) => {
+                          const headId = f.head?.id;
+                          const spouseId = f.spouse?.id;
+                          const ordered: Member[] = [];
+                          if (f.head) ordered.push(f.head);
+                          if (f.spouse) ordered.push(f.spouse);
+                          for (const m of f.members) {
+                            if (m.id !== headId && m.id !== spouseId) ordered.push(m);
+                          }
+                          const headName = f.head?.name ?? f.members[0]?.name ?? "(미상)";
+                          const rate = f.head
+                            ? Math.round(
+                                ((attendanceDates.get(f.head.id)?.size ?? 0) /
+                                  (allServiceDates.size || 1)) *
+                                  100
+                              )
+                            : 0;
+                          return (
+                            <li key={f.id} className="border-b border-border/50 pb-1.5 last:border-0">
+                              <div className="font-bold flex items-center justify-between gap-2">
+                                <span>{headName} 가족</span>
+                                <span className="text-[10px] font-normal text-muted-foreground">
+                                  {rate}%
+                                </span>
+                              </div>
+                              {!f.isSingle && (
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  {ordered.map(nameWithAge).join(", ")}
+                                </div>
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </CardContent>
