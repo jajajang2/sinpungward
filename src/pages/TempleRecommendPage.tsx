@@ -414,11 +414,6 @@ const TempleRecommendPage = () => {
         <TabsContent value="non-holders" className="mt-4">
           <NonHoldersView members={members} recommends={recommendsLite} reload={fetchAll} />
         </TabsContent>
-          <Dashboard rows={rows} />
-        </TabsContent>
-        <TabsContent value="list" className="mt-4">
-          <RecommendList rows={rows} />
-        </TabsContent>
         <TabsContent value="expiry" className="mt-4">
           <ExpiryManagementView rows={rows} interviews={interviews} reload={fetchAll} />
         </TabsContent>
