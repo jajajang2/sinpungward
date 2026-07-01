@@ -9,6 +9,7 @@ import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save } from "lu
 import { cn } from "@/lib/utils";
 import BlockNoteEditorView from "@/components/meeting/BlockNoteEditor";
 import BlockNoteReadOnly from "@/components/meeting/BlockNoteReadOnly";
+import { getBishopricTemplateJSON, isEditorEmpty } from "@/lib/bishopricTemplate";
 
 interface MeetingMinute {
   id: string;
