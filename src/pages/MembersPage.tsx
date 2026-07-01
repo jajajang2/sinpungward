@@ -198,15 +198,29 @@ const MembersPage = () => {
 
   const fetchMembers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('members')
-      .select('*')
-      .order('name');
+    const [{ data, error }, relRes] = await Promise.all([
+      supabase.from('members').select('*').order('name'),
+      supabase.from('member_relations').select('member_id, related_member_id, relation_type'),
+    ]);
     if (error) {
       toast({ title: '오류', description: '회원 목록을 불러오지 못했습니다.', variant: 'destructive' });
     } else {
       setMembers(data || []);
     }
+    const excluded = new Set<string>();
+    if (!relRes.error && relRes.data) {
+      for (const r of relRes.data as any[]) {
+        if (r.relation_type === "spouse") {
+          excluded.add(r.member_id);
+          excluded.add(r.related_member_id);
+        } else if (r.relation_type === "child") {
+          excluded.add(r.member_id);
+        } else if (r.relation_type === "parent") {
+          excluded.add(r.related_member_id);
+        }
+      }
+    }
+    setExcludedFromSingles(excluded);
     setLoading(false);
   };
 
