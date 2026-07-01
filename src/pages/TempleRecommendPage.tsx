@@ -349,14 +349,17 @@ const RecommendList = ({ rows }: { rows: RecommendRow[] }) => {
 };
 
 import { ExpiryManagementView, InterviewKanbanView, InterviewRow } from "@/components/temple/InterviewViews";
+import { NonHoldersView, NonHolderMember, RecommendLite } from "@/components/temple/NonHoldersView";
 
 const TempleRecommendPage = () => {
   const [rows, setRows] = useState<RecommendRow[]>([]);
   const [interviews, setInterviews] = useState<InterviewRow[]>([]);
+  const [members, setMembers] = useState<NonHolderMember[]>([]);
+  const [recommendsLite, setRecommendsLite] = useState<RecommendLite[]>([]);
   const { toast } = useToast();
 
   const fetchAll = async () => {
-    const [{ data: recs, error: e1 }, { data: ivs, error: e2 }] = await Promise.all([
+    const [{ data: recs, error: e1 }, { data: ivs, error: e2 }, { data: mem, error: e3 }, { data: recLite, error: e4 }] = await Promise.all([
       supabase
         .from("temple_recommends")
         .select("id, lcr_name, gender, age_at_import, recommend_type, expiry_month, lcr_status_raw")
@@ -366,11 +369,23 @@ const TempleRecommendPage = () => {
         .select("id, recommend_id, interview_type, assigned_to, status, scheduled_at, completed_at, notes")
         .order("created_at", { ascending: false })
         .range(0, 9999),
+      supabase
+        .from("members")
+        .select("id, name, gender, birth_date")
+        .range(0, 9999),
+      supabase
+        .from("temple_recommends")
+        .select("id, lcr_name, member_id, recommend_type")
+        .range(0, 9999),
     ]);
     if (e1) { toast({ title: "추천서 로드 실패", description: e1.message, variant: "destructive" }); }
     else setRows((recs ?? []) as RecommendRow[]);
     if (e2) { toast({ title: "접견 로드 실패", description: e2.message, variant: "destructive" }); }
     else setInterviews((ivs ?? []) as InterviewRow[]);
+    if (e3) { toast({ title: "회원 로드 실패", description: e3.message, variant: "destructive" }); }
+    else setMembers((mem ?? []) as NonHolderMember[]);
+    if (e4) { toast({ title: "매칭 데이터 로드 실패", description: e4.message, variant: "destructive" }); }
+    else setRecommendsLite((recLite ?? []) as RecommendLite[]);
   };
 
   useEffect(() => { fetchAll(); }, []);
