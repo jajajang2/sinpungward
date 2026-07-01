@@ -399,6 +399,11 @@ export default function MeetingMinutesPage() {
                       onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))}
                       className="h-7 flex-1 min-w-[180px] border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
                     />
+                    {form.category === "감독단회의" && (
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={applyBishopricTemplate}>
+                        감독단 양식 불러오기
+                      </Button>
+                    )}
                   </div>
 
 
