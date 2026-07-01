@@ -176,7 +176,16 @@ export default function CleaningPage() {
       fmByFamily.get(fm.family_id)!.push(fm);
     }
 
-    const sortedDates = Array.from(allServiceDates).sort();
+    // 최근 3개월 일요일 목록 (개인별 출석률과 동일 기준)
+    const today = new Date();
+    const start = new Date(today); start.setMonth(start.getMonth() - 3);
+    const sundays: string[] = [];
+    const cur = new Date(start);
+    while (cur.getDay() !== 0) cur.setDate(cur.getDate() + 1);
+    while (cur <= today) {
+      sundays.push(cur.toISOString().slice(0, 10));
+      cur.setDate(cur.getDate() + 7);
+    }
 
     return families.map((fam) => {
       const fms = fmByFamily.get(fam.id) ?? [];
@@ -186,24 +195,16 @@ export default function CleaningPage() {
       const head = headFm ? memberById.get(headFm.member_id) ?? null : null;
       const spouse = spouseFm ? memberById.get(spouseFm.member_id) ?? null : null;
 
-      // 점수: 가족 멤버 중 가장 이른 출석일 ~ 오늘 사이의 예배일 중,
-      // 가족이 1명이라도 출석한 날 / 전체 예배일
-      const familyDates = new Set<string>();
-      let earliest: string | null = null;
-      for (const mem of ms) {
-        const dates = attendanceDates.get(mem.id);
-        if (!dates) continue;
-        for (const d of dates) {
-          familyDates.add(d);
-          if (!earliest || d < earliest) earliest = d;
-        }
-      }
+      // 점수: 가족 멤버들의 최근 3개월 개인 출석률 평균 (0~1)
       let score = 0;
-      if (earliest) {
-        const today = new Date().toISOString().slice(0, 10);
-        const denom = sortedDates.filter((d) => d >= earliest! && d <= today).length;
-        const numer = Array.from(familyDates).filter((d) => d <= today).length;
-        score = denom > 0 ? numer / denom : 0;
+      if (ms.length > 0 && sundays.length > 0) {
+        let sum = 0;
+        for (const mem of ms) {
+          const dates = attendanceDates.get(mem.id);
+          const present = dates ? sundays.filter((d) => dates.has(d)).length : 0;
+          sum += present / sundays.length;
+        }
+        score = sum / ms.length;
       }
 
       return {
@@ -216,7 +217,7 @@ export default function CleaningPage() {
         score,
       };
     });
-  }, [families, familyMembers, members, attendanceDates, allServiceDates]);
+  }, [families, familyMembers, members, attendanceDates]);
 
   const teamByCode = useMemo(() => {
     const m = new Map<string, Team>();
