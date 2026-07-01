@@ -352,19 +352,32 @@ const TempleRecommendPage = () => {
   const [rows, setRows] = useState<RecommendRow[]>([]);
   const { toast } = useToast();
 
-  const fetchRows = async () => {
-    const { data, error } = await supabase
-      .from("temple_recommends")
-      .select("id, lcr_name, gender, age_at_import, recommend_type, expiry_month, lcr_status_raw")
-      .range(0, 9999);
-    if (error) {
-      toast({ title: "불러오기 실패", description: error.message, variant: "destructive" });
-      return;
-    }
-    setRows((data ?? []) as RecommendRow[]);
+import { ExpiryManagementView, InterviewKanbanView, InterviewRow } from "@/components/temple/InterviewViews";
+
+const TempleRecommendPage = () => {
+  const [rows, setRows] = useState<RecommendRow[]>([]);
+  const [interviews, setInterviews] = useState<InterviewRow[]>([]);
+  const { toast } = useToast();
+
+  const fetchAll = async () => {
+    const [{ data: recs, error: e1 }, { data: ivs, error: e2 }] = await Promise.all([
+      supabase
+        .from("temple_recommends")
+        .select("id, lcr_name, gender, age_at_import, recommend_type, expiry_month, lcr_status_raw")
+        .range(0, 9999),
+      supabase
+        .from("recommend_interviews")
+        .select("id, recommend_id, interview_type, assigned_to, status, scheduled_at, completed_at, notes")
+        .order("created_at", { ascending: false })
+        .range(0, 9999),
+    ]);
+    if (e1) { toast({ title: "추천서 로드 실패", description: e1.message, variant: "destructive" }); }
+    else setRows((recs ?? []) as RecommendRow[]);
+    if (e2) { toast({ title: "접견 로드 실패", description: e2.message, variant: "destructive" }); }
+    else setInterviews((ivs ?? []) as InterviewRow[]);
   };
 
-  useEffect(() => { fetchRows(); }, []);
+  useEffect(() => { fetchAll(); }, []);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-4">
@@ -376,6 +389,8 @@ const TempleRecommendPage = () => {
         <TabsList>
           <TabsTrigger value="dashboard">대시보드</TabsTrigger>
           <TabsTrigger value="list">추천서 목록</TabsTrigger>
+          <TabsTrigger value="expiry">만료 관리</TabsTrigger>
+          <TabsTrigger value="interview">접견 관리</TabsTrigger>
           <TabsTrigger value="import">명단 임포트</TabsTrigger>
         </TabsList>
         <TabsContent value="dashboard" className="mt-4">
@@ -383,6 +398,12 @@ const TempleRecommendPage = () => {
         </TabsContent>
         <TabsContent value="list" className="mt-4">
           <RecommendList rows={rows} />
+        </TabsContent>
+        <TabsContent value="expiry" className="mt-4">
+          <ExpiryManagementView rows={rows} interviews={interviews} reload={fetchAll} />
+        </TabsContent>
+        <TabsContent value="interview" className="mt-4">
+          <InterviewKanbanView rows={rows} interviews={interviews} reload={fetchAll} />
         </TabsContent>
         <TabsContent value="import" className="mt-4">
           <Tabs defaultValue="adult">
@@ -404,4 +425,5 @@ const TempleRecommendPage = () => {
 };
 
 export default TempleRecommendPage;
+
 
