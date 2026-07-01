@@ -482,7 +482,7 @@ const MembersPage = () => {
 
         <div className="flex-1 overflow-y-auto py-2">
           {GROUPS.map(group => {
-            const count = members.filter(group.filter).length;
+            const count = members.filter(group.filter).filter(m => !((group.id === "singles" || group.id === "singles_under35") && excludedFromSingles.has(m.id))).length;
             const isSelected = selectedGroupId === group.id;
             return (
               <button
