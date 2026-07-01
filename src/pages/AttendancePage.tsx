@@ -116,11 +116,16 @@ const monthOffset = (baseDate: Date, offset: number) => new Date(baseDate.getFul
 
 const formatSelectedDate = (date: Date) => format(date, "yyyy년 M월 d일 (EEE)", { locale: ko });
 
+interface FamilyRow { id: string; head_member_id: string | null; }
+interface FamilyMemberRow { family_id: string; member_id: string; family_role: "head" | "spouse" | "child" | "single"; }
+
 const AttendancePage = () => {
   const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [attendance, setAttendance] = useState<Record<string, Record<string, boolean>>>({});
   const [visitors, setVisitors] = useState<AttendanceVisitor[]>([]);
+  const [families, setFamilies] = useState<FamilyRow[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMemberRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingVisitor, setSavingVisitor] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
