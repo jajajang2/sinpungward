@@ -400,11 +400,20 @@ const TempleRecommendPage = () => {
         <TabsList>
           <TabsTrigger value="dashboard">대시보드</TabsTrigger>
           <TabsTrigger value="list">추천서 목록</TabsTrigger>
+          <TabsTrigger value="non-holders">미소지자 명단</TabsTrigger>
           <TabsTrigger value="expiry">만료 관리</TabsTrigger>
           <TabsTrigger value="interview">접견 관리</TabsTrigger>
           <TabsTrigger value="import">명단 임포트</TabsTrigger>
         </TabsList>
         <TabsContent value="dashboard" className="mt-4">
+          <Dashboard rows={rows} />
+        </TabsContent>
+        <TabsContent value="list" className="mt-4">
+          <RecommendList rows={rows} />
+        </TabsContent>
+        <TabsContent value="non-holders" className="mt-4">
+          <NonHoldersView members={members} recommends={recommendsLite} reload={fetchAll} />
+        </TabsContent>
           <Dashboard rows={rows} />
         </TabsContent>
         <TabsContent value="list" className="mt-4">
