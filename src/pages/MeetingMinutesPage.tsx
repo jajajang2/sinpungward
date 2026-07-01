@@ -45,10 +45,28 @@ export default function MeetingMinutesPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
 
   useEffect(() => {
     fetchMinutes();
   }, []);
+
+  // 새 회의록 작성 중 감독단회의 선택 & 에디터 비어있으면 템플릿 자동 삽입
+  useEffect(() => {
+    if (!isCreating) return;
+    if (form.category !== "감독단회의") return;
+    if (!isEditorEmpty(form.content)) return;
+    setForm((f) => ({ ...f, content: getBishopricTemplateJSON() }));
+    setEditorKey((k) => k + 1);
+  }, [isCreating, form.category]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyBishopricTemplate() {
+    if (!isEditorEmpty(form.content)) {
+      if (!window.confirm("현재 내용을 감독단 양식으로 덮어씁니다. 계속할까요?")) return;
+    }
+    setForm((f) => ({ ...f, content: getBishopricTemplateJSON() }));
+    setEditorKey((k) => k + 1);
+  }
 
 
   async function fetchMinutes() {
