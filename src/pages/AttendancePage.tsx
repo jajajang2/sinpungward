@@ -130,6 +130,7 @@ const AttendancePage = () => {
   const [focusedMonth, setFocusedMonth] = useState(() => monthOffset(new Date(), 0));
   const [motionDirection, setMotionDirection] = useState<"prev" | "next">("next");
   const [isVisitorDialogOpen, setIsVisitorDialogOpen] = useState(false);
+  const [excludedFromSingles, setExcludedFromSingles] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -142,10 +143,11 @@ const AttendancePage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [memberRes, attendanceRes, visitorRes] = await Promise.all([
+      const [memberRes, attendanceRes, visitorRes, relRes] = await Promise.all([
         supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
         supabase.from("attendance").select("*"),
         supabase.from("attendance_visitors").select("*").order("attendance_date", { ascending: false }).order("sort_order"),
+        supabase.from("member_relations").select("member_id, related_member_id, relation_type"),
       ]);
 
       if (memberRes.error) {
@@ -171,6 +173,21 @@ const AttendancePage = () => {
       } else {
         setVisitors((visitorRes.data as AttendanceVisitor[]) || []);
       }
+
+      const excluded = new Set<string>();
+      if (!relRes.error && relRes.data) {
+        for (const r of relRes.data as any[]) {
+          if (r.relation_type === "spouse") {
+            excluded.add(r.member_id);
+            excluded.add(r.related_member_id);
+          } else if (r.relation_type === "child") {
+            excluded.add(r.member_id);
+          } else if (r.relation_type === "parent") {
+            excluded.add(r.related_member_id);
+          }
+        }
+      }
+      setExcludedFromSingles(excluded);
     } catch (error) {
       toast({
         title: "오류",
@@ -207,10 +224,11 @@ const AttendancePage = () => {
 
     return members.filter((member) => {
       if (!selectedGroup.filter(member)) return false;
+      if (selectedGroup.id === "singles" && excludedFromSingles.has(member.id)) return false;
       if (!query) return true;
       return member.name.toLowerCase().includes(query);
     });
-  }, [memberSearch, members, selectedGroup]);
+  }, [memberSearch, members, selectedGroup, excludedFromSingles]);
 
   const selectedVisitors = useMemo(() => {
     if (!selectedDateStr) return [];
@@ -496,7 +514,7 @@ const AttendancePage = () => {
           <div className="flex gap-2 overflow-x-auto pb-1">
             {GROUPS.map((group) => {
               const isSelected = selectedGroupId === group.id;
-              const count = members.filter(group.filter).length;
+              const count = members.filter(group.filter).filter(m => !(group.id === "singles" && excludedFromSingles.has(m.id))).length;
               return (
                 <button
                   key={group.id}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Member } from "@/types/church";
@@ -144,6 +144,7 @@ const MembersPage = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteSelected, setShowDeleteSelected] = useState(false);
   const { toast } = useToast();
+  const [excludedFromSingles, setExcludedFromSingles] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
   const exitDeleteMode = () => {
@@ -197,15 +198,29 @@ const MembersPage = () => {
 
   const fetchMembers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('members')
-      .select('*')
-      .order('name');
+    const [{ data, error }, relRes] = await Promise.all([
+      supabase.from('members').select('*').order('name'),
+      supabase.from('member_relations').select('member_id, related_member_id, relation_type'),
+    ]);
     if (error) {
       toast({ title: '오류', description: '회원 목록을 불러오지 못했습니다.', variant: 'destructive' });
     } else {
       setMembers(data || []);
     }
+    const excluded = new Set<string>();
+    if (!relRes.error && relRes.data) {
+      for (const r of relRes.data as any[]) {
+        if (r.relation_type === "spouse") {
+          excluded.add(r.member_id);
+          excluded.add(r.related_member_id);
+        } else if (r.relation_type === "child") {
+          excluded.add(r.member_id);
+        } else if (r.relation_type === "parent") {
+          excluded.add(r.related_member_id);
+        }
+      }
+    }
+    setExcludedFromSingles(excluded);
     setLoading(false);
   };
 
@@ -241,7 +256,10 @@ const MembersPage = () => {
   const selectedGroup = GROUPS.find(g => g.id === selectedGroupId) ?? null;
 
   const groupMembers = selectedGroup
-    ? members.filter(selectedGroup.filter).filter(m =>
+    ? members.filter(selectedGroup.filter).filter(m => {
+        if ((selectedGroup.id === "singles" || selectedGroup.id === "singles_under35") && excludedFromSingles.has(m.id)) return false;
+        return true;
+      }).filter(m =>
         m.name.toLowerCase().includes(search.toLowerCase()) ||
         (m.phone || '').includes(search)
       )
@@ -464,7 +482,7 @@ const MembersPage = () => {
 
         <div className="flex-1 overflow-y-auto py-2">
           {GROUPS.map(group => {
-            const count = members.filter(group.filter).length;
+            const count = members.filter(group.filter).filter(m => !((group.id === "singles" || group.id === "singles_under35") && excludedFromSingles.has(m.id))).length;
             const isSelected = selectedGroupId === group.id;
             return (
               <button
