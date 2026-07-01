@@ -533,6 +533,66 @@ export type Database = {
         }
         Relationships: []
       }
+      recommend_interviews: {
+        Row: {
+          assigned_by: string | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          interview_type: string | null
+          member_id: string | null
+          notes: string | null
+          recommend_id: string
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          interview_type?: string | null
+          member_id?: string | null
+          notes?: string | null
+          recommend_id: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          interview_type?: string | null
+          member_id?: string | null
+          notes?: string | null
+          recommend_id?: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommend_interviews_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommend_interviews_recommend_id_fkey"
+            columns: ["recommend_id"]
+            isOneToOne: false
+            referencedRelation: "temple_recommends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sacrament_assignments: {
         Row: {
           created_at: string
@@ -685,6 +745,56 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      temple_recommends: {
+        Row: {
+          age_at_import: number | null
+          created_at: string
+          expiry_month: string | null
+          gender: string | null
+          id: string
+          last_imported_at: string
+          lcr_name: string
+          lcr_status_raw: string | null
+          member_id: string | null
+          recommend_type: string
+          updated_at: string
+        }
+        Insert: {
+          age_at_import?: number | null
+          created_at?: string
+          expiry_month?: string | null
+          gender?: string | null
+          id?: string
+          last_imported_at?: string
+          lcr_name: string
+          lcr_status_raw?: string | null
+          member_id?: string | null
+          recommend_type: string
+          updated_at?: string
+        }
+        Update: {
+          age_at_import?: number | null
+          created_at?: string
+          expiry_month?: string | null
+          gender?: string | null
+          id?: string
+          last_imported_at?: string
+          lcr_name?: string
+          lcr_status_raw?: string | null
+          member_id?: string | null
+          recommend_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temple_recommends_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
