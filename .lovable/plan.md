@@ -1,28 +1,36 @@
-# 누락된 부모 관계 보정
 
-`member_relations` 테이블에 아래 `child` 관계 4건을 INSERT 합니다. 트리거(`sync_member_relation`)가 자동으로 역방향 `parent`, 형제(sibling), 배우자→자녀 연결까지 처리해 주므로 한 줄씩만 넣으면 충분합니다.
+## 목표
+`/minutes` 새 회의록 작성 시 카테고리를 **감독단회의**로 선택하면 표준 감독단 회의록 양식이 BlockNote 에디터에 자동으로 채워지도록 한다.
 
-## 추가할 관계
+## 구현 범위
 
-| 부모 | → 자녀 | 비고 |
-|---|---|---|
-| 박호형 | 박이린 | 배우자(강세희)에게도 자동으로 child 연결됨 |
-| 이인주 | 최연후 | 엄마만 (아빠 없음) |
-| 구슬아 | 김우찬 | 엄마만 (아빠 없음) |
+### 1. 새 파일: `src/lib/bishopricTemplate.ts`
+- BlockNote 0.51 스키마에 맞는 블록 배열 상수 `BISHOPRIC_TEMPLATE` 정의.
+- `heading` (level 1/2/3), `paragraph`, `bulletListItem`만 사용. 하위 불릿은 `children`으로 중첩. 굵은 문단은 `paragraph` + `styles.bold`.
+- 빈칸은 `"라벨: "`까지만 채움.
+- 헬퍼 `getBishopricTemplateJSON()`: `JSON.stringify(BISHOPRIC_TEMPLATE)` 반환.
+- 양식 내용은 업로드된 명령서의 [H1]/[H2]/[H3]/[P]/[•]/[•>]/[B] 표기 규칙 그대로 매핑 (와드 주제 성구 ~ 스테이크 전달사항까지 전 항목).
 
-박호형↔강세희가 이미 spouse로 연결돼 있다는 전제 — 트리거가 강세희에게도 박이린을 자녀로 자동 추가합니다. 만약 spouse 관계가 없다면 박이린 ↔ 강세희도 별도로 한 줄 추가해야 합니다 (확인 후 처리).
+### 2. `src/pages/MeetingMinutesPage.tsx` 수정
+- **에디터 비어있음 판정 헬퍼** `isEditorEmpty(content: string)` 추가 (빈 문자열, `[]`, 또는 텍스트가 없는 단일 paragraph만 있는 경우 true).
+- `form.category` 변경을 감지하는 `useEffect`:
+  - `isCreating === true` 이고
+  - `form.category === "감독단회의"` 이고
+  - `isEditorEmpty(form.content)` 일 때
+  - → `form.content`를 `getBishopricTemplateJSON()`으로 세팅.
+- 수정(`isEditing`) 모드에서는 절대 자동 삽입하지 않음 (조건에서 제외).
+- **"감독단 양식 불러오기" 버튼**: 작성/수정 폼의 메타 행에 추가.
+  - 현재 카테고리가 감독단회의일 때만 표시.
+  - 클릭 시 `window.confirm("현재 내용을 감독단 양식으로 덮어씁니다. 계속할까요?")` 후 템플릿 재삽입.
+- `BlockNoteEditorView`는 `initialContent`를 마운트 시 1회만 읽으므로, 자동 삽입 후 에디터가 새 값을 반영하도록 **컴포넌트 remount용 `key` prop**을 추가 (예: `templateVersion` 상태를 증가시켜 key로 전달).
 
-## 실행 SQL (insert 도구 사용)
+### 3. 검증
+- 새 회의록 → 카테고리 "감독단회의" 선택 시 양식이 뜨는지.
+- 저장 후 목록에서 다시 열었을 때 `BlockNoteReadOnly`에서 heading/bullet 중첩/굵은 문단이 그대로 렌더되는지.
+- 와드평의회로 새 회의록 만들 땐 빈 상태 유지되는지.
+- 기존 회의록 수정 시 자동 삽입되지 않는지.
 
-```sql
-INSERT INTO public.member_relations (member_id, related_member_id, relation_type) VALUES
-  ('f0df4d36-6dc1-45e9-a3fa-9f861c0173de', '2c9dd393-c911-4d2b-9ce2-cc0b980cfea0', 'child'), -- 박호형 → 박이린
-  ('97c76201-6ff3-4bd6-8be7-9953da3fd9a6', '85efbeae-76c0-4c0b-941e-84a74b35c5e2', 'child'), -- 이인주 → 최연후
-  ('4581c578-a05c-4d36-aa79-cb4cc9ec13d3', '0919dadd-2452-4e3a-bd6e-ed1a1447199e', 'child')  -- 구슬아  → 김우찬
-ON CONFLICT (member_id, related_member_id, relation_type) DO NOTHING;
-```
-
-## 사후 처리
-
-1. INSERT 후 박호형-강세희 spouse 관계 유무 확인. 없으면 박이린에 대해 강세희 child 관계도 추가.
-2. `/cleaning` 페이지에서 **"가족 재구성"** 버튼을 눌러 `rebuildFamilies()` 재실행 → 박이린/최연후/김우찬이 부모 가족으로 합쳐지는지 확인.
+## 변경 파일 요약
+- 신규: `src/lib/bishopricTemplate.ts`
+- 수정: `src/pages/MeetingMinutesPage.tsx`
+- DB 변경 없음, 신규 패키지 없음.

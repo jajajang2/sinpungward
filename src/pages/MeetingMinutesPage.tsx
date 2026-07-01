@@ -9,6 +9,7 @@ import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save } from "lu
 import { cn } from "@/lib/utils";
 import BlockNoteEditorView from "@/components/meeting/BlockNoteEditor";
 import BlockNoteReadOnly from "@/components/meeting/BlockNoteReadOnly";
+import { getBishopricTemplateJSON, isEditorEmpty } from "@/lib/bishopricTemplate";
 
 interface MeetingMinute {
   id: string;
@@ -44,10 +45,28 @@ export default function MeetingMinutesPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
 
   useEffect(() => {
     fetchMinutes();
   }, []);
+
+  // 새 회의록 작성 중 감독단회의 선택 & 에디터 비어있으면 템플릿 자동 삽입
+  useEffect(() => {
+    if (!isCreating) return;
+    if (form.category !== "감독단회의") return;
+    if (!isEditorEmpty(form.content)) return;
+    setForm((f) => ({ ...f, content: getBishopricTemplateJSON() }));
+    setEditorKey((k) => k + 1);
+  }, [isCreating, form.category]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyBishopricTemplate() {
+    if (!isEditorEmpty(form.content)) {
+      if (!window.confirm("현재 내용을 감독단 양식으로 덮어씁니다. 계속할까요?")) return;
+    }
+    setForm((f) => ({ ...f, content: getBishopricTemplateJSON() }));
+    setEditorKey((k) => k + 1);
+  }
 
 
   async function fetchMinutes() {
@@ -380,12 +399,18 @@ export default function MeetingMinutesPage() {
                       onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))}
                       className="h-7 flex-1 min-w-[180px] border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
                     />
+                    {form.category === "감독단회의" && (
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={applyBishopricTemplate}>
+                        감독단 양식 불러오기
+                      </Button>
+                    )}
                   </div>
 
 
                   {/* Editor card */}
                   <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
                     <BlockNoteEditorView
+                      key={editorKey}
                       value={form.content}
                       onChange={(val) => setForm((f) => ({ ...f, content: val }))}
                       className="min-h-[560px]"
