@@ -348,10 +348,6 @@ const RecommendList = ({ rows }: { rows: RecommendRow[] }) => {
   );
 };
 
-const TempleRecommendPage = () => {
-  const [rows, setRows] = useState<RecommendRow[]>([]);
-  const { toast } = useToast();
-
 import { ExpiryManagementView, InterviewKanbanView, InterviewRow } from "@/components/temple/InterviewViews";
 
 const TempleRecommendPage = () => {
