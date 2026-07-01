@@ -116,11 +116,16 @@ const monthOffset = (baseDate: Date, offset: number) => new Date(baseDate.getFul
 
 const formatSelectedDate = (date: Date) => format(date, "yyyy년 M월 d일 (EEE)", { locale: ko });
 
+interface FamilyRow { id: string; head_member_id: string | null; }
+interface FamilyMemberRow { family_id: string; member_id: string; family_role: "head" | "spouse" | "child" | "single"; }
+
 const AttendancePage = () => {
   const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [attendance, setAttendance] = useState<Record<string, Record<string, boolean>>>({});
   const [visitors, setVisitors] = useState<AttendanceVisitor[]>([]);
+  const [families, setFamilies] = useState<FamilyRow[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMemberRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingVisitor, setSavingVisitor] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -143,11 +148,13 @@ const AttendancePage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [memberRes, attendanceRes, visitorRes, relRes] = await Promise.all([
+      const [memberRes, attendanceRes, visitorRes, relRes, famRes, famMemRes] = await Promise.all([
         supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
         supabase.from("attendance").select("*"),
         supabase.from("attendance_visitors").select("*").order("attendance_date", { ascending: false }).order("sort_order"),
         supabase.from("member_relations").select("member_id, related_member_id, relation_type"),
+        supabase.from("families").select("id, head_member_id"),
+        supabase.from("family_members").select("family_id, member_id, family_role"),
       ]);
 
       if (memberRes.error) {
@@ -173,6 +180,9 @@ const AttendancePage = () => {
       } else {
         setVisitors((visitorRes.data as AttendanceVisitor[]) || []);
       }
+
+      if (!famRes.error) setFamilies((famRes.data as FamilyRow[]) || []);
+      if (!famMemRes.error) setFamilyMembers((famMemRes.data as FamilyMemberRow[]) || []);
 
       const excluded = new Set<string>();
       if (!relRes.error && relRes.data) {
@@ -229,6 +239,115 @@ const AttendancePage = () => {
       return member.name.toLowerCase().includes(query);
     });
   }, [memberSearch, members, selectedGroup, excludedFromSingles]);
+
+  const isSearching = memberSearch.trim().length > 0;
+
+  // 최근 8주(56일) 개인 출석률
+  const attendanceRates = useMemo(() => {
+    const today = new Date();
+    const cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() - 56);
+    const cutoffStr = toDateStr(cutoff);
+    const todayStr = toDateStr(today);
+
+    // 최근 8주 안에 존재한 모임 날짜(누구든 기록이 있는 날짜)
+    const meetingDates = new Set<string>();
+    Object.values(attendance).forEach((byDate) => {
+      Object.keys(byDate).forEach((d) => {
+        if (d >= cutoffStr && d <= todayStr) meetingDates.add(d);
+      });
+    });
+    const denom = meetingDates.size;
+
+    const rates: Record<string, number> = {};
+    for (const m of members) {
+      if (denom === 0) { rates[m.id] = 0; continue; }
+      const byDate = attendance[m.id] || {};
+      let present = 0;
+      meetingDates.forEach((d) => { if (byDate[d]) present += 1; });
+      rates[m.id] = present / denom;
+    }
+    return rates;
+  }, [attendance, members]);
+
+  // 가족 단위 그룹핑 (filteredMembers 기준)
+  const familyGroups = useMemo(() => {
+    if (isSearching) return null;
+    const memberById = new Map(members.map((m) => [m.id, m]));
+    const filteredIds = new Set(filteredMembers.map((m) => m.id));
+    const famById = new Map(families.map((f) => [f.id, f]));
+    // memberId -> family_id
+    const famOf = new Map<string, string>();
+    // family_id -> rows
+    const rowsByFam = new Map<string, FamilyMemberRow[]>();
+    for (const fm of familyMembers) {
+      famOf.set(fm.member_id, fm.family_id);
+      const arr = rowsByFam.get(fm.family_id) || [];
+      arr.push(fm);
+      rowsByFam.set(fm.family_id, arr);
+    }
+
+    interface Group {
+      key: string;
+      headName: string;
+      members: Member[]; // ordered head, spouse, children(age desc)
+      topRate: number;
+    }
+    const groups: Group[] = [];
+    const usedFam = new Set<string>();
+
+    for (const m of filteredMembers) {
+      const fid = famOf.get(m.id);
+      if (fid && !usedFam.has(fid)) {
+        usedFam.add(fid);
+        const rows = rowsByFam.get(fid) || [];
+        const fam = famById.get(fid);
+        const headId = fam?.head_member_id
+          || rows.find((r) => r.family_role === "head")?.member_id
+          || rows.find((r) => r.family_role === "single")?.member_id
+          || rows[0]?.member_id;
+        const headMember = headId ? memberById.get(headId) : undefined;
+        const spouseRow = rows.find((r) => r.family_role === "spouse");
+        const childRows = rows.filter((r) => r.family_role === "child");
+        const orderedAll: Member[] = [];
+        if (headMember) orderedAll.push(headMember);
+        if (spouseRow) {
+          const sp = memberById.get(spouseRow.member_id);
+          if (sp) orderedAll.push(sp);
+        }
+        const children = childRows
+          .map((r) => memberById.get(r.member_id))
+          .filter((x): x is Member => !!x)
+          .sort((a, b) => (a.birth_date || "9999").localeCompare(b.birth_date || "9999"));
+        orderedAll.push(...children);
+        // 현재 그룹 필터에 해당하는 회원만 표시하되, 가족 내부 순서 유지
+        const shown = orderedAll.filter((x) => filteredIds.has(x.id));
+        if (shown.length === 0) continue;
+        const topRate = Math.max(0, ...orderedAll.map((x) => attendanceRates[x.id] ?? 0));
+        groups.push({
+          key: fid,
+          headName: headMember?.name ?? shown[0].name,
+          members: shown,
+          topRate,
+        });
+      } else if (!fid) {
+        // 가족 정보 없음 → 1인 가족
+        groups.push({
+          key: `solo:${m.id}`,
+          headName: m.name,
+          members: [m],
+          topRate: attendanceRates[m.id] ?? 0,
+        });
+      }
+    }
+
+    groups.sort((a, b) => {
+      if (b.topRate !== a.topRate) return b.topRate - a.topRate;
+      return a.headName.localeCompare(b.headName, "ko");
+    });
+    return groups;
+  }, [isSearching, filteredMembers, families, familyMembers, members, attendanceRates]);
+
 
   const selectedVisitors = useMemo(() => {
     if (!selectedDateStr) return [];
@@ -571,20 +690,21 @@ const AttendancePage = () => {
             <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-border">
               {filteredMembers.length === 0 ? (
                 <div className="p-5 text-sm text-muted-foreground md:p-6">해당 그룹에 회원이 없습니다.</div>
-              ) : (
-                filteredMembers.map((member) => {
+              ) : (() => {
+                const renderMemberRow = (member: Member) => {
                   const checked = selectedDateStr ? attendance[member.id]?.[selectedDateStr] === true : false;
+                  const a = getAge(member.birth_date);
+                  const rate = attendanceRates[member.id];
+                  const ratePct = rate != null ? Math.round(rate * 100) : 0;
                   return (
                     <div key={member.id} className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 px-3 py-3 hover:bg-accent/40 md:px-4 md:py-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium text-foreground md:text-base">
                           {member.name}
-                          {(() => {
-                            const a = getAge(member.birth_date);
-                            return a != null ? (
-                              <span className="ml-1.5 text-xs text-muted-foreground font-normal">({a}세)</span>
-                            ) : null;
-                          })()}
+                          {a != null && (
+                            <span className="ml-1.5 text-xs text-muted-foreground font-normal">({a}세)</span>
+                          )}
+                          <span className="ml-1.5 text-xs text-muted-foreground font-normal">· {ratePct}%</span>
                         </div>
                         <div className="text-[11px] text-muted-foreground md:text-xs">{selectedGroup.description}</div>
                       </div>
@@ -593,10 +713,22 @@ const AttendancePage = () => {
                       </div>
                     </div>
                   );
-                })
-              )}
+                };
+                if (isSearching || !familyGroups) {
+                  return filteredMembers.map(renderMemberRow);
+                }
+                return familyGroups.map((g) => (
+                  <div key={g.key}>
+                    <div className="bg-muted/40 px-3 py-1.5 text-xs font-semibold text-foreground md:px-4">
+                      [{g.headName} 가족] <span className="ml-1 font-normal text-muted-foreground">· 대표 {Math.round(g.topRate * 100)}%</span>
+                    </div>
+                    {g.members.map(renderMemberRow)}
+                  </div>
+                ));
+              })()}
             </div>
           </Card>
+
 
           <Card className="order-2 hidden min-h-0 border-border md:flex md:h-full md:flex-col md:overflow-hidden">
             <div className="shrink-0 border-b border-border p-3 md:p-4">
