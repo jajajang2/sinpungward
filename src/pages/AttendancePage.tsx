@@ -148,11 +148,13 @@ const AttendancePage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [memberRes, attendanceRes, visitorRes, relRes] = await Promise.all([
+      const [memberRes, attendanceRes, visitorRes, relRes, famRes, famMemRes] = await Promise.all([
         supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
         supabase.from("attendance").select("*"),
         supabase.from("attendance_visitors").select("*").order("attendance_date", { ascending: false }).order("sort_order"),
         supabase.from("member_relations").select("member_id, related_member_id, relation_type"),
+        supabase.from("families").select("id, head_member_id"),
+        supabase.from("family_members").select("family_id, member_id, family_role"),
       ]);
 
       if (memberRes.error) {
