@@ -285,22 +285,29 @@ export default function CleaningPage() {
     }
     const targetTeams = [...teams].sort((a, b) => a.sort_order - b.sort_order);
     if (targetTeams.length === 0) return;
+    const T = targetTeams.length;
 
-    const candidates = [...familyViews].sort((x, y) => y.score - x.score);
+    // 출석률 내림차순 정렬
+    const sorted = [...familyViews].sort((x, y) => y.score - x.score);
 
-    // 스네이크 드래프트
-    const buckets: string[][] = targetTeams.map(() => []);
-    let dir = 1;
-    let idx = 0;
-    for (const fam of candidates) {
-      buckets[idx].push(fam.id);
-      if (dir === 1) {
-        if (idx === buckets.length - 1) dir = -1;
-        else idx++;
-      } else {
-        if (idx === 0) dir = 1;
-        else idx--;
+    // T개씩 밴드로 묶어 각 밴드를 랜덤 셔플 → 각 팀에 하나씩 → 팀 순서도 랜덤
+    // 이렇게 하면 각 조가 고/중/저 출석률을 균등히 가지면서 매번 랜덤 배정됨
+    const shuffle = <U,>(arr: U[]): U[] => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
       }
+      return a;
+    };
+
+    const buckets: string[][] = targetTeams.map(() => []);
+    for (let i = 0; i < sorted.length; i += T) {
+      const band = shuffle(sorted.slice(i, i + T));
+      const teamOrder = shuffle(targetTeams.map((_, idx) => idx));
+      band.forEach((fam, k) => {
+        buckets[teamOrder[k]].push(fam.id);
+      });
     }
 
     // 기존 모든 배정 삭제 후 새로 삽입
