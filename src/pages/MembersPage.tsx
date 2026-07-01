@@ -256,7 +256,10 @@ const MembersPage = () => {
   const selectedGroup = GROUPS.find(g => g.id === selectedGroupId) ?? null;
 
   const groupMembers = selectedGroup
-    ? members.filter(selectedGroup.filter).filter(m =>
+    ? members.filter(selectedGroup.filter).filter(m => {
+        if ((selectedGroup.id === "singles" || selectedGroup.id === "singles_under35") && excludedFromSingles.has(m.id)) return false;
+        return true;
+      }).filter(m =>
         m.name.toLowerCase().includes(search.toLowerCase()) ||
         (m.phone || '').includes(search)
       )
