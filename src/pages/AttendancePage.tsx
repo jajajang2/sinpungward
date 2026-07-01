@@ -181,6 +181,9 @@ const AttendancePage = () => {
         setVisitors((visitorRes.data as AttendanceVisitor[]) || []);
       }
 
+      if (!famRes.error) setFamilies((famRes.data as FamilyRow[]) || []);
+      if (!famMemRes.error) setFamilyMembers((famMemRes.data as FamilyMemberRow[]) || []);
+
       const excluded = new Set<string>();
       if (!relRes.error && relRes.data) {
         for (const r of relRes.data as any[]) {
