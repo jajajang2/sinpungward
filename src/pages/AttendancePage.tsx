@@ -240,6 +240,115 @@ const AttendancePage = () => {
     });
   }, [memberSearch, members, selectedGroup, excludedFromSingles]);
 
+  const isSearching = memberSearch.trim().length > 0;
+
+  // 최근 8주(56일) 개인 출석률
+  const attendanceRates = useMemo(() => {
+    const today = new Date();
+    const cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() - 56);
+    const cutoffStr = toDateStr(cutoff);
+    const todayStr = toDateStr(today);
+
+    // 최근 8주 안에 존재한 모임 날짜(누구든 기록이 있는 날짜)
+    const meetingDates = new Set<string>();
+    Object.values(attendance).forEach((byDate) => {
+      Object.keys(byDate).forEach((d) => {
+        if (d >= cutoffStr && d <= todayStr) meetingDates.add(d);
+      });
+    });
+    const denom = meetingDates.size;
+
+    const rates: Record<string, number> = {};
+    for (const m of members) {
+      if (denom === 0) { rates[m.id] = 0; continue; }
+      const byDate = attendance[m.id] || {};
+      let present = 0;
+      meetingDates.forEach((d) => { if (byDate[d]) present += 1; });
+      rates[m.id] = present / denom;
+    }
+    return rates;
+  }, [attendance, members]);
+
+  // 가족 단위 그룹핑 (filteredMembers 기준)
+  const familyGroups = useMemo(() => {
+    if (isSearching) return null;
+    const memberById = new Map(members.map((m) => [m.id, m]));
+    const filteredIds = new Set(filteredMembers.map((m) => m.id));
+    const famById = new Map(families.map((f) => [f.id, f]));
+    // memberId -> family_id
+    const famOf = new Map<string, string>();
+    // family_id -> rows
+    const rowsByFam = new Map<string, FamilyMemberRow[]>();
+    for (const fm of familyMembers) {
+      famOf.set(fm.member_id, fm.family_id);
+      const arr = rowsByFam.get(fm.family_id) || [];
+      arr.push(fm);
+      rowsByFam.set(fm.family_id, arr);
+    }
+
+    interface Group {
+      key: string;
+      headName: string;
+      members: Member[]; // ordered head, spouse, children(age desc)
+      topRate: number;
+    }
+    const groups: Group[] = [];
+    const usedFam = new Set<string>();
+
+    for (const m of filteredMembers) {
+      const fid = famOf.get(m.id);
+      if (fid && !usedFam.has(fid)) {
+        usedFam.add(fid);
+        const rows = rowsByFam.get(fid) || [];
+        const fam = famById.get(fid);
+        const headId = fam?.head_member_id
+          || rows.find((r) => r.family_role === "head")?.member_id
+          || rows.find((r) => r.family_role === "single")?.member_id
+          || rows[0]?.member_id;
+        const headMember = headId ? memberById.get(headId) : undefined;
+        const spouseRow = rows.find((r) => r.family_role === "spouse");
+        const childRows = rows.filter((r) => r.family_role === "child");
+        const orderedAll: Member[] = [];
+        if (headMember) orderedAll.push(headMember);
+        if (spouseRow) {
+          const sp = memberById.get(spouseRow.member_id);
+          if (sp) orderedAll.push(sp);
+        }
+        const children = childRows
+          .map((r) => memberById.get(r.member_id))
+          .filter((x): x is Member => !!x)
+          .sort((a, b) => (a.birth_date || "9999").localeCompare(b.birth_date || "9999"));
+        orderedAll.push(...children);
+        // 현재 그룹 필터에 해당하는 회원만 표시하되, 가족 내부 순서 유지
+        const shown = orderedAll.filter((x) => filteredIds.has(x.id));
+        if (shown.length === 0) continue;
+        const topRate = Math.max(0, ...orderedAll.map((x) => attendanceRates[x.id] ?? 0));
+        groups.push({
+          key: fid,
+          headName: headMember?.name ?? shown[0].name,
+          members: shown,
+          topRate,
+        });
+      } else if (!fid) {
+        // 가족 정보 없음 → 1인 가족
+        groups.push({
+          key: `solo:${m.id}`,
+          headName: m.name,
+          members: [m],
+          topRate: attendanceRates[m.id] ?? 0,
+        });
+      }
+    }
+
+    groups.sort((a, b) => {
+      if (b.topRate !== a.topRate) return b.topRate - a.topRate;
+      return a.headName.localeCompare(b.headName, "ko");
+    });
+    return groups;
+  }, [isSearching, filteredMembers, families, familyMembers, members, attendanceRates]);
+
+
   const selectedVisitors = useMemo(() => {
     if (!selectedDateStr) return [];
     return visitors.filter((visitor) => visitor.attendance_date === selectedDateStr);
