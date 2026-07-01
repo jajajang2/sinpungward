@@ -173,7 +173,6 @@ const ImportTab = ({ type }: { type: RecommendType }) => {
   );
 };
 
-import { useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { computeStatus, colorFor, STATUS_ORDER, RecommendStatus } from "@/lib/templeRecommendStatus";
