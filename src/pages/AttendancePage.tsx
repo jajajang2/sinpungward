@@ -690,20 +690,21 @@ const AttendancePage = () => {
             <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-border">
               {filteredMembers.length === 0 ? (
                 <div className="p-5 text-sm text-muted-foreground md:p-6">해당 그룹에 회원이 없습니다.</div>
-              ) : (
-                filteredMembers.map((member) => {
+              ) : (() => {
+                const renderMemberRow = (member: Member) => {
                   const checked = selectedDateStr ? attendance[member.id]?.[selectedDateStr] === true : false;
+                  const a = getAge(member.birth_date);
+                  const rate = attendanceRates[member.id];
+                  const ratePct = rate != null ? Math.round(rate * 100) : 0;
                   return (
                     <div key={member.id} className="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-0 px-3 py-3 hover:bg-accent/40 md:px-4 md:py-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium text-foreground md:text-base">
                           {member.name}
-                          {(() => {
-                            const a = getAge(member.birth_date);
-                            return a != null ? (
-                              <span className="ml-1.5 text-xs text-muted-foreground font-normal">({a}세)</span>
-                            ) : null;
-                          })()}
+                          {a != null && (
+                            <span className="ml-1.5 text-xs text-muted-foreground font-normal">({a}세)</span>
+                          )}
+                          <span className="ml-1.5 text-xs text-muted-foreground font-normal">· {ratePct}%</span>
                         </div>
                         <div className="text-[11px] text-muted-foreground md:text-xs">{selectedGroup.description}</div>
                       </div>
@@ -712,10 +713,22 @@ const AttendancePage = () => {
                       </div>
                     </div>
                   );
-                })
-              )}
+                };
+                if (isSearching || !familyGroups) {
+                  return filteredMembers.map(renderMemberRow);
+                }
+                return familyGroups.map((g) => (
+                  <div key={g.key}>
+                    <div className="bg-muted/40 px-3 py-1.5 text-xs font-semibold text-foreground md:px-4">
+                      [{g.headName} 가족] <span className="ml-1 font-normal text-muted-foreground">· 대표 {Math.round(g.topRate * 100)}%</span>
+                    </div>
+                    {g.members.map(renderMemberRow)}
+                  </div>
+                ));
+              })()}
             </div>
           </Card>
+
 
           <Card className="order-2 hidden min-h-0 border-border md:flex md:h-full md:flex-col md:overflow-hidden">
             <div className="shrink-0 border-b border-border p-3 md:p-4">
