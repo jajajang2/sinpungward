@@ -173,23 +173,231 @@ const ImportTab = ({ type }: { type: RecommendType }) => {
   );
 };
 
-const TempleRecommendPage = () => {
+import { useEffect, useMemo } from "react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { computeStatus, colorFor, STATUS_ORDER, RecommendStatus } from "@/lib/templeRecommendStatus";
+
+interface RecommendRow {
+  id: string;
+  lcr_name: string;
+  gender: string | null;
+  age_at_import: number | null;
+  recommend_type: "REGULAR" | "LIMITED_USE";
+  expiry_month: string | null;
+  lcr_status_raw: string | null;
+}
+
+const typeLabel = (t: string) => (t === "REGULAR" ? "정규" : "제한사용");
+
+const Dashboard = ({ rows }: { rows: RecommendRow[] }) => {
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "REGULAR" | "LIMITED_USE">("ALL");
+
+  const filtered = useMemo(
+    () => (typeFilter === "ALL" ? rows : rows.filter((r) => r.recommend_type === typeFilter)),
+    [rows, typeFilter]
+  );
+
+  const counts = useMemo(() => {
+    const map: Record<RecommendStatus, number> = { 활동적: 0, 주의: 0, 긴급: 0, 만료됨: 0 };
+    for (const r of filtered) {
+      const { status } = computeStatus(r.expiry_month);
+      map[status]++;
+    }
+    return map;
+  }, [filtered]);
+
+  const byType = useMemo(() => {
+    const init = () => ({ 활동적: 0, 주의: 0, 긴급: 0, 만료됨: 0 } as Record<RecommendStatus, number>);
+    const reg = init();
+    const lim = init();
+    for (const r of rows) {
+      const { status } = computeStatus(r.expiry_month);
+      (r.recommend_type === "REGULAR" ? reg : lim)[status]++;
+    }
+    return { REGULAR: reg, LIMITED_USE: lim };
+  }, [rows]);
+
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-4">
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">유형 필터:</span>
+        <div className="inline-flex rounded-md border overflow-hidden">
+          {(["ALL", "REGULAR", "LIMITED_USE"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setTypeFilter(v)}
+              className={`px-3 py-1.5 text-sm ${typeFilter === v ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
+            >
+              {v === "ALL" ? "전체" : typeLabel(v)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {STATUS_ORDER.map((s) => (
+          <div key={s} className={`rounded-lg border p-4 ${colorFor(s)}`}>
+            <div className="text-xs opacity-70">{s}</div>
+            <div className="text-3xl font-bold mt-1">{counts[s]}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-3">
+        {(["REGULAR", "LIMITED_USE"] as const).map((t) => (
+          <div key={t} className="rounded-lg border p-4 bg-card">
+            <div className="text-sm font-semibold mb-2">{typeLabel(t)}</div>
+            <div className="grid grid-cols-4 gap-2">
+              {STATUS_ORDER.map((s) => (
+                <div key={s} className={`rounded border p-2 text-center ${colorFor(s)}`}>
+                  <div className="text-[10px]">{s}</div>
+                  <div className="text-lg font-bold">{byType[t][s]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const RecommendList = ({ rows }: { rows: RecommendRow[] }) => {
+  const [statusFilter, setStatusFilter] = useState<"ALL" | RecommendStatus>("ALL");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "REGULAR" | "LIMITED_USE">("ALL");
+  const [search, setSearch] = useState("");
+
+  const enriched = useMemo(() => {
+    return rows
+      .map((r) => ({ ...r, ...computeStatus(r.expiry_month) }))
+      .filter((r) => (statusFilter === "ALL" ? true : r.status === statusFilter))
+      .filter((r) => (typeFilter === "ALL" ? true : r.recommend_type === typeFilter))
+      .filter((r) => (search ? r.lcr_name.includes(search.trim()) : true))
+      .sort((a, b) => {
+        const ax = a.expiry_month ?? "9999-12-01";
+        const bx = b.expiry_month ?? "9999-12-01";
+        return ax.localeCompare(bx);
+      });
+  }, [rows, statusFilter, typeFilter, search]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2 items-center">
+        <Input
+          placeholder="이름 검색"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-48"
+        />
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="w-36"><SelectValue placeholder="상태" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">상태: 전체</SelectItem>
+            {STATUS_ORDER.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+          <SelectTrigger className="w-36"><SelectValue placeholder="유형" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">유형: 전체</SelectItem>
+            <SelectItem value="REGULAR">정규</SelectItem>
+            <SelectItem value="LIMITED_USE">제한사용</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-sm text-muted-foreground ml-auto">총 {enriched.length}건</span>
+      </div>
+
+      <div className="border rounded-lg overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-muted">
+            <tr>
+              <th className="px-3 py-2 text-left">이름</th>
+              <th className="px-3 py-2 text-left">성별</th>
+              <th className="px-3 py-2 text-left">나이</th>
+              <th className="px-3 py-2 text-left">유형</th>
+              <th className="px-3 py-2 text-left">만료월</th>
+              <th className="px-3 py-2 text-left">상태</th>
+              <th className="px-3 py-2 text-left">D-day</th>
+            </tr>
+          </thead>
+          <tbody>
+            {enriched.map((r) => (
+              <tr key={r.id} className="border-t">
+                <td className="px-3 py-1.5 font-medium">{r.lcr_name}</td>
+                <td className="px-3 py-1.5">{r.gender ?? "-"}</td>
+                <td className="px-3 py-1.5">{r.age_at_import ?? "-"}</td>
+                <td className="px-3 py-1.5">{typeLabel(r.recommend_type)}</td>
+                <td className="px-3 py-1.5">{r.expiry_month ? r.expiry_month.slice(0, 7) : "-"}</td>
+                <td className="px-3 py-1.5">
+                  <span className={`inline-block px-2 py-0.5 rounded border text-xs ${r.colorClass}`}>
+                    {r.status}
+                  </span>
+                </td>
+                <td className="px-3 py-1.5">
+                  {r.dday === null ? "-" : r.dday >= 0 ? `D-${r.dday}` : `D+${-r.dday}`}
+                </td>
+              </tr>
+            ))}
+            {enriched.length === 0 && (
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">데이터가 없습니다</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const TempleRecommendPage = () => {
+  const [rows, setRows] = useState<RecommendRow[]>([]);
+  const { toast } = useToast();
+
+  const fetchRows = async () => {
+    const { data, error } = await supabase
+      .from("temple_recommends")
+      .select("id, lcr_name, gender, age_at_import, recommend_type, expiry_month, lcr_status_raw")
+      .range(0, 9999);
+    if (error) {
+      toast({ title: "불러오기 실패", description: error.message, variant: "destructive" });
+      return;
+    }
+    setRows((data ?? []) as RecommendRow[]);
+  };
+
+  useEffect(() => { fetchRows(); }, []);
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto space-y-4">
       <div>
         <h1 className="text-2xl font-bold">성전 추천서 관리</h1>
-        <p className="text-sm text-muted-foreground">LCR 명단을 붙여넣어 임포트하세요.</p>
+        <p className="text-sm text-muted-foreground">상태는 오늘 날짜 기준으로 자동 계산됩니다.</p>
       </div>
-      <Tabs defaultValue="adult">
+      <Tabs defaultValue="dashboard">
         <TabsList>
-          <TabsTrigger value="adult">성인 명단 (정규)</TabsTrigger>
-          <TabsTrigger value="youth">청소년 명단 (제한사용)</TabsTrigger>
+          <TabsTrigger value="dashboard">대시보드</TabsTrigger>
+          <TabsTrigger value="list">추천서 목록</TabsTrigger>
+          <TabsTrigger value="import">명단 임포트</TabsTrigger>
         </TabsList>
-        <TabsContent value="adult" className="mt-4">
-          <ImportTab type="REGULAR" />
+        <TabsContent value="dashboard" className="mt-4">
+          <Dashboard rows={rows} />
         </TabsContent>
-        <TabsContent value="youth" className="mt-4">
-          <ImportTab type="LIMITED_USE" />
+        <TabsContent value="list" className="mt-4">
+          <RecommendList rows={rows} />
+        </TabsContent>
+        <TabsContent value="import" className="mt-4">
+          <Tabs defaultValue="adult">
+            <TabsList>
+              <TabsTrigger value="adult">성인 명단 (정규)</TabsTrigger>
+              <TabsTrigger value="youth">청소년 명단 (제한사용)</TabsTrigger>
+            </TabsList>
+            <TabsContent value="adult" className="mt-4">
+              <ImportTab type="REGULAR" />
+            </TabsContent>
+            <TabsContent value="youth" className="mt-4">
+              <ImportTab type="LIMITED_USE" />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>
@@ -197,3 +405,4 @@ const TempleRecommendPage = () => {
 };
 
 export default TempleRecommendPage;
+
