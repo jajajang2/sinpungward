@@ -144,6 +144,7 @@ const MembersPage = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteSelected, setShowDeleteSelected] = useState(false);
   const { toast } = useToast();
+  const [excludedFromSingles, setExcludedFromSingles] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
   const exitDeleteMode = () => {
