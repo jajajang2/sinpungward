@@ -405,6 +405,7 @@ export default function MeetingMinutesPage() {
                   {/* Editor card */}
                   <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
                     <BlockNoteEditorView
+                      key={editorKey}
                       value={form.content}
                       onChange={(val) => setForm((f) => ({ ...f, content: val }))}
                       className="min-h-[560px]"
