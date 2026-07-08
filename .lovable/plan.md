@@ -1,36 +1,40 @@
+## Goal
+업로드한 PDF "성전 추천서 상태 (만료회원 포함)" 154행을 `temple_recommends` 테이블에 넣고, 가능한 한 기존 `members` 회원과 자동 연결한다. 현재 `temple_recommends`는 비어 있으므로 새로 삽입한다.
 
-## 목표
-`/minutes` 새 회의록 작성 시 카테고리를 **감독단회의**로 선택하면 표준 감독단 회의록 양식이 BlockNote 에디터에 자동으로 채워지도록 한다.
+## Data mapping (PDF → temple_recommends 컬럼)
+- 이름 → `lcr_name` (PDF 원문 그대로, 예: "김 백희")
+- 성별 → `gender` ("남성"/"여성")
+- 나이 → `age_at_import`
+- 추천서 유형 → `recommend_type` ("성전 추천서" — 전원 정규, 청소년(제한사용) 명단은 이 PDF에 없음)
+- 상태 → `lcr_status_raw` (원문: 활동적 / 만료됨 / 만료 예정 / 발급됨)
+- 만료 YYYY-MM → `expiry_month` (해당 월 1일 date, 빈 값은 NULL)
+- `last_imported_at` = now()
 
-## 구현 범위
+앱에서 표시되는 상태/색상은 이미 `templeRecommendStatus.ts`가 오늘 날짜와 `expiry_month`로 재계산하므로 원본 상태 문자열은 참고용으로만 저장한다.
 
-### 1. 새 파일: `src/lib/bishopricTemplate.ts`
-- BlockNote 0.51 스키마에 맞는 블록 배열 상수 `BISHOPRIC_TEMPLATE` 정의.
-- `heading` (level 1/2/3), `paragraph`, `bulletListItem`만 사용. 하위 불릿은 `children`으로 중첩. 굵은 문단은 `paragraph` + `styles.bold`.
-- 빈칸은 `"라벨: "`까지만 채움.
-- 헬퍼 `getBishopricTemplateJSON()`: `JSON.stringify(BISHOPRIC_TEMPLATE)` 반환.
-- 양식 내용은 업로드된 명령서의 [H1]/[H2]/[H3]/[P]/[•]/[•>]/[B] 표기 규칙 그대로 매핑 (와드 주제 성구 ~ 스테이크 전달사항까지 전 항목).
+## Member 자동 매칭 규칙
+1. `lcr_name`을 공백 제거·소문자로 정규화한 값이 `members.name` 정규화 값과 정확히 일치.
+2. 후보가 1명이면 그대로 `member_id`에 연결.
+3. 후보가 여러 명(예: "김 병현" 2명)이면 `gender`가 같고 `members.birth_date`로 계산한 만 나이(2026-07-01 기준)가 PDF `age`와 ±1년 이내인 유일한 회원에 연결. 그래도 유일하지 않으면 `member_id`는 NULL로 두고 NonHoldersView "매칭 필요" 목록에 뜨게 한다.
+4. 영문 이름·외국인 이름(예: Heo Abby, Palomera Sandoval Leon Felipe, 엘레나 주바산, 타노 알렉스 리) 등 매칭 실패 건도 NULL로 두고 수동 매칭에 맡긴다.
 
-### 2. `src/pages/MeetingMinutesPage.tsx` 수정
-- **에디터 비어있음 판정 헬퍼** `isEditorEmpty(content: string)` 추가 (빈 문자열, `[]`, 또는 텍스트가 없는 단일 paragraph만 있는 경우 true).
-- `form.category` 변경을 감지하는 `useEffect`:
-  - `isCreating === true` 이고
-  - `form.category === "감독단회의"` 이고
-  - `isEditorEmpty(form.content)` 일 때
-  - → `form.content`를 `getBishopricTemplateJSON()`으로 세팅.
-- 수정(`isEditing`) 모드에서는 절대 자동 삽입하지 않음 (조건에서 제외).
-- **"감독단 양식 불러오기" 버튼**: 작성/수정 폼의 메타 행에 추가.
-  - 현재 카테고리가 감독단회의일 때만 표시.
-  - 클릭 시 `window.confirm("현재 내용을 감독단 양식으로 덮어씁니다. 계속할까요?")` 후 템플릿 재삽입.
-- `BlockNoteEditorView`는 `initialContent`를 마운트 시 1회만 읽으므로, 자동 삽입 후 에디터가 새 값을 반영하도록 **컴포넌트 remount용 `key` prop**을 추가 (예: `templateVersion` 상태를 증가시켜 key로 전달).
+## 실행 방식
+- 154행을 단일 SQL 마이그레이션 대신 `supabase--insert` 한 번으로 `INSERT INTO public.temple_recommends (...) VALUES (...), (...);` 벌크 삽입.
+- 매칭은 서브쿼리로: `member_id = (SELECT id FROM members m WHERE regexp_replace(m.name,'\s','','g') = '김백희' AND ...)` 형태. 단순화를 위해 CTE로 후보 목록을 만들고 `LEFT JOIN LATERAL`로 유일 후보만 채운다.
 
-### 3. 검증
-- 새 회의록 → 카테고리 "감독단회의" 선택 시 양식이 뜨는지.
-- 저장 후 목록에서 다시 열었을 때 `BlockNoteReadOnly`에서 heading/bullet 중첩/굵은 문단이 그대로 렌더되는지.
-- 와드평의회로 새 회의록 만들 땐 빈 상태 유지되는지.
-- 기존 회의록 수정 시 자동 삽입되지 않는지.
+## 검증
+- 삽입 후 `SELECT count(*) FROM temple_recommends` = 154 확인.
+- `SELECT count(*) FROM temple_recommends WHERE member_id IS NOT NULL` 로 자동 매칭 성공 수 확인.
+- 앱에서:
+  - "김 원석 2026-07" → 긴급
+  - "김 용기 2026-08" → 긴급
+  - "최 민석 28 2027-11" → 활동적
+  - "김 백희 2027-11" → 활동적, member_id 매칭됨
+  - "김 병현" 2명 → 나이로 각각 30세/61세 회원에 매칭
+  - 미소지자 명단 탭에서 대상이 정상 필터되는지 확인.
 
-## 변경 파일 요약
-- 신규: `src/lib/bishopricTemplate.ts`
-- 수정: `src/pages/MeetingMinutesPage.tsx`
-- DB 변경 없음, 신규 패키지 없음.
+## 확인 요청
+1. PDF에 청소년(제한사용) 추천서는 없다. 전부 `recommend_type = "성전 추천서"`(정규)로 저장하면 되는지?
+2. 원본 "발급됨"(권 영민)·"만료 예정" 상태 문자열은 `lcr_status_raw`에만 저장하고, 화면 표시는 앱의 오늘 날짜 기준 재계산 로직을 그대로 사용해도 되는지?
+
+이 두 가지가 OK면 위 방식대로 154행을 넣는다.
