@@ -13,7 +13,7 @@ const MonthCalendarCard = () => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [events, setEvents] = useState<Record<string, { id: string; title: string }[]>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -21,14 +21,15 @@ const MonthCalendarCard = () => {
     const end = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
     const { data } = await supabase
       .from("calendar_events")
-      .select("event_date")
+      .select("id, event_date, title")
       .gte("event_date", fmt(start))
-      .lte("event_date", fmt(end));
-    const map: Record<string, number> = {};
+      .lte("event_date", fmt(end))
+      .order("created_at");
+    const map: Record<string, { id: string; title: string }[]> = {};
     (data || []).forEach((r: any) => {
-      map[r.event_date] = (map[r.event_date] || 0) + 1;
+      (map[r.event_date] ||= []).push({ id: r.id, title: r.title });
     });
-    setCounts(map);
+    setEvents(map);
   }, [cursor]);
 
   useEffect(() => {
