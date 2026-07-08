@@ -78,25 +78,36 @@ const MonthCalendarCard = () => {
         </div>
         <div className="grid grid-cols-7 gap-1">
           {cells.map((d, i) => {
-            if (d === null) return <div key={i} />;
+            if (d === null) return <div key={i} className="min-h-[92px]" />;
             const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
-            const count = counts[dateStr] || 0;
+            const dayEvents = events[dateStr] || [];
             const isToday = dateStr === today;
             const dow = i % 7;
+            const shown = dayEvents.slice(0, 3);
+            const extra = dayEvents.length - shown.length;
             return (
               <button
                 key={i}
                 onClick={() => setSelectedDate(dateStr)}
-                className={`aspect-square rounded-md border text-xs flex flex-col items-center justify-start p-1 transition-colors hover:bg-accent ${
+                className={`min-h-[92px] rounded-md border text-xs flex flex-col items-stretch justify-start p-1.5 gap-1 transition-colors hover:bg-accent text-left overflow-hidden ${
                   isToday ? "border-primary bg-primary/10" : "border-border"
                 }`}
               >
-                <span className={`font-medium ${dow === 0 ? "text-destructive" : dow === 6 ? "text-primary" : "text-foreground"}`}>{d}</span>
-                {count > 0 && (
-                  <span className="mt-auto text-[10px] px-1.5 rounded-full bg-primary text-primary-foreground">
-                    {count}
-                  </span>
-                )}
+                <span className={`font-medium text-center ${dow === 0 ? "text-destructive" : dow === 6 ? "text-primary" : "text-foreground"}`}>{d}</span>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  {shown.map((e) => (
+                    <span
+                      key={e.id}
+                      className="text-[10px] leading-tight px-1 py-0.5 rounded bg-primary/15 text-primary truncate"
+                      title={e.title}
+                    >
+                      • {e.title}
+                    </span>
+                  ))}
+                  {extra > 0 && (
+                    <span className="text-[10px] text-muted-foreground px-1">+{extra}건</span>
+                  )}
+                </div>
               </button>
             );
           })}
