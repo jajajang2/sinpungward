@@ -421,7 +421,7 @@ export default function CleaningPage() {
   // 가족 멤버 보기 다이얼로그
   const [memberDialogFamily, setMemberDialogFamily] = useState<FamilyView | null>(null);
 
-  // Excel export — 조별 시트, [조][가족][구성원] 컬럼, 구성원 줄바꿈
+  // Excel export — 조별 시트, [조][구성원] 컬럼, 구성원 줄바꿈
   const exportRoster = () => {
     const wb = XLSX.utils.book_new();
     const sortedTeams = [...teams].sort((a, b) => a.sort_order - b.sort_order);
@@ -433,7 +433,7 @@ export default function CleaningPage() {
       const rows: Record<string, string>[] = [];
 
       if (list.length === 0) {
-        rows.push({ 조: teamName, 가족: "(배정 없음)", 구성원: "" });
+        rows.push({ 조: teamName, 구성원: "" });
       } else {
         list.forEach((f) => {
           // 구성원 정렬: head → spouse → child
@@ -445,17 +445,15 @@ export default function CleaningPage() {
           for (const m of f.members) {
             if (m.id !== headId && m.id !== spouseId) ordered.push(m);
           }
-          const familyHeadName = f.head?.name ?? f.members[0]?.name ?? "(미상)";
           rows.push({
             조: teamName,
-            가족: `${familyHeadName} 가족`,
-            구성원: ordered.map(nameWithAge).join("\n"),
+            구성원: ordered.map((m) => m.name).join("\n"),
           });
         });
       }
 
       const ws = XLSX.utils.json_to_sheet(rows);
-      ws["!cols"] = [{ wch: 12 }, { wch: 18 }, { wch: 40 }];
+      ws["!cols"] = [{ wch: 12 }, { wch: 40 }];
       // 줄바꿈이 표시되도록 wrapText 적용
       const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
       for (let R = range.s.r; R <= range.e.r; R++) {
