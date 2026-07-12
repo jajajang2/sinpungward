@@ -251,13 +251,15 @@ const AttendancePage = () => {
     const todayStr = toDateStr(today);
 
     // 최근 8주 안에 존재한 모임 날짜(누구든 기록이 있는 날짜)
+    // 현재 편집 중인 날짜(selectedDateStr)는 제외 — 오늘 체크/해제 때문에 가족 순서가 흔들리지 않도록 고정
     const meetingDates = new Set<string>();
     Object.values(attendance).forEach((byDate) => {
       Object.keys(byDate).forEach((d) => {
-        if (d >= cutoffStr && d <= todayStr) meetingDates.add(d);
+        if (d >= cutoffStr && d <= todayStr && d !== selectedDateStr) meetingDates.add(d);
       });
     });
     const denom = meetingDates.size;
+
 
     const rates: Record<string, number> = {};
     for (const m of members) {
