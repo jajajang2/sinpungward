@@ -58,7 +58,7 @@ const UpcomingBirthdaysCard = () => {
           <span className="ml-auto text-xs font-normal text-muted-foreground">{list.length}명</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="max-h-72 overflow-y-auto">
+      <CardContent className="max-h-[9.5rem] overflow-y-auto">
         {loading ? (
           <p className="text-sm text-muted-foreground">불러오는 중...</p>
         ) : list.length === 0 ? (

@@ -6,7 +6,7 @@ import { LayoutGrid } from "lucide-react";
 
 const DashboardPage = () => {
   return (
-    <div className="h-screen overflow-y-auto p-4 md:p-6 bg-muted/30">
+    <div className="h-screen overflow-hidden p-4 md:p-6 bg-muted/30">
       <div className="mb-4 md:mb-6 flex items-center gap-3">
         <div className="w-11 h-11 rounded-xl bg-card border border-border flex items-center justify-center shadow-sm">
           <LayoutGrid className="w-5 h-5 text-primary" />
