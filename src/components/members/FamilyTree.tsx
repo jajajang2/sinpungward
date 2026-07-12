@@ -157,11 +157,13 @@ function siblingSpouseLabel(kind: SibKind | null, selfGender?: string | null): s
 
 // ── Combobox ───────────────────────────────────────────────
 const MemberCombobox = ({
-  members, value, onChange,
+  members, value, valueLabel, onChange, onSelectNonMember,
 }: {
   members: RelationMember[];
   value: string;
+  valueLabel?: string;
   onChange: (memberId: string) => void;
+  onSelectNonMember: (name: string) => void;
 }) => {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -169,6 +171,8 @@ const MemberCombobox = ({
   const filtered = members.filter(m =>
     !q || m.name.toLowerCase().includes(q.toLowerCase())
   ).slice(0, 30);
+  const trimmed = q.trim();
+  const exactMatch = trimmed && members.some(m => m.name === trimmed);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -176,31 +180,45 @@ const MemberCombobox = ({
           type="button"
           className="h-8 px-2 text-xs border border-input rounded-md flex items-center justify-between gap-1 w-full bg-background hover:bg-accent"
         >
-          <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected?.name || "회원 선택..."}
+          <span className={cn("truncate", !selected && !valueLabel && "text-muted-foreground")}>
+            {selected?.name || valueLabel || "회원 선택 또는 비회원 이름 입력..."}
           </span>
           <ChevronsUpDown className="w-3 h-3 text-muted-foreground shrink-0" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="start">
+      <PopoverContent className="w-64 p-0" align="start">
         <Input
           autoFocus value={q} onChange={e => setQ(e.target.value)}
-          placeholder="이름 검색..." className="h-8 text-xs border-0 border-b rounded-none"
+          placeholder="이름 검색 또는 비회원 이름 입력..." className="h-8 text-xs border-0 border-b rounded-none"
         />
         <div className="max-h-56 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="px-3 py-3 text-xs text-muted-foreground text-center">결과 없음</div>
-          ) : filtered.map(m => (
+          {filtered.map(m => (
             <button
               key={m.id}
               type="button"
               onClick={() => { onChange(m.id); setOpen(false); setQ(""); }}
-              className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent"
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent flex items-center gap-1.5"
             >
               <span className="font-medium">{m.name}</span>
-              {m.birth_date && <span className="ml-2 text-muted-foreground">{m.birth_date}</span>}
+              {m.is_non_member && (
+                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">비회원</span>
+              )}
+              {m.birth_date && <span className="ml-auto text-muted-foreground">{m.birth_date}</span>}
             </button>
           ))}
+          {trimmed && !exactMatch && (
+            <button
+              type="button"
+              onClick={() => { onSelectNonMember(trimmed); setOpen(false); setQ(""); }}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-accent border-t border-border flex items-center gap-1.5"
+            >
+              <Plus className="w-3 h-3 text-amber-600" />
+              <span>비회원으로 추가: <span className="font-semibold">"{trimmed}"</span></span>
+            </button>
+          )}
+          {filtered.length === 0 && !trimmed && (
+            <div className="px-3 py-3 text-xs text-muted-foreground text-center">이름을 입력하세요</div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
