@@ -235,6 +235,7 @@ const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
 
   const [addType, setAddType] = useState<RelationType>("child");
   const [addTarget, setAddTarget] = useState<string>("");
+  const [addNonMemberName, setAddNonMemberName] = useState<string>("");
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -257,10 +258,27 @@ const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
   const relatedOf = (id: string, t: RelationType) => sortByAge(getRelated(edges, id, t));
 
   const handleAddRelation = async () => {
-    if (!addTarget) { toast({ title: "회원을 선택하세요", variant: "destructive" }); return; }
-    if (addTarget === memberId) { toast({ title: "자기 자신은 추가할 수 없습니다", variant: "destructive" }); return; }
+    let targetId = addTarget;
+
+    // 비회원으로 신규 등록
+    if (!targetId && addNonMemberName.trim()) {
+      const name = addNonMemberName.trim();
+      const { data: created, error: createErr } = await supabase
+        .from("members")
+        .insert({ name, is_non_member: true })
+        .select("id")
+        .single();
+      if (createErr || !created) {
+        toast({ title: "비회원 추가 실패", description: createErr?.message, variant: "destructive" });
+        return;
+      }
+      targetId = created.id;
+    }
+
+    if (!targetId) { toast({ title: "회원을 선택하거나 비회원 이름을 입력하세요", variant: "destructive" }); return; }
+    if (targetId === memberId) { toast({ title: "자기 자신은 추가할 수 없습니다", variant: "destructive" }); return; }
     const { error } = await supabase.from("member_relations").insert({
-      member_id: memberId, related_member_id: addTarget, relation_type: addType,
+      member_id: memberId, related_member_id: targetId, relation_type: addType,
     });
     if (error) {
       if (error.code === "23505") toast({ title: "이미 등록된 관계입니다", variant: "destructive" });
@@ -268,6 +286,7 @@ const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
       return;
     }
     setAddTarget("");
+    setAddNonMemberName("");
     toast({ title: "추가됨", description: "양쪽 회원카드에 자동 반영됩니다." });
     await reload();
   };
@@ -362,7 +381,13 @@ const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
                 ))}
               </SelectContent>
             </Select>
-            <MemberCombobox members={addCandidates} value={addTarget} onChange={setAddTarget} />
+            <MemberCombobox
+              members={addCandidates}
+              value={addTarget}
+              valueLabel={addNonMemberName ? `비회원: ${addNonMemberName}` : undefined}
+              onChange={(id) => { setAddTarget(id); setAddNonMemberName(""); }}
+              onSelectNonMember={(name) => { setAddNonMemberName(name); setAddTarget(""); }}
+            />
             <Button size="sm" className="h-8 text-xs" onClick={handleAddRelation}>
               <Plus className="w-3 h-3 mr-1" />추가
             </Button>
