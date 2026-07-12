@@ -112,6 +112,30 @@ const GROUPS: AttendanceGroup[] = [
 const toDateStr = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
+const ATTENDANCE_PAGE_SIZE = 1000;
+
+const fetchAllAttendanceRecords = async (): Promise<{ data: AttendanceRecord[]; error: unknown }> => {
+  const allRecords: AttendanceRecord[] = [];
+
+  for (let from = 0; ; from += ATTENDANCE_PAGE_SIZE) {
+    const to = from + ATTENDANCE_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from("attendance")
+      .select("*")
+      .order("attendance_date", { ascending: true })
+      .range(from, to);
+
+    if (error) return { data: allRecords, error };
+
+    const page = (data as AttendanceRecord[]) || [];
+    allRecords.push(...page);
+
+    if (page.length < ATTENDANCE_PAGE_SIZE) break;
+  }
+
+  return { data: allRecords, error: null };
+};
+
 const monthOffset = (baseDate: Date, offset: number) => new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1);
 
 const formatSelectedDate = (date: Date) => format(date, "yyyy년 M월 d일 (EEE)", { locale: ko });
@@ -150,7 +174,7 @@ const AttendancePage = () => {
     try {
       const [memberRes, attendanceRes, visitorRes, relRes, famRes, famMemRes] = await Promise.all([
         supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
-        supabase.from("attendance").select("*"),
+        fetchAllAttendanceRecords(),
         supabase.from("attendance_visitors").select("*").order("attendance_date", { ascending: false }).order("sort_order"),
         supabase.from("member_relations").select("member_id, related_member_id, relation_type"),
         supabase.from("families").select("id, head_member_id"),
