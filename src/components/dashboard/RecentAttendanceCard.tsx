@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, CartesianGrid } from "recharts";
 
 interface WeekData {
   label: string;
   count: number;
 }
 
-const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const formatDate = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 const RecentAttendanceCard = () => {
   const [data, setData] = useState<WeekData[]>([]);
@@ -18,7 +18,6 @@ const RecentAttendanceCard = () => {
 
   useEffect(() => {
     (async () => {
-      // Find last 4 Sundays
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const lastSunday = new Date(today);
@@ -44,13 +43,10 @@ const RecentAttendanceCard = () => {
         counts[r.attendance_date] = (counts[r.attendance_date] || 0) + 1;
       });
 
-      const result = sundays.map((s) => {
-        const key = formatDate(s);
-        return {
-          label: `${s.getMonth() + 1}/${s.getDate()}`,
-          count: counts[key] || 0,
-        };
-      });
+      const result = sundays.map((s) => ({
+        label: `${s.getMonth() + 1}/${s.getDate()}`,
+        count: counts[formatDate(s)] || 0,
+      }));
       setData(result);
       setAvg(Math.round(result.reduce((a, b) => a + b.count, 0) / result.length));
       setLoading(false);
@@ -66,27 +62,22 @@ const RecentAttendanceCard = () => {
           <span className="ml-auto text-xs font-normal text-muted-foreground">평균 {avg}명</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-72">
+      <CardContent className="pb-4">
         {loading ? (
           <p className="text-sm text-muted-foreground">불러오는 중...</p>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 6,
-                  fontSize: 12,
-                }}
-              />
-              <ReferenceLine y={avg} stroke="hsl(var(--primary))" strokeDasharray="4 4" />
-              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="grid grid-cols-4 gap-2">
+            {data.map((w) => (
+              <div
+                key={w.label}
+                className="flex flex-col items-center justify-center rounded-md border border-border bg-muted/30 py-2"
+              >
+                <span className="text-xs text-muted-foreground">{w.label}</span>
+                <span className="text-lg font-semibold text-foreground leading-tight">{w.count}</span>
+                <span className="text-[10px] text-muted-foreground">명</span>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
