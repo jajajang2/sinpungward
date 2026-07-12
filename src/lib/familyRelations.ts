@@ -9,6 +9,7 @@ export interface RelationMember {
   birth_date?: string | null;
   phone?: string | null;
   current_calling?: string[] | null;
+  is_non_member?: boolean;
 }
 
 export interface RelationEdge {
@@ -67,7 +68,7 @@ export async function fetchRelationGraph(): Promise<{
   edgesByMember: Map<string, RelationEdge[]>;
 }> {
   const [{ data: members }, { data: edges }, { data: ci }] = await Promise.all([
-    supabase.from("members").select("id, name, gender, birth_date, phone"),
+    supabase.from("members").select("id, name, gender, birth_date, phone, is_non_member"),
     supabase.from("member_relations").select("member_id, related_member_id, relation_type"),
     supabase.from("member_church_info").select("member_id, current_calling"),
   ]);
