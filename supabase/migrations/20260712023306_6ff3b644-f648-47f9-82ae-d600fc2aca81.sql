@@ -1,0 +1,1 @@
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS is_non_member BOOLEAN NOT NULL DEFAULT false;

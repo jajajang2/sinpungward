@@ -460,6 +460,7 @@ export type Database = {
           email: string | null
           gender: string | null
           id: string
+          is_non_member: boolean
           is_special_care: boolean
           marital_status: string | null
           marriage_date: string | null
@@ -477,6 +478,7 @@ export type Database = {
           email?: string | null
           gender?: string | null
           id?: string
+          is_non_member?: boolean
           is_special_care?: boolean
           marital_status?: string | null
           marriage_date?: string | null
@@ -494,6 +496,7 @@ export type Database = {
           email?: string | null
           gender?: string | null
           id?: string
+          is_non_member?: boolean
           is_special_care?: boolean
           marital_status?: string | null
           marriage_date?: string | null

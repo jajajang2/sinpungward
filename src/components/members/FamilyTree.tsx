@@ -47,6 +47,7 @@ const FamilyRowItem = ({
   editMode?: boolean;
 }) => {
   const age = calcAge(m.birth_date);
+  const isNonMember = !!m.is_non_member;
   return (
     <HoverCard openDelay={250}>
       <HoverCardTrigger asChild>
@@ -64,8 +65,13 @@ const FamilyRowItem = ({
             {isSelf ? "본인" : label || "—"}
           </span>
           <div className="flex-1 min-w-0 grid grid-cols-12 gap-2 items-center">
-            <div className={cn("col-span-3 text-sm font-semibold truncate", isSelf && "text-primary")}>
-              {m.name || "—"}
+            <div className={cn("col-span-3 text-sm font-semibold truncate flex items-center gap-1.5", isSelf && "text-primary")}>
+              <span className="truncate">{m.name || "—"}</span>
+              {isNonMember && (
+                <span className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  비회원
+                </span>
+              )}
             </div>
             <div className="col-span-3 text-xs text-muted-foreground truncate">
               {m.birth_date ? `${m.birth_date}${age != null ? ` (${age})` : ""}` : "—"}
@@ -78,7 +84,7 @@ const FamilyRowItem = ({
             </div>
           </div>
           <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-            {!isSelf && onNavigate && (
+            {!isSelf && !isNonMember && onNavigate && (
               <button type="button" onClick={onNavigate} className="p-1 rounded hover:bg-accent text-primary" title="회원카드 이동">
                 <ExternalLink className="w-3.5 h-3.5" />
               </button>
@@ -92,7 +98,14 @@ const FamilyRowItem = ({
         </div>
       </HoverCardTrigger>
       <HoverCardContent className="w-64 text-xs space-y-1" side="top">
-        <div className="font-semibold text-sm">{m.name}</div>
+        <div className="font-semibold text-sm flex items-center gap-1.5">
+          {m.name}
+          {isNonMember && (
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+              비회원
+            </span>
+          )}
+        </div>
         {label && <div><span className="text-muted-foreground">관계:</span> {label}</div>}
         {m.birth_date && <div><span className="text-muted-foreground">생년월일:</span> {m.birth_date}{age != null && ` (${age}세)`}</div>}
         {m.current_calling && m.current_calling.length > 0 && (
@@ -144,11 +157,13 @@ function siblingSpouseLabel(kind: SibKind | null, selfGender?: string | null): s
 
 // ── Combobox ───────────────────────────────────────────────
 const MemberCombobox = ({
-  members, value, onChange,
+  members, value, valueLabel, onChange, onSelectNonMember,
 }: {
   members: RelationMember[];
   value: string;
+  valueLabel?: string;
   onChange: (memberId: string) => void;
+  onSelectNonMember: (name: string) => void;
 }) => {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -156,6 +171,8 @@ const MemberCombobox = ({
   const filtered = members.filter(m =>
     !q || m.name.toLowerCase().includes(q.toLowerCase())
   ).slice(0, 30);
+  const trimmed = q.trim();
+  const exactMatch = trimmed && members.some(m => m.name === trimmed);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -163,31 +180,45 @@ const MemberCombobox = ({
           type="button"
           className="h-8 px-2 text-xs border border-input rounded-md flex items-center justify-between gap-1 w-full bg-background hover:bg-accent"
         >
-          <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected?.name || "회원 선택..."}
+          <span className={cn("truncate", !selected && !valueLabel && "text-muted-foreground")}>
+            {selected?.name || valueLabel || "회원 선택 또는 비회원 이름 입력..."}
           </span>
           <ChevronsUpDown className="w-3 h-3 text-muted-foreground shrink-0" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="start">
+      <PopoverContent className="w-64 p-0" align="start">
         <Input
           autoFocus value={q} onChange={e => setQ(e.target.value)}
-          placeholder="이름 검색..." className="h-8 text-xs border-0 border-b rounded-none"
+          placeholder="이름 검색 또는 비회원 이름 입력..." className="h-8 text-xs border-0 border-b rounded-none"
         />
         <div className="max-h-56 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="px-3 py-3 text-xs text-muted-foreground text-center">결과 없음</div>
-          ) : filtered.map(m => (
+          {filtered.map(m => (
             <button
               key={m.id}
               type="button"
               onClick={() => { onChange(m.id); setOpen(false); setQ(""); }}
-              className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent"
+              className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent flex items-center gap-1.5"
             >
               <span className="font-medium">{m.name}</span>
-              {m.birth_date && <span className="ml-2 text-muted-foreground">{m.birth_date}</span>}
+              {m.is_non_member && (
+                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">비회원</span>
+              )}
+              {m.birth_date && <span className="ml-auto text-muted-foreground">{m.birth_date}</span>}
             </button>
           ))}
+          {trimmed && !exactMatch && (
+            <button
+              type="button"
+              onClick={() => { onSelectNonMember(trimmed); setOpen(false); setQ(""); }}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-accent border-t border-border flex items-center gap-1.5"
+            >
+              <Plus className="w-3 h-3 text-amber-600" />
+              <span>비회원으로 추가: <span className="font-semibold">"{trimmed}"</span></span>
+            </button>
+          )}
+          {filtered.length === 0 && !trimmed && (
+            <div className="px-3 py-3 text-xs text-muted-foreground text-center">이름을 입력하세요</div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
@@ -204,6 +235,7 @@ const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
 
   const [addType, setAddType] = useState<RelationType>("child");
   const [addTarget, setAddTarget] = useState<string>("");
+  const [addNonMemberName, setAddNonMemberName] = useState<string>("");
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -226,10 +258,27 @@ const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
   const relatedOf = (id: string, t: RelationType) => sortByAge(getRelated(edges, id, t));
 
   const handleAddRelation = async () => {
-    if (!addTarget) { toast({ title: "회원을 선택하세요", variant: "destructive" }); return; }
-    if (addTarget === memberId) { toast({ title: "자기 자신은 추가할 수 없습니다", variant: "destructive" }); return; }
+    let targetId = addTarget;
+
+    // 비회원으로 신규 등록
+    if (!targetId && addNonMemberName.trim()) {
+      const name = addNonMemberName.trim();
+      const { data: created, error: createErr } = await supabase
+        .from("members")
+        .insert({ name, is_non_member: true })
+        .select("id")
+        .single();
+      if (createErr || !created) {
+        toast({ title: "비회원 추가 실패", description: createErr?.message, variant: "destructive" });
+        return;
+      }
+      targetId = created.id;
+    }
+
+    if (!targetId) { toast({ title: "회원을 선택하거나 비회원 이름을 입력하세요", variant: "destructive" }); return; }
+    if (targetId === memberId) { toast({ title: "자기 자신은 추가할 수 없습니다", variant: "destructive" }); return; }
     const { error } = await supabase.from("member_relations").insert({
-      member_id: memberId, related_member_id: addTarget, relation_type: addType,
+      member_id: memberId, related_member_id: targetId, relation_type: addType,
     });
     if (error) {
       if (error.code === "23505") toast({ title: "이미 등록된 관계입니다", variant: "destructive" });
@@ -237,6 +286,7 @@ const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
       return;
     }
     setAddTarget("");
+    setAddNonMemberName("");
     toast({ title: "추가됨", description: "양쪽 회원카드에 자동 반영됩니다." });
     await reload();
   };
@@ -331,7 +381,13 @@ const FamilyTree = ({ memberId, onNavigateToMember }: FamilyTreeProps) => {
                 ))}
               </SelectContent>
             </Select>
-            <MemberCombobox members={addCandidates} value={addTarget} onChange={setAddTarget} />
+            <MemberCombobox
+              members={addCandidates}
+              value={addTarget}
+              valueLabel={addNonMemberName ? `비회원: ${addNonMemberName}` : undefined}
+              onChange={(id) => { setAddTarget(id); setAddNonMemberName(""); }}
+              onSelectNonMember={(name) => { setAddNonMemberName(name); setAddTarget(""); }}
+            />
             <Button size="sm" className="h-8 text-xs" onClick={handleAddRelation}>
               <Plus className="w-3 h-3 mr-1" />추가
             </Button>
