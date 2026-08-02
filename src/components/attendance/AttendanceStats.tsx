@@ -112,18 +112,30 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
     return out;
   }, [members, attendance, totalMembers, today.getMonth(), today.getFullYear()]);
 
+  // ── 실제 출석부가 열린 날짜 (기록이 존재하는 날) ──
+  const meetingDates = useMemo(() => {
+    const s = new Set<string>();
+    records.forEach(r => { if (r.is_present) s.add(r.attendance_date); });
+    return Array.from(s).sort();
+  }, [records]);
+
+  const datesInRange = (start: Date, end: Date) => {
+    const a = toDateStr(start), b = toDateStr(end);
+    return meetingDates.filter(d => d >= a && d <= b);
+  };
+
   // ── 개인별 출석률 (최근 3개월) ──
   const personalRates = useMemo(() => {
     const start = new Date(today); start.setMonth(start.getMonth() - 3);
-    const sundays = getSundays(start, today);
+    const dates = datesInRange(start, today);
     return members
       .map(m => {
-        const present = sundays.filter(s => attendance[m.id]?.[toDateStr(s)]).length;
-        const rate = sundays.length > 0 ? (present / sundays.length) * 100 : 0;
-        return { id: m.id, name: m.name, age: getAge(m.birth_date), phone: m.phone || "", present, total: sundays.length, rate };
+        const present = dates.filter(d => attendance[m.id]?.[d]).length;
+        const rate = dates.length > 0 ? (present / dates.length) * 100 : 0;
+        return { id: m.id, name: m.name, age: getAge(m.birth_date), phone: m.phone || "", present, total: dates.length, rate };
       })
       .sort((a, b) => b.rate - a.rate);
-  }, [members, attendance]);
+  }, [members, attendance, meetingDates]);
 
   const filteredPersonalRates = useMemo(() => {
     const q = personalSearch.trim().toLowerCase();
@@ -139,11 +151,10 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
     if (absentRange === "2w") start.setDate(start.getDate() - 14);
     else if (absentRange === "4w") start.setDate(start.getDate() - 28);
     else start.setMonth(start.getMonth() - 3);
-    const sundays = getSundays(start, today);
-    return members.filter(m => {
-      return sundays.every(s => !attendance[m.id]?.[toDateStr(s)]);
-    });
-  }, [members, attendance, absentRange]);
+    const dates = datesInRange(start, today);
+    if (dates.length === 0) return [];
+    return members.filter(m => dates.every(d => !attendance[m.id]?.[d]));
+  }, [members, attendance, absentRange, meetingDates]);
 
   const exportAbsentees = async () => {
     if (absentees.length === 0) {
