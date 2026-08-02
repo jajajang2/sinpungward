@@ -285,11 +285,12 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
             <UserX className="w-4 h-4" /> 4주 불참
           </div>
-          <p className="text-2xl font-bold">{members.filter(m => {
+          <p className="text-2xl font-bold">{(() => {
             const sd = new Date(today); sd.setDate(sd.getDate() - 28);
-            const ss = getSundays(sd, today);
-            return ss.every(s => !attendance[m.id]?.[toDateStr(s)]);
-          }).length}</p>
+            const ds = datesInRange(sd, today);
+            if (ds.length === 0) return 0;
+            return members.filter(m => ds.every(d => !attendance[m.id]?.[d])).length;
+          })()}</p>
           <p className="text-xs text-muted-foreground mt-1">명</p>
         </Card>
       </div>
