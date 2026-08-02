@@ -11,9 +11,25 @@ const AttendanceStatsPage = () => {
 
   useEffect(() => {
     (async () => {
+      const fetchAllAttendance = async () => {
+        const size = 1000;
+        const all: AttendanceRecord[] = [];
+        for (let from = 0; ; from += size) {
+          const { data, error } = await supabase
+            .from("attendance")
+            .select("*")
+            .order("attendance_date", { ascending: true })
+            .range(from, from + size - 1);
+          if (error) break;
+          const page = (data as AttendanceRecord[]) || [];
+          all.push(...page);
+          if (page.length < size) break;
+        }
+        return { data: all };
+      };
       const [mRes, aRes] = await Promise.all([
         supabase.from("members").select("id, name, gender, birth_date, marital_status, created_at, updated_at").order("name"),
-        supabase.from("attendance").select("*"),
+        fetchAllAttendance(),
       ]);
       if (mRes.data) setMembers(mRes.data as Member[]);
       if (aRes.data) {
