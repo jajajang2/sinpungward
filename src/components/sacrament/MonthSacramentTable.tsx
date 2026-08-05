@@ -23,6 +23,8 @@ interface Props {
   members: MemberLite[];
   refreshKey: number;
   onChanged: () => void;
+  bishopricCandidates: MemberLite[];
+  musicCandidates: MemberLite[];
 }
 
 function sundaysOf(year: number, month: number): string[] {
