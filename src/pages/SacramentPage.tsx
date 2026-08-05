@@ -135,6 +135,24 @@ export default function SacramentPage() {
               musicCandidates={musicCandidates}
             />
           </div>
+          <div className="rounded-lg border bg-card p-3">
+            <Input
+              placeholder="이름 검색"
+              value={nameQuery}
+              onChange={(e) => setNameQuery(e.target.value)}
+              className="h-8 w-full max-w-xs text-xs"
+            />
+            <ul className="mt-2 divide-y">
+              {searchResults.map((r) => (
+                <li key={r.id} className="flex items-center gap-2 py-1 text-xs">
+                  <span className="font-medium">{r.name}</span>
+                  <span className="text-muted-foreground">
+                    {format(new Date(r.meeting_date), "yyyy.MM.dd")} · {ROLE_LABEL[r.role] || r.role}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </TabsContent>
 
         <TabsContent value="history">
