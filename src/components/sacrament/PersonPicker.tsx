@@ -14,6 +14,7 @@ interface Props {
   currentStatus?: AssignStatus | null;
   onStatus?: (s: AssignStatus) => void;
   showStatus?: boolean;
+  candidates?: MemberLite[];
 }
 
 export default function PersonPicker({
