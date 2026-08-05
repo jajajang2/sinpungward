@@ -69,3 +69,5 @@ export const ROWS: RowDef[] = [
 
 export const TALK_ROLES = ["말씀_3분", "말씀_7분", "말씀_10분", "마지막연사"];
 export const SPECIAL_MERGE_ROLES = ["말씀_3분", "말씀_7분", "말씀_10분", "중간찬송", "마지막연사"];
+
+export const PRAYER_ROLES = ["개회기도", "폐회기도"];

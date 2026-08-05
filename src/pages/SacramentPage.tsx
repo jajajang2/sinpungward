@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import MonthSacramentTable from "@/components/sacrament/MonthSacramentTable";
 import SacramentTalkHistory from "@/components/sacrament/SacramentTalkHistory";
+import SacramentPrayerHistory from "@/components/sacrament/SacramentPrayerHistory";
 import SacramentImportExport from "@/components/sacrament/SacramentImportExport";
 import AutoLinkMembers from "@/components/sacrament/AutoLinkMembers";
 import type { MemberLite } from "@/components/sacrament/types";
@@ -66,6 +67,7 @@ export default function SacramentPage() {
           <TabsList className="h-8">
             <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
             <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
+            <TabsTrigger value="prayer" className="text-xs py-1">기도 히스토리</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setAnchor((p) => addMonths(p, -2))}>
@@ -107,6 +109,11 @@ export default function SacramentPage() {
         <TabsContent value="history">
           <SacramentTalkHistory members={members} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
         </TabsContent>
+
+        <TabsContent value="prayer">
+          <SacramentPrayerHistory members={members} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
