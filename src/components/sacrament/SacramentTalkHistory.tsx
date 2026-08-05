@@ -108,20 +108,25 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
     })();
   }, [members]);
 
+  const filteredRows = useMemo(() => {
+    if (talkFilter === "all") return rows;
+    return rows.filter((r) => r.role === talkFilter);
+  }, [rows, talkFilter]);
+
   const memberGroups = useMemo(() => {
     const byMember = new Map<string, TalkRow[]>();
-    rows.forEach((r) => {
+    filteredRows.forEach((r) => {
       if (!r.member_id) return;
       if (!byMember.has(r.member_id)) byMember.set(r.member_id, []);
       byMember.get(r.member_id)!.push(r);
     });
     byMember.forEach((arr) => arr.sort((a, b) => b.meeting_date.localeCompare(a.meeting_date)));
     return byMember;
-  }, [rows]);
+  }, [filteredRows]);
 
   const customGroups = useMemo(() => {
     const map = new Map<string, TalkRow[]>();
-    rows.forEach((r) => {
+    filteredRows.forEach((r) => {
       if (r.member_id || !r.custom_name) return;
       const k = r.custom_name.trim();
       if (!map.has(k)) map.set(k, []);
@@ -129,7 +134,7 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
     });
     map.forEach((arr) => arr.sort((a, b) => b.meeting_date.localeCompare(a.meeting_date)));
     return map;
-  }, [rows]);
+  }, [filteredRows]);
 
   const attRate = (id: string) => {
     const a = attendance.get(id);
