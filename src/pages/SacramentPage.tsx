@@ -29,6 +29,8 @@ export default function SacramentPage() {
   const [members, setMembers] = useState<MemberLite[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [callingMap, setCallingMap] = useState<Record<string, string[]>>({});
+  const [searchRows, setSearchRows] = useState<SearchRow[]>([]);
+  const [nameQuery, setNameQuery] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -43,6 +45,23 @@ export default function SacramentPage() {
       setCallingMap(cmap);
     })();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("sacrament_assignments")
+        .select("id, role, member_id, custom_name, sacrament_meetings!inner(meeting_date)")
+        .in("role", SEARCH_ROLES);
+      const parsed: SearchRow[] = (data || []).map((r: any) => ({
+        id: r.id,
+        role: r.role,
+        member_id: r.member_id,
+        custom_name: r.custom_name,
+        meeting_date: r.sacrament_meetings.meeting_date,
+      })).filter((r) => r.meeting_date >= "2025-01-01");
+      setSearchRows(parsed);
+    })();
+  }, [refreshKey]);
 
   const bishopricCandidates = useMemo(() => {
     return members
