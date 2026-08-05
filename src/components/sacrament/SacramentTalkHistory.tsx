@@ -56,7 +56,7 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
         talk_topic: r.talk_topic,
         talk_content: r.talk_content,
         meeting_date: r.sacrament_meetings.meeting_date,
-      }));
+      })).filter((r: TalkRow) => r.meeting_date >= "2025-01-01");
       setRows(parsed);
     })();
   }, [refreshKey]);
