@@ -162,16 +162,16 @@ export const CALLING_GROUPS: { group: string; items: string[] }[] = [
     group: "음악 위원회",
     items: [
       "음악 위원장",
-      "지휘자 1",
-      "지휘자 2",
-      "지휘자 3",
-      "지휘자 4",
-      "지휘자 5",
-      "반주자 1",
-      "반주자 2",
-      "반주자 3",
-      "반주자 4",
-      "반주자 5",
+      "음악 위원회 1_반주자",
+      "음악 위원회 2_반주자",
+      "음악 위원회 3_반주자",
+      "음악 위원회 4_반주자",
+      "음악 위원회 5_반주자",
+      "음악 위원회 1_지휘자",
+      "음악 위원회 2_지휘자",
+      "음악 위원회 3_지휘자",
+      "음악 위원회 4_지휘자",
+      "음악 위원회 5_지휘자",
     ],
   },
   {
@@ -198,3 +198,7 @@ export const CALLING_GROUPS: { group: string; items: string[] }[] = [
 export const ALL_CALLINGS: CallingItem[] = CALLING_GROUPS.flatMap(({ group, items }) =>
   makeList(group, items)
 );
+
+export const BISHOPRIC_MAIN_CALLINGS = ["감독", "감독단 1보좌", "감독단 2보좌"];
+
+export const MUSIC_COMMITTEE_CALLINGS = ["음악 위원장", "음악 위원회 1", "음악 위원회 2", "음악 위원회 3", "음악 위원회 4", "음악 위원회 5"];
