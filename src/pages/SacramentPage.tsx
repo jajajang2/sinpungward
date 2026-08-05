@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { addMonths, startOfMonth } from "date-fns";
+import { addMonths, format, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,8 +10,19 @@ import SacramentTalkHistory from "@/components/sacrament/SacramentTalkHistory";
 import SacramentPrayerHistory from "@/components/sacrament/SacramentPrayerHistory";
 import SacramentImportExport from "@/components/sacrament/SacramentImportExport";
 import AutoLinkMembers from "@/components/sacrament/AutoLinkMembers";
-import type { MemberLite } from "@/components/sacrament/types";
+import { ROWS, type MemberLite } from "@/components/sacrament/types";
 import { BISHOPRIC_MAIN_CALLINGS, MUSIC_COMMITTEE_CALLINGS } from "@/data/callings";
+
+const SEARCH_ROLES = ["말씀_3분", "말씀_7분", "말씀_10분", "마지막연사", "개회기도", "폐회기도"];
+const ROLE_LABEL: Record<string, string> = Object.fromEntries(ROWS.map((r) => [r.role, r.label]));
+
+interface SearchRow {
+  id: string;
+  role: string;
+  member_id: string | null;
+  custom_name: string | null;
+  meeting_date: string;
+}
 
 export default function SacramentPage() {
   const [anchor, setAnchor] = useState<Date>(() => startOfMonth(new Date()));
