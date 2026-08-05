@@ -93,6 +93,11 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
     load();
   }, [load, refreshKey]);
 
+  const defaultPresider = useMemo(() => {
+    const m = members.find((x) => x.name === "정준우");
+    return m ? { member_id: m.id, custom_name: null as string | null } : { member_id: null as string | null, custom_name: "정준우" };
+  }, [members]);
+
   const ensureMeeting = async (date: string): Promise<string> => {
     if (meetings[date]) return meetings[date].id;
     const { data, error } = await supabase
@@ -104,9 +109,20 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
       toast.error("저장 실패: " + (error?.message || ""));
       throw error;
     }
-    setMeetings((p) => ({ ...p, [date]: data as SacramentMeeting }));
-    return (data as SacramentMeeting).id;
+    const meeting = data as SacramentMeeting;
+    setMeetings((p) => ({ ...p, [date]: meeting }));
+    // 새 미팅 생성 직후에만 감리자 기본값 자동 생성
+    const { data: pres } = await supabase
+      .from("sacrament_assignments")
+      .insert({ meeting_id: meeting.id, role: "감리자", slot: 0, ...defaultPresider, status: "승인" })
+      .select()
+      .single();
+    if (pres) {
+      setAssigns((p) => ({ ...p, [keyOf(meeting.id, "감리자", 0)]: pres as SacramentAssignment }));
+    }
+    return meeting.id;
   };
+
 
   const upsertAssign = async (date: string, role: string, slot: number, patch: Partial<SacramentAssignment>) => {
     const meeting_id = await ensureMeeting(date);
