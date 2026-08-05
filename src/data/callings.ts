@@ -198,3 +198,7 @@ export const CALLING_GROUPS: { group: string; items: string[] }[] = [
 export const ALL_CALLINGS: CallingItem[] = CALLING_GROUPS.flatMap(({ group, items }) =>
   makeList(group, items)
 );
+
+export const BISHOPRIC_MAIN_CALLINGS = ["감독", "감독단 1보좌", "감독단 2보좌"];
+
+export const MUSIC_COMMITTEE_CALLINGS = ["음악 위원장", "음악 위원회 1", "음악 위원회 2", "음악 위원회 3", "음악 위원회 4", "음악 위원회 5"];
