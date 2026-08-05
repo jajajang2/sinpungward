@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import MonthSacramentTable from "@/components/sacrament/MonthSacramentTable";
 import SacramentTalkHistory from "@/components/sacrament/SacramentTalkHistory";
+import SacramentPrayerHistory from "@/components/sacrament/SacramentPrayerHistory";
 import SacramentImportExport from "@/components/sacrament/SacramentImportExport";
 import AutoLinkMembers from "@/components/sacrament/AutoLinkMembers";
 import type { MemberLite } from "@/components/sacrament/types";
