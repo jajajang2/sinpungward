@@ -14,6 +14,7 @@ interface Props {
   currentStatus?: AssignStatus | null;
   onStatus?: (s: AssignStatus) => void;
   showStatus?: boolean;
+  candidates?: MemberLite[];
 }
 
 export default function PersonPicker({
@@ -26,6 +27,7 @@ export default function PersonPicker({
   currentStatus,
   onStatus,
   showStatus,
+  candidates,
 }: Props) {
   const [q, setQ] = useState("");
   const [custom, setCustom] = useState(currentCustomName ?? "");
@@ -48,15 +50,16 @@ export default function PersonPicker({
     </Button>
   );
 
+  const hasCandidates = candidates !== undefined;
+
   return (
     <div className="w-64 space-y-2 p-2">
-      <Input placeholder="이름 검색" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-      {q.trim() && (
+      {hasCandidates ? (
         <div className="max-h-56 overflow-y-auto rounded border">
-          {filtered.length === 0 ? (
-            <div className="px-2 py-3 text-xs text-muted-foreground">결과 없음</div>
+          {candidates.length === 0 ? (
+            <div className="px-2 py-3 text-xs text-muted-foreground">후보 없음</div>
           ) : (
-            filtered.map((m) => {
+            candidates.map((m) => {
               const age = calcAge(m.birth_date);
               return (
                 <button
@@ -72,7 +75,34 @@ export default function PersonPicker({
             })
           )}
         </div>
+      ) : (
+        <>
+          <Input placeholder="이름 검색" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          {q.trim() && (
+            <div className="max-h-56 overflow-y-auto rounded border">
+              {filtered.length === 0 ? (
+                <div className="px-2 py-3 text-xs text-muted-foreground">결과 없음</div>
+              ) : (
+                filtered.map((m) => {
+                  const age = calcAge(m.birth_date);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => onPick(m.id, null)}
+                      className={`block w-full px-2 py-1.5 text-left text-sm hover:bg-muted ${m.id === currentMemberId ? "bg-muted font-semibold" : ""}`}
+                    >
+                      {m.name}
+                      {age !== null && <span className="ml-1 text-xs text-muted-foreground">({age}세)</span>}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </>
       )}
+
       <div className="border-t pt-2">
         <div className="mb-1 text-xs text-muted-foreground">직접 입력 (비회원)</div>
         <div className="flex gap-1">
