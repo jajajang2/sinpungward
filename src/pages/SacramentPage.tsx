@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { addMonths, startOfMonth } from "date-fns";
+import { addMonths, format, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,14 +10,27 @@ import SacramentTalkHistory from "@/components/sacrament/SacramentTalkHistory";
 import SacramentPrayerHistory from "@/components/sacrament/SacramentPrayerHistory";
 import SacramentImportExport from "@/components/sacrament/SacramentImportExport";
 import AutoLinkMembers from "@/components/sacrament/AutoLinkMembers";
-import type { MemberLite } from "@/components/sacrament/types";
+import { ROWS, type MemberLite } from "@/components/sacrament/types";
 import { BISHOPRIC_MAIN_CALLINGS, MUSIC_COMMITTEE_CALLINGS } from "@/data/callings";
+
+const SEARCH_ROLES = ["말씀_3분", "말씀_7분", "말씀_10분", "마지막연사", "개회기도", "폐회기도"];
+const ROLE_LABEL: Record<string, string> = Object.fromEntries(ROWS.map((r) => [r.role, r.label]));
+
+interface SearchRow {
+  id: string;
+  role: string;
+  member_id: string | null;
+  custom_name: string | null;
+  meeting_date: string;
+}
 
 export default function SacramentPage() {
   const [anchor, setAnchor] = useState<Date>(() => startOfMonth(new Date()));
   const [members, setMembers] = useState<MemberLite[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [callingMap, setCallingMap] = useState<Record<string, string[]>>({});
+  const [searchRows, setSearchRows] = useState<SearchRow[]>([]);
+  const [nameQuery, setNameQuery] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -31,6 +45,43 @@ export default function SacramentPage() {
       setCallingMap(cmap);
     })();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("sacrament_assignments")
+        .select("id, role, member_id, custom_name, sacrament_meetings!inner(meeting_date)")
+        .in("role", SEARCH_ROLES);
+      const parsed: SearchRow[] = (data || []).map((r: any) => ({
+        id: r.id,
+        role: r.role,
+        member_id: r.member_id,
+        custom_name: r.custom_name,
+        meeting_date: r.sacrament_meetings.meeting_date,
+      })).filter((r) => r.meeting_date >= "2025-01-01");
+      setSearchRows(parsed);
+    })();
+  }, [refreshKey]);
+
+  const memberNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    members.forEach((mem) => m.set(mem.id, mem.name));
+    return m;
+  }, [members]);
+
+  const searchResults = useMemo(() => {
+    const q = nameQuery.trim().replace(/\s+/g, "");
+    if (!q) return [];
+    return searchRows
+      .map((r) => ({
+        id: r.id,
+        role: r.role,
+        meeting_date: r.meeting_date,
+        name: r.member_id ? (memberNameById.get(r.member_id) || r.custom_name || "") : (r.custom_name || ""),
+      }))
+      .filter((r) => r.name && r.name.replace(/\s+/g, "").includes(q))
+      .sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
+  }, [searchRows, nameQuery, memberNameById]);
 
   const bishopricCandidates = useMemo(() => {
     return members
@@ -103,6 +154,24 @@ export default function SacramentPage() {
               bishopricCandidates={bishopricCandidates}
               musicCandidates={musicCandidates}
             />
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <Input
+              placeholder="이름 검색"
+              value={nameQuery}
+              onChange={(e) => setNameQuery(e.target.value)}
+              className="h-8 w-full max-w-xs text-xs"
+            />
+            <ul className="mt-2 divide-y">
+              {searchResults.map((r) => (
+                <li key={r.id} className="flex items-center gap-2 py-1 text-xs">
+                  <span className="font-medium">{r.name}</span>
+                  <span className="text-muted-foreground">
+                    {format(new Date(r.meeting_date), "yyyy.MM.dd")} · {ROLE_LABEL[r.role] || r.role}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </TabsContent>
 
