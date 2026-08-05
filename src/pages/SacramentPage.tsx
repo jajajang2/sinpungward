@@ -66,6 +66,7 @@ export default function SacramentPage() {
           <TabsList className="h-8">
             <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
             <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
+            <TabsTrigger value="prayer" className="text-xs py-1">기도 히스토리</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setAnchor((p) => addMonths(p, -2))}>
