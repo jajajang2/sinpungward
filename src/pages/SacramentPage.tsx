@@ -63,6 +63,26 @@ export default function SacramentPage() {
     })();
   }, [refreshKey]);
 
+  const memberNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    members.forEach((mem) => m.set(mem.id, mem.name));
+    return m;
+  }, [members]);
+
+  const searchResults = useMemo(() => {
+    const q = nameQuery.trim().replace(/\s+/g, "");
+    if (!q) return [];
+    return searchRows
+      .map((r) => ({
+        id: r.id,
+        role: r.role,
+        meeting_date: r.meeting_date,
+        name: r.member_id ? (memberNameById.get(r.member_id) || r.custom_name || "") : (r.custom_name || ""),
+      }))
+      .filter((r) => r.name && r.name.replace(/\s+/g, "").includes(q))
+      .sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
+  }, [searchRows, nameQuery, memberNameById]);
+
   const bishopricCandidates = useMemo(() => {
     return members
       .filter((m) => {
