@@ -108,6 +108,11 @@ export default function SacramentPage() {
         <TabsContent value="history">
           <SacramentTalkHistory members={members} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
         </TabsContent>
+
+        <TabsContent value="prayer">
+          <SacramentPrayerHistory members={members} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
