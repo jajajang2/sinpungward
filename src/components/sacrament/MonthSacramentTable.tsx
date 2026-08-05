@@ -385,6 +385,9 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
 
     if (row.kind === "person") {
       const filled = !!(a?.member_id || a?.custom_name);
+      const isPresiderDefault = row.role === "감리자" && !a;
+      const displayName = nameOf(a) || (isPresiderDefault ? "정준우" : "");
+      const bgClass = statusBg(a?.status ?? (isPresiderDefault ? "승인" : null));
       const candidates =
         row.role === "사회자"
           ? bishopricCandidates
@@ -396,10 +399,11 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${statusBg(a?.status)}`}
+              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${bgClass}`}
             >
-              {nameOf(a) || <span className="text-muted-foreground">+</span>}
+              {displayName || <span className="text-muted-foreground">+</span>}
             </button>
+
           </PopoverTrigger>
           <PopoverContent className="p-0">
             <PersonPicker
