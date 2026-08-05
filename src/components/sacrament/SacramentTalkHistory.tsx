@@ -23,6 +23,15 @@ interface TalkRow {
 }
 
 type SortKey = "name_asc" | "name_desc" | "talks_desc" | "talks_asc" | "att_desc" | "att_asc";
+type TalkFilter = "all" | "말씀_3분" | "말씀_7분" | "말씀_10분" | "마지막연사";
+
+const TALK_FILTERS: { label: string; value: TalkFilter }[] = [
+  { label: "전체", value: "all" },
+  { label: "3분", value: "말씀_3분" },
+  { label: "7분", value: "말씀_7분" },
+  { label: "10분", value: "말씀_10분" },
+  { label: "마지막연사", value: "마지막연사" },
+];
 
 export default function SacramentTalkHistory({ members, refreshKey, onChanged }: Props) {
   const [rows, setRows] = useState<TalkRow[]>([]);
@@ -30,6 +39,7 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
   const [memberSearch, setMemberSearch] = useState("");
   const [customSearch, setCustomSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name_asc");
+  const [talkFilter, setTalkFilter] = useState<TalkFilter>("all");
   const [attendance, setAttendance] = useState<Map<string, { present: number; total: number }>>(new Map());
 
   useEffect(() => {
