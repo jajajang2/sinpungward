@@ -185,7 +185,23 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
       <div className="flex flex-col gap-3 md:flex-row md:gap-3" style={{ height: "calc(100vh - 200px)", minHeight: 480 }}>
         <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card md:w-[60%]">
           <div className="sticky top-0 z-10 shrink-0 border-b bg-muted/50 px-3 py-2">
-            <div className="text-sm font-semibold mb-2">회원 말씀 히스토리</div>
+            <div className="text-sm font-semibold mb-2">회원 말씀 �스토리</div>
+            <div className="mb-2 flex flex-wrap gap-1">
+              {TALK_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setTalkFilter(f.value)}
+                  className={
+                    "rounded-full px-2.5 py-0.5 text-xs " +
+                    (talkFilter === f.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/70")
+                  }
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2">
               <Input
                 placeholder="이름 검색"
