@@ -93,6 +93,11 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
     load();
   }, [load, refreshKey]);
 
+  const defaultPresider = useMemo(() => {
+    const m = members.find((x) => x.name === "정준우");
+    return m ? { member_id: m.id, custom_name: null as string | null } : { member_id: null as string | null, custom_name: "정준우" };
+  }, [members]);
+
   const ensureMeeting = async (date: string): Promise<string> => {
     if (meetings[date]) return meetings[date].id;
     const { data, error } = await supabase
@@ -104,9 +109,20 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
       toast.error("저장 실패: " + (error?.message || ""));
       throw error;
     }
-    setMeetings((p) => ({ ...p, [date]: data as SacramentMeeting }));
-    return (data as SacramentMeeting).id;
+    const meeting = data as SacramentMeeting;
+    setMeetings((p) => ({ ...p, [date]: meeting }));
+    // 새 미팅 생성 직후에만 감리자 기본값 자동 생성
+    const { data: pres } = await supabase
+      .from("sacrament_assignments")
+      .insert({ meeting_id: meeting.id, role: "감리자", slot: 0, ...defaultPresider, status: "승인" })
+      .select()
+      .single();
+    if (pres) {
+      setAssigns((p) => ({ ...p, [keyOf(meeting.id, "감리자", 0)]: pres as SacramentAssignment }));
+    }
+    return meeting.id;
   };
+
 
   const upsertAssign = async (date: string, role: string, slot: number, patch: Partial<SacramentAssignment>) => {
     const meeting_id = await ensureMeeting(date);
@@ -369,6 +385,9 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
 
     if (row.kind === "person") {
       const filled = !!(a?.member_id || a?.custom_name);
+      const isPresiderDefault = row.role === "감리자" && !a;
+      const displayName = nameOf(a) || (isPresiderDefault ? "정준우" : "");
+      const bgClass = statusBg(a?.status ?? (isPresiderDefault ? "승인" : null));
       const candidates =
         row.role === "사회자"
           ? bishopricCandidates
@@ -380,10 +399,11 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${statusBg(a?.status)}`}
+              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${bgClass}`}
             >
-              {nameOf(a) || <span className="text-muted-foreground">+</span>}
+              {displayName || <span className="text-muted-foreground">+</span>}
             </button>
+
           </PopoverTrigger>
           <PopoverContent className="p-0">
             <PersonPicker
