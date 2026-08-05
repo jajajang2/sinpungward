@@ -9,18 +9,45 @@ import SacramentTalkHistory from "@/components/sacrament/SacramentTalkHistory";
 import SacramentImportExport from "@/components/sacrament/SacramentImportExport";
 import AutoLinkMembers from "@/components/sacrament/AutoLinkMembers";
 import type { MemberLite } from "@/components/sacrament/types";
+import { BISHOPRIC_MAIN_CALLINGS, MUSIC_COMMITTEE_CALLINGS } from "@/data/callings";
 
 export default function SacramentPage() {
   const [anchor, setAnchor] = useState<Date>(() => startOfMonth(new Date()));
   const [members, setMembers] = useState<MemberLite[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [callingMap, setCallingMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("members").select("id, name, birth_date").order("name");
-      setMembers((data as MemberLite[]) || []);
+      const mlist = (data as MemberLite[]) || [];
+      setMembers(mlist);
+      const { data: ci } = await supabase.from("member_church_info").select("member_id, current_calling");
+      const cmap: Record<string, string[]> = {};
+      (ci || []).forEach((r: any) => {
+        if (r.member_id) cmap[r.member_id] = (r.current_calling as string[]) || [];
+      });
+      setCallingMap(cmap);
     })();
   }, []);
+
+  const bishopricCandidates = useMemo(() => {
+    return members
+      .filter((m) => {
+        const cs = callingMap[m.id] || [];
+        return cs.some((c) => BISHOPRIC_MAIN_CALLINGS.includes(c));
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+  }, [members, callingMap]);
+
+  const musicCandidates = useMemo(() => {
+    return members
+      .filter((m) => {
+        const cs = callingMap[m.id] || [];
+        return cs.some((c) => MUSIC_COMMITTEE_CALLINGS.includes(c));
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+  }, [members, callingMap]);
 
   const second = useMemo(() => addMonths(anchor, 1), [anchor]);
 
@@ -62,6 +89,8 @@ export default function SacramentPage() {
               members={members}
               refreshKey={refreshKey}
               onChanged={() => setRefreshKey((k) => k + 1)}
+              bishopricCandidates={bishopricCandidates}
+              musicCandidates={musicCandidates}
             />
             <MonthSacramentTable
               year={second.getFullYear()}
@@ -69,6 +98,8 @@ export default function SacramentPage() {
               members={members}
               refreshKey={refreshKey}
               onChanged={() => setRefreshKey((k) => k + 1)}
+              bishopricCandidates={bishopricCandidates}
+              musicCandidates={musicCandidates}
             />
           </div>
         </TabsContent>

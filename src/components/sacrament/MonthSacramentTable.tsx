@@ -23,6 +23,8 @@ interface Props {
   members: MemberLite[];
   refreshKey: number;
   onChanged: () => void;
+  bishopricCandidates: MemberLite[];
+  musicCandidates: MemberLite[];
 }
 
 function sundaysOf(year: number, month: number): string[] {
@@ -53,7 +55,7 @@ const displayLabel = (t: EventType) => DISPLAY_LABELS[t] || t;
 type AssignKey = string; // `${meeting_id}|${role}|${slot}`
 const keyOf = (m: string, r: string, s: number) => `${m}|${r}|${s}`;
 
-export default function MonthSacramentTable({ year, month, members, refreshKey, onChanged }: Props) {
+export default function MonthSacramentTable({ year, month, members, refreshKey, onChanged, bishopricCandidates, musicCandidates }: Props) {
   const sundays = useMemo(() => sundaysOf(year, month), [year, month]);
   const [meetings, setMeetings] = useState<Record<string, SacramentMeeting>>({});
   const [assigns, setAssigns] = useState<Record<AssignKey, SacramentAssignment>>({});
@@ -367,6 +369,12 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
 
     if (row.kind === "person") {
       const filled = !!(a?.member_id || a?.custom_name);
+      const candidates =
+        row.role === "사회자"
+          ? bishopricCandidates
+          : row.role === "지휘자" || row.role === "반주자"
+            ? musicCandidates
+            : undefined;
       return (
         <Popover>
           <PopoverTrigger asChild>
@@ -380,6 +388,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           <PopoverContent className="p-0">
             <PersonPicker
               members={members}
+              candidates={candidates}
               currentMemberId={a?.member_id ?? null}
               currentCustomName={a?.custom_name ?? null}
               onPick={(mid, cn) => upsertAssign(date, row.role, 0, { member_id: mid, custom_name: cn })}
