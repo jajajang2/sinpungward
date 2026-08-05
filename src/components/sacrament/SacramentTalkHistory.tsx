@@ -23,6 +23,15 @@ interface TalkRow {
 }
 
 type SortKey = "name_asc" | "name_desc" | "talks_desc" | "talks_asc" | "att_desc" | "att_asc";
+type TalkFilter = "all" | "말씀_3분" | "말씀_7분" | "말씀_10분" | "마지막연사";
+
+const TALK_FILTERS: { label: string; value: TalkFilter }[] = [
+  { label: "전체", value: "all" },
+  { label: "3분", value: "말씀_3분" },
+  { label: "7분", value: "말씀_7분" },
+  { label: "10분", value: "말씀_10분" },
+  { label: "마지막연사", value: "마지막연사" },
+];
 
 export default function SacramentTalkHistory({ members, refreshKey, onChanged }: Props) {
   const [rows, setRows] = useState<TalkRow[]>([]);
@@ -30,6 +39,7 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
   const [memberSearch, setMemberSearch] = useState("");
   const [customSearch, setCustomSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name_asc");
+  const [talkFilter, setTalkFilter] = useState<TalkFilter>("all");
   const [attendance, setAttendance] = useState<Map<string, { present: number; total: number }>>(new Map());
 
   useEffect(() => {
@@ -98,20 +108,25 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
     })();
   }, [members]);
 
+  const filteredRows = useMemo(() => {
+    if (talkFilter === "all") return rows;
+    return rows.filter((r) => r.role === talkFilter);
+  }, [rows, talkFilter]);
+
   const memberGroups = useMemo(() => {
     const byMember = new Map<string, TalkRow[]>();
-    rows.forEach((r) => {
+    filteredRows.forEach((r) => {
       if (!r.member_id) return;
       if (!byMember.has(r.member_id)) byMember.set(r.member_id, []);
       byMember.get(r.member_id)!.push(r);
     });
     byMember.forEach((arr) => arr.sort((a, b) => b.meeting_date.localeCompare(a.meeting_date)));
     return byMember;
-  }, [rows]);
+  }, [filteredRows]);
 
   const customGroups = useMemo(() => {
     const map = new Map<string, TalkRow[]>();
-    rows.forEach((r) => {
+    filteredRows.forEach((r) => {
       if (r.member_id || !r.custom_name) return;
       const k = r.custom_name.trim();
       if (!map.has(k)) map.set(k, []);
@@ -119,7 +134,7 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
     });
     map.forEach((arr) => arr.sort((a, b) => b.meeting_date.localeCompare(a.meeting_date)));
     return map;
-  }, [rows]);
+  }, [filteredRows]);
 
   const attRate = (id: string) => {
     const a = attendance.get(id);
@@ -171,6 +186,22 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
         <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card md:w-[60%]">
           <div className="sticky top-0 z-10 shrink-0 border-b bg-muted/50 px-3 py-2">
             <div className="text-sm font-semibold mb-2">회원 말씀 히스토리</div>
+            <div className="mb-2 flex flex-wrap gap-1">
+              {TALK_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setTalkFilter(f.value)}
+                  className={
+                    "rounded-full px-2.5 py-0.5 text-xs " +
+                    (talkFilter === f.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/70")
+                  }
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2">
               <Input
                 placeholder="이름 검색"
