@@ -89,6 +89,8 @@ export default function SacramentPage() {
               members={members}
               refreshKey={refreshKey}
               onChanged={() => setRefreshKey((k) => k + 1)}
+              bishopricCandidates={bishopricCandidates}
+              musicCandidates={musicCandidates}
             />
             <MonthSacramentTable
               year={second.getFullYear()}
@@ -96,6 +98,8 @@ export default function SacramentPage() {
               members={members}
               refreshKey={refreshKey}
               onChanged={() => setRefreshKey((k) => k + 1)}
+              bishopricCandidates={bishopricCandidates}
+              musicCandidates={musicCandidates}
             />
           </div>
         </TabsContent>
