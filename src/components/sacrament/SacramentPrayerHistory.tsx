@@ -47,7 +47,7 @@ export default function SacramentPrayerHistory({ members, refreshKey }: Props) {
         member_id: r.member_id,
         custom_name: r.custom_name,
         meeting_date: r.sacrament_meetings.meeting_date,
-      }));
+      })).filter((r: PrayerRow) => r.meeting_date >= "2025-01-01");
       setRows(parsed);
     })();
   }, [refreshKey]);
