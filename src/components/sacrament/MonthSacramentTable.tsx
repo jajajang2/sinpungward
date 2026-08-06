@@ -204,12 +204,12 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
   };
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div className="border-b bg-muted/50 px-2 py-1 text-xs font-semibold">
+    <div className={`rounded-lg border bg-card flex flex-col h-full ${className || ""}`}>
+      <div className="border-b bg-muted/50 px-2 py-1 text-xs font-semibold shrink-0">
         {year}년 {month}월 성찬식 계획표
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[480px] border-collapse text-xs">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <table className="w-full h-full border-collapse text-xs table-fixed">
           <thead>
             <tr>
               <th className="border bg-muted px-1.5 py-0.5 text-left font-medium w-20 sticky left-0 z-10">항목</th>
