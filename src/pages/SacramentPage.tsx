@@ -157,9 +157,10 @@ export default function SacramentPage() {
           </div>
         </div>
 
-        <TabsContent value="schedule" className="mt-2 min-h-0 flex-1 overflow-auto">
-          <div className="grid gap-2 lg:grid-cols-2">
+        <TabsContent value="schedule" className="mt-2 min-h-0 flex-1 overflow-hidden">
+          <div className="grid h-full gap-2 lg:grid-cols-2">
             <MonthSacramentTable
+              className="h-full"
               year={anchor.getFullYear()}
               month={anchor.getMonth() + 1}
               members={members}
@@ -169,6 +170,7 @@ export default function SacramentPage() {
               musicCandidates={musicCandidates}
             />
             <MonthSacramentTable
+              className="h-full"
               year={second.getFullYear()}
               month={second.getMonth() + 1}
               members={members}

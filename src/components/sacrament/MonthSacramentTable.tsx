@@ -25,6 +25,7 @@ interface Props {
   onChanged: () => void;
   bishopricCandidates: MemberLite[];
   musicCandidates: MemberLite[];
+  className?: string;
 }
 
 function sundaysOf(year: number, month: number): string[] {
@@ -55,7 +56,7 @@ const displayLabel = (t: EventType) => DISPLAY_LABELS[t] || t;
 type AssignKey = string; // `${meeting_id}|${role}|${slot}`
 const keyOf = (m: string, r: string, s: number) => `${m}|${r}|${s}`;
 
-export default function MonthSacramentTable({ year, month, members, refreshKey, onChanged, bishopricCandidates, musicCandidates }: Props) {
+export default function MonthSacramentTable({ year, month, members, refreshKey, onChanged, bishopricCandidates, musicCandidates, className }: Props) {
   const sundays = useMemo(() => sundaysOf(year, month), [year, month]);
   const [meetings, setMeetings] = useState<Record<string, SacramentMeeting>>({});
   const [assigns, setAssigns] = useState<Record<AssignKey, SacramentAssignment>>({});
@@ -203,15 +204,15 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
   };
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div className="border-b bg-muted/50 px-2 py-1 text-xs font-semibold">
+    <div className={`rounded-lg border bg-card flex flex-col h-full ${className || ""}`}>
+      <div className="border-b bg-muted/50 px-2 py-1 text-xs font-semibold shrink-0">
         {year}년 {month}월 성찬식 계획표
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[480px] border-collapse text-xs">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <table className="w-full h-full border-collapse text-xs table-fixed">
           <thead>
             <tr>
-              <th className="border bg-muted px-1.5 py-0.5 text-left font-medium w-20 sticky left-0 z-10">항목</th>
+              <th className="border bg-muted px-1 py-px text-left font-medium w-20 sticky left-0 z-10">항목</th>
               {sundays.map((d) => {
                 const dayNum = parseInt(d.split("-")[2], 10);
                 const m = meetings[d];
@@ -278,7 +279,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
               // Track skip cells due to rowSpan merges from prior rows
               return (
                 <tr key={row.role}>
-                  <td className="border bg-muted/30 px-1.5 py-0.5 font-medium sticky left-0 z-10">{row.label}</td>
+                  <td className="border bg-muted/30 px-1 py-px font-medium sticky left-0 z-10">{row.label}</td>
                   {sundays.map((d) => {
                     const m = meetings[d];
                     const evt: EventType = (m?.event_type as EventType) || "일반";
@@ -369,7 +370,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
         <Input
           defaultValue={a?.hymn_number || ""}
           placeholder="번호"
-          className="h-6 border-0 text-[11px] px-1"
+          className="h-5 border-0 text-[11px] px-1 py-0"
           onBlur={(e) => {
             const v = e.target.value.trim();
             if ((a?.hymn_number || "") === v) return;
@@ -399,7 +400,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${bgClass}`}
+              className={`h-5 w-full px-1 text-left text-[11px] hover:bg-muted ${bgClass}`}
             >
               {displayName || <span className="text-muted-foreground">+</span>}
             </button>
@@ -426,10 +427,10 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
     if (row.kind === "talk") {
       const filled = !!(a?.member_id || a?.custom_name);
       return (
-        <div className={`flex flex-col gap-0.5 p-0.5 ${statusBg(a?.status)}`}>
+        <div className={`flex flex-col gap-px p-px ${statusBg(a?.status)}`}>
           <Popover>
             <PopoverTrigger asChild>
-              <button type="button" className="h-6 w-full px-1 text-left text-xs hover:bg-muted">
+              <button type="button" className="h-5 w-full px-1 text-left text-xs hover:bg-muted leading-none">
                 {nameOf(a) || <span className="text-muted-foreground">+ 사람</span>}
               </button>
             </PopoverTrigger>
@@ -449,7 +450,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           </Popover>
           <button
             type="button"
-            className="truncate rounded bg-background px-1 py-0.5 text-left text-[10px] text-muted-foreground hover:bg-muted"
+            className="truncate rounded bg-background px-1 py-px text-left text-[10px] text-muted-foreground hover:bg-muted leading-none"
             onClick={() =>
               setTalkModal({
                 open: true,
@@ -469,14 +470,14 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
       const list = meeting ? deliverersFor(date) : [];
       const nextSlot = list.length > 0 ? Math.max(...list.map((x) => x.slot)) + 1 : 0;
       return (
-        <div className="flex flex-col gap-0.5 p-0.5">
+        <div className="flex flex-col gap-px p-px max-h-full overflow-y-auto">
           {list.map((a) => {
             const filled = !!(a.member_id || a.custom_name);
             return (
-              <div key={a.id} className={`flex items-center gap-0.5 ${statusBg(a.status)}`}>
+              <div key={a.id} className={`flex items-center gap-px ${statusBg(a.status)}`}>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button type="button" className="h-6 flex-1 px-1 text-left text-xs hover:bg-muted">
+                    <button type="button" className="h-5 flex-1 px-1 text-left text-xs hover:bg-muted leading-none">
                       {nameOf(a) || <span className="text-muted-foreground">선택</span>}
                     </button>
                   </PopoverTrigger>
@@ -496,7 +497,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                 </Popover>
                 <button
                   type="button"
-                  className="text-muted-foreground hover:text-destructive"
+                  className="text-muted-foreground hover:text-destructive px-px"
                   onClick={() => deleteAssign(date, "성찬전달", a.slot)}
                   aria-label="삭제"
                 >
@@ -507,7 +508,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           })}
           <button
             type="button"
-            className="flex items-center justify-center gap-0.5 rounded border border-dashed py-0.5 text-[10px] text-muted-foreground hover:bg-muted"
+            className="flex items-center justify-center gap-0.5 rounded border border-dashed py-px text-[10px] text-muted-foreground hover:bg-muted leading-none"
             onClick={() => upsertAssign(date, "성찬전달", nextSlot, { member_id: null, custom_name: null })}
           >
             <Plus className="h-3 w-3" /> 추가
