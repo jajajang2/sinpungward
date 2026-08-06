@@ -32,7 +32,7 @@ export default function SacramentPrayerHistory({ members, refreshKey }: Props) {
   const [rows, setRows] = useState<PrayerRow[]>([]);
   const [memberSearch, setMemberSearch] = useState("");
   const [customSearch, setCustomSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("name_asc");
+  const [sortKey, setSortKey] = useState<SortKey>("prayers_asc");
   const [prayerFilter, setPrayerFilter] = useState<PrayerFilter>("all");
 
   useEffect(() => {
