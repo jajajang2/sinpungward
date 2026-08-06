@@ -52,7 +52,7 @@ const TempleRecommendCard = () => {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <ScrollText className="w-4 h-4 text-primary" />
-          성전추천서 만료 임박 (3개월 이내)
+          성전추천서 긴급·주의 대상자
           <span className="ml-auto text-xs font-normal text-muted-foreground">{list.length}명</span>
         </CardTitle>
       </CardHeader>
