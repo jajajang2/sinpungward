@@ -163,9 +163,6 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
       </li>
     );
   };
-      </li>
-    );
-  };
 
   const column = (title: string, list: MemberLite[]) => (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
