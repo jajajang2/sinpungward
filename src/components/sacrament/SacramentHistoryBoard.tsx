@@ -39,7 +39,7 @@ function since18Months() {
 export default function SacramentHistoryBoard({ members, refreshKey, onChanged, mode }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [editing, setEditing] = useState<Row | null>(null);
-  const [search, setSearch] = useState("");
+  
   const [sortKey, setSortKey] = useState<SortKey>("count_desc");
 
   useEffect(() => {
@@ -82,11 +82,9 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
   const countOf = (id: string) => (byMember.get(id)?.[mode].length || 0);
 
   const buildList = (gender: "남" | "여") => {
-    const q = search.trim().replace(/\s+/g, "");
     const arr = members.filter((m) => {
       const g = (m as any).gender;
-      if (gender === "남" ? g !== "남" : g !== "여") return false;
-      return !q || m.name.replace(/\s+/g, "").includes(q);
+      return gender === "남" ? g === "남" : g === "여";
     });
     return [...arr].sort((a, b) => {
       switch (sortKey) {
