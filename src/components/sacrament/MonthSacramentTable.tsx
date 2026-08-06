@@ -400,7 +400,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`h-6 w-full px-1 text-left text-[11px] hover:bg-muted ${bgClass}`}
+              className={`h-5 w-full px-1 text-left text-[11px] hover:bg-muted ${bgClass}`}
             >
               {displayName || <span className="text-muted-foreground">+</span>}
             </button>
