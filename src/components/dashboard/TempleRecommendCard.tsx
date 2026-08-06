@@ -60,7 +60,7 @@ const TempleRecommendCard = () => {
         {loading ? (
           <p className="text-sm text-muted-foreground">불러오는 중...</p>
         ) : list.length === 0 ? (
-          <p className="text-sm text-muted-foreground">만료 임박자가 없습니다.</p>
+          <p className="text-sm text-muted-foreground">긴급·주의 대상자가 없습니다.</p>
         ) : (
           <ul className="space-y-1.5">
             {list.map((m) => {
