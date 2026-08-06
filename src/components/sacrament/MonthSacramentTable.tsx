@@ -56,7 +56,7 @@ const displayLabel = (t: EventType) => DISPLAY_LABELS[t] || t;
 type AssignKey = string; // `${meeting_id}|${role}|${slot}`
 const keyOf = (m: string, r: string, s: number) => `${m}|${r}|${s}`;
 
-export default function MonthSacramentTable({ year, month, members, refreshKey, onChanged, bishopricCandidates, musicCandidates }: Props) {
+export default function MonthSacramentTable({ year, month, members, refreshKey, onChanged, bishopricCandidates, musicCandidates, className }: Props) {
   const sundays = useMemo(() => sundaysOf(year, month), [year, month]);
   const [meetings, setMeetings] = useState<Record<string, SacramentMeeting>>({});
   const [assigns, setAssigns] = useState<Record<AssignKey, SacramentAssignment>>({});
