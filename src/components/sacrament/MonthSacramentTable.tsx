@@ -370,7 +370,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
         <Input
           defaultValue={a?.hymn_number || ""}
           placeholder="번호"
-          className="h-6 border-0 text-[11px] px-1"
+          className="h-5 border-0 text-[11px] px-1 py-0"
           onBlur={(e) => {
             const v = e.target.value.trim();
             if ((a?.hymn_number || "") === v) return;
