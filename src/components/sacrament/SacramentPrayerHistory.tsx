@@ -32,7 +32,7 @@ export default function SacramentPrayerHistory({ members, refreshKey }: Props) {
   const [rows, setRows] = useState<PrayerRow[]>([]);
   const [memberSearch, setMemberSearch] = useState("");
   const [customSearch, setCustomSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("name_asc");
+  const [sortKey, setSortKey] = useState<SortKey>("prayers_asc");
   const [prayerFilter, setPrayerFilter] = useState<PrayerFilter>("all");
 
   useEffect(() => {
@@ -99,8 +99,8 @@ export default function SacramentPrayerHistory({ members, refreshKey }: Props) {
   }, [customGroups, customSearch]);
 
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:gap-3" style={{ height: "calc(100vh - 200px)", minHeight: 480 }}>
-      <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card md:w-[60%]">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
         <div className="sticky top-0 z-10 shrink-0 border-b bg-muted/50 px-3 py-2">
           <div className="text-sm font-semibold mb-2">회원 기도 히스토리</div>
           <div className="mb-2 flex flex-wrap gap-1">
@@ -165,39 +165,7 @@ export default function SacramentPrayerHistory({ members, refreshKey }: Props) {
           })}
         </ul>
       </div>
-
-      <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card md:w-[40%]">
-        <div className="sticky top-0 z-10 shrink-0 border-b bg-muted/50 px-3 py-2">
-          <div className="text-sm font-semibold mb-2">비회원 (직접 입력)</div>
-          <Input
-            placeholder="이름 검색"
-            value={customSearch}
-            onChange={(e) => setCustomSearch(e.target.value)}
-            className="h-8 w-full text-xs"
-          />
-        </div>
-        <ul className="flex-1 divide-y overflow-x-hidden overflow-y-auto">
-          {filteredCustom.length === 0 && (
-            <li className="px-3 py-2 text-xs text-muted-foreground">직접 입력된 항목이 없습니다.</li>
-          )}
-          {filteredCustom.map(([name, list]) => (
-            <li key={name} className="flex items-start gap-3 px-3 py-2">
-              <div className="w-24 shrink-0 text-sm font-medium">{name}</div>
-              <div className="flex min-w-0 flex-1 flex-wrap gap-1">
-                {list.map((r) => (
-                  <span
-                    key={r.assignment_id}
-                    className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900"
-                  >
-                    {format(new Date(r.meeting_date), "yyyy.MM.dd")}
-                    <span className="ml-1 text-amber-800/70">· {r.role}</span>
-                  </span>
-                ))}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 }
+

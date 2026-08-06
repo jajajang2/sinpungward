@@ -104,8 +104,8 @@ export default function SacramentPage() {
   const second = useMemo(() => addMonths(anchor, 1), [anchor]);
 
   return (
-    <div className="space-y-2 p-2 md:p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex h-screen flex-col overflow-hidden p-2 md:p-3 gap-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <h1 className="text-base font-bold md:text-lg leading-tight">성찬식 순서</h1>
         <div className="flex items-center gap-1">
           <AutoLinkMembers onChanged={() => setRefreshKey((k) => k + 1)} />
@@ -113,13 +113,37 @@ export default function SacramentPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="schedule">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <TabsList className="h-8">
-            <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
-            <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
-            <TabsTrigger value="prayer" className="text-xs py-1">기도 히스토리</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="schedule" className="flex min-h-0 flex-1 flex-col">
+        <div className="flex shrink-0 items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <TabsList className="h-8">
+              <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
+              <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
+              <TabsTrigger value="prayer" className="text-xs py-1">기도 히스토리</TabsTrigger>
+            </TabsList>
+            <div className="relative">
+              <Input
+                placeholder="이름 검색"
+                value={nameQuery}
+                onChange={(e) => setNameQuery(e.target.value)}
+                className="h-8 w-[160px] text-xs"
+              />
+              {searchResults.length > 0 && (
+                <div className="absolute left-0 top-9 z-50 w-[280px] overflow-y-auto rounded-md border bg-popover p-1 shadow-md" style={{ maxHeight: 5 * 28 + 8 }}>
+                  <ul className="divide-y">
+                    {searchResults.map((r) => (
+                      <li key={r.id} className="flex h-7 items-center gap-2 px-1 text-xs">
+                        <span className="font-medium">{r.name}</span>
+                        <span className="text-muted-foreground">
+                          {format(new Date(r.meeting_date), "yyyy.MM.dd")} · {ROLE_LABEL[r.role] || r.role}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setAnchor((p) => addMonths(p, -2))}>
               <ChevronLeft className="h-3 w-3" /> 이전
@@ -133,9 +157,8 @@ export default function SacramentPage() {
           </div>
         </div>
 
-        <TabsContent value="schedule" className="space-y-2 mt-2">
+        <TabsContent value="schedule" className="mt-2 min-h-0 flex-1 overflow-auto">
           <div className="grid gap-2 lg:grid-cols-2">
-
             <MonthSacramentTable
               year={anchor.getFullYear()}
               month={anchor.getMonth() + 1}
@@ -155,31 +178,13 @@ export default function SacramentPage() {
               musicCandidates={musicCandidates}
             />
           </div>
-          <div className="rounded-lg border bg-card p-3">
-            <Input
-              placeholder="이름 검색"
-              value={nameQuery}
-              onChange={(e) => setNameQuery(e.target.value)}
-              className="h-8 w-full max-w-xs text-xs"
-            />
-            <ul className="mt-2 divide-y">
-              {searchResults.map((r) => (
-                <li key={r.id} className="flex items-center gap-2 py-1 text-xs">
-                  <span className="font-medium">{r.name}</span>
-                  <span className="text-muted-foreground">
-                    {format(new Date(r.meeting_date), "yyyy.MM.dd")} · {ROLE_LABEL[r.role] || r.role}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
         </TabsContent>
 
-        <TabsContent value="history">
+        <TabsContent value="history" className="mt-2 min-h-0 flex-1 overflow-hidden">
           <SacramentTalkHistory members={members} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
         </TabsContent>
 
-        <TabsContent value="prayer">
+        <TabsContent value="prayer" className="mt-2 min-h-0 flex-1 overflow-hidden">
           <SacramentPrayerHistory members={members} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
         </TabsContent>
 
@@ -187,3 +192,4 @@ export default function SacramentPage() {
     </div>
   );
 }
+

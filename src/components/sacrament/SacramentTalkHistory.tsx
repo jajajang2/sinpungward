@@ -38,7 +38,7 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
   const [editing, setEditing] = useState<TalkRow | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
   const [customSearch, setCustomSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("name_asc");
+  const [sortKey, setSortKey] = useState<SortKey>("talks_asc");
   const [talkFilter, setTalkFilter] = useState<TalkFilter>("all");
   const [attendance, setAttendance] = useState<Map<string, { present: number; total: number }>>(new Map());
 
@@ -182,8 +182,8 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
 
   return (
     <>
-      <div className="flex flex-col gap-3 md:flex-row md:gap-3" style={{ height: "calc(100vh - 200px)", minHeight: 480 }}>
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card md:w-[60%]">
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
           <div className="sticky top-0 z-10 shrink-0 border-b bg-muted/50 px-3 py-2">
             <div className="text-sm font-semibold mb-2">회원 말씀 히스토리</div>
             <div className="mb-2 flex flex-wrap gap-1">
@@ -254,39 +254,7 @@ export default function SacramentTalkHistory({ members, refreshKey, onChanged }:
           </ul>
         </div>
 
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card md:w-[40%]">
-          <div className="sticky top-0 z-10 shrink-0 border-b bg-muted/50 px-3 py-2">
-            <div className="text-sm font-semibold mb-2">비회원 (직접 입력)</div>
-            <Input
-              placeholder="이름 검색"
-              value={customSearch}
-              onChange={(e) => setCustomSearch(e.target.value)}
-              className="h-8 w-full text-xs"
-            />
-          </div>
-          <ul className="flex-1 divide-y overflow-x-hidden overflow-y-auto">
-            {filteredCustom.length === 0 && (
-              <li className="px-3 py-2 text-xs text-muted-foreground">직접 입력된 항목이 없습니다.</li>
-            )}
-            {filteredCustom.map(([name, list]) => (
-              <li key={name} className="flex items-start gap-3 px-3 py-2">
-                <div className="w-24 shrink-0 text-sm font-medium">{name}</div>
-                <div className="flex min-w-0 flex-1 flex-wrap gap-1">
-                  {list.map((r) => (
-                    <button
-                      key={r.assignment_id}
-                      onClick={() => setEditing(r)}
-                      className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900 hover:bg-amber-200"
-                    >
-                      {format(new Date(r.meeting_date), "yyyy.MM.dd")}
-                      {r.talk_topic && <span className="ml-1 text-amber-800/70">· {r.talk_topic}</span>}
-                    </button>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+
       </div>
 
       {editing && (
