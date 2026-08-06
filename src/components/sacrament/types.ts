@@ -26,6 +26,7 @@ export interface MemberLite {
   id: string;
   name: string;
   birth_date?: string | null;
+  gender?: string | null;
 }
 
 export function calcAge(birth_date?: string | null): number | null {
