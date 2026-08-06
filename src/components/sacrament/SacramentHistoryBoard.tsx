@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TalkDetailModal from "./TalkDetailModal";
 import { TALK_ROLES, PRAYER_ROLES, calcAge, type MemberLite } from "./types";
@@ -39,7 +39,7 @@ function since18Months() {
 export default function SacramentHistoryBoard({ members, refreshKey, onChanged, mode }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [editing, setEditing] = useState<Row | null>(null);
-  const [search, setSearch] = useState("");
+  
   const [sortKey, setSortKey] = useState<SortKey>("count_desc");
 
   useEffect(() => {
@@ -82,11 +82,9 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
   const countOf = (id: string) => (byMember.get(id)?.[mode].length || 0);
 
   const buildList = (gender: "남" | "여") => {
-    const q = search.trim().replace(/\s+/g, "");
     const arr = members.filter((m) => {
       const g = (m as any).gender;
-      if (gender === "남" ? g !== "남" : g !== "여") return false;
-      return !q || m.name.replace(/\s+/g, "").includes(q);
+      return gender === "남" ? g === "남" : g === "여";
     });
     return [...arr].sort((a, b) => {
       switch (sortKey) {
@@ -98,8 +96,8 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
     });
   };
 
-  const brothers = useMemo(() => buildList("남"), [members, search, sortKey, byMember, mode]);
-  const sisters = useMemo(() => buildList("여"), [members, search, sortKey, byMember, mode]);
+  const brothers = useMemo(() => buildList("남"), [members, sortKey, byMember, mode]);
+  const sisters = useMemo(() => buildList("여"), [members, sortKey, byMember, mode]);
 
   const saveEdit = async (topic: string, content: string) => {
     if (!editing) return;
@@ -117,13 +115,13 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
     const cls = isTalk
       ? "bg-blue-500/15 text-blue-600 hover:bg-blue-500/25"
       : "bg-yellow-500/20 text-yellow-700 hover:bg-yellow-500/30";
-    const label = r.meeting_date.slice(5).replace("-", ".");
+    const label = r.meeting_date.slice(2).replace(/-/g, ".");
     return isTalk ? (
-      <button key={r.assignment_id} onClick={() => setEditing(r)} className={`block w-full rounded px-1 py-0.5 text-[10px] leading-tight ${cls}`}>
+      <button key={r.assignment_id} onClick={() => setEditing(r)} className={`shrink-0 whitespace-nowrap rounded px-1 py-0.5 text-[10px] leading-tight ${cls}`}>
         {label}
       </button>
     ) : (
-      <span key={r.assignment_id} className={`block w-full rounded px-1 py-0.5 text-[10px] leading-tight ${cls}`}>
+      <span key={r.assignment_id} className={`shrink-0 whitespace-nowrap rounded px-1 py-0.5 text-[10px] leading-tight ${cls}`}>
         {label}
       </span>
     );
@@ -131,10 +129,11 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
 
   const renderRow = (m: MemberLite) => {
     const g = byMember.get(m.id) || { talk: [], prayer: [] };
-    const months = Array.from(new Set([...g.talk, ...g.prayer].map((r) => monthKey(r.meeting_date)))).sort();
     const age = calcAge(m.birth_date);
     const topKind: "talk" | "prayer" = mode === "talk" ? "talk" : "prayer";
     const bottomKind: "talk" | "prayer" = mode === "talk" ? "prayer" : "talk";
+    const top = g[topKind];
+    const bottom = g[bottomKind];
     return (
       <li key={m.id} className="flex items-start gap-2 px-2 py-1.5">
         <div className="w-20 shrink-0">
@@ -148,22 +147,18 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
             <span className="text-yellow-700">기 {g.prayer.length}</span>
           </div>
         </div>
-        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto pb-0.5">
-          {months.length === 0 && <span className="text-[10px] text-muted-foreground">-</span>}
-          {months.map((mk) => {
-            const top = g[topKind].filter((r) => monthKey(r.meeting_date) === mk);
-            const bottom = g[bottomKind].filter((r) => monthKey(r.meeting_date) === mk);
-            return (
-              <div key={mk} className="w-[46px] shrink-0">
-                <div className="space-y-0.5">
-                  {top.length ? top.map(renderChip) : <div className="h-[15px]" />}
-                </div>
-                <div className="mt-0.5 space-y-0.5">
-                  {bottom.length ? bottom.map(renderChip) : <div className="h-[15px]" />}
-                </div>
+        <div className="min-w-0 flex-1 overflow-x-auto pb-0.5">
+          {top.length === 0 && bottom.length === 0 && <span className="text-[10px] text-muted-foreground">-</span>}
+          {(top.length > 0 || bottom.length > 0) && (
+            <>
+              <div className="flex gap-1">
+                {top.length ? top.map(renderChip) : <div className="h-[15px]" />}
               </div>
-            );
-          })}
+              <div className="mt-0.5 flex gap-1">
+                {bottom.length ? bottom.map(renderChip) : <div className="h-[15px]" />}
+              </div>
+            </>
+          )}
         </div>
       </li>
     );
@@ -181,12 +176,6 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
       <div className="flex h-full min-h-0 flex-col gap-2">
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <div className="text-sm font-semibold">{mode === "talk" ? "회원 말씀 히스토리" : "회원 기도 히스토리"}</div>
-          <Input
-            placeholder="이름 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 w-[140px] text-xs"
-          />
           <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
             <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
