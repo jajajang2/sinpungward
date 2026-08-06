@@ -470,14 +470,14 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
       const list = meeting ? deliverersFor(date) : [];
       const nextSlot = list.length > 0 ? Math.max(...list.map((x) => x.slot)) + 1 : 0;
       return (
-        <div className="flex flex-col gap-0.5 p-0.5">
+        <div className="flex flex-col gap-px p-px max-h-full overflow-y-auto">
           {list.map((a) => {
             const filled = !!(a.member_id || a.custom_name);
             return (
-              <div key={a.id} className={`flex items-center gap-0.5 ${statusBg(a.status)}`}>
+              <div key={a.id} className={`flex items-center gap-px ${statusBg(a.status)}`}>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button type="button" className="h-6 flex-1 px-1 text-left text-xs hover:bg-muted">
+                    <button type="button" className="h-5 flex-1 px-1 text-left text-xs hover:bg-muted leading-none">
                       {nameOf(a) || <span className="text-muted-foreground">선택</span>}
                     </button>
                   </PopoverTrigger>
@@ -497,7 +497,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
                 </Popover>
                 <button
                   type="button"
-                  className="text-muted-foreground hover:text-destructive"
+                  className="text-muted-foreground hover:text-destructive px-px"
                   onClick={() => deleteAssign(date, "성찬전달", a.slot)}
                   aria-label="삭제"
                 >
@@ -508,7 +508,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           })}
           <button
             type="button"
-            className="flex items-center justify-center gap-0.5 rounded border border-dashed py-0.5 text-[10px] text-muted-foreground hover:bg-muted"
+            className="flex items-center justify-center gap-0.5 rounded border border-dashed py-px text-[10px] text-muted-foreground hover:bg-muted leading-none"
             onClick={() => upsertAssign(date, "성찬전달", nextSlot, { member_id: null, custom_name: null })}
           >
             <Plus className="h-3 w-3" /> 추가
