@@ -212,7 +212,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
         <table className="w-full h-full border-collapse text-xs table-fixed">
           <thead>
             <tr>
-              <th className="border bg-muted px-1.5 py-0.5 text-left font-medium w-20 sticky left-0 z-10">항목</th>
+              <th className="border bg-muted px-1 py-px text-left font-medium w-20 sticky left-0 z-10">항목</th>
               {sundays.map((d) => {
                 const dayNum = parseInt(d.split("-")[2], 10);
                 const m = meetings[d];
