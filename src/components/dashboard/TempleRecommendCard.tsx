@@ -30,8 +30,8 @@ const TempleRecommendCard = () => {
       (data || []).forEach((row: any) => {
         const info = computeStatus(row.expiry_month);
         if (!info.expiryEnd || info.dday === null) return;
-        // 3개월(92일) 이내 만료 예정 또는 이미 만료됨
-        if (info.dday > 92) return;
+        // 긴급(60일 이내) 또는 주의(61~90일)만 표시
+        if (info.status !== "긴급" && info.status !== "주의") return;
         result.push({
           id: row.id,
           memberId: row.member_id,
@@ -52,7 +52,7 @@ const TempleRecommendCard = () => {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <ScrollText className="w-4 h-4 text-primary" />
-          성전추천서 만료 임박 (3개월 이내)
+          성전추천서 긴급·주의 대상자
           <span className="ml-auto text-xs font-normal text-muted-foreground">{list.length}명</span>
         </CardTitle>
       </CardHeader>
@@ -60,7 +60,7 @@ const TempleRecommendCard = () => {
         {loading ? (
           <p className="text-sm text-muted-foreground">불러오는 중...</p>
         ) : list.length === 0 ? (
-          <p className="text-sm text-muted-foreground">만료 임박자가 없습니다.</p>
+          <p className="text-sm text-muted-foreground">긴급·주의 대상자가 없습니다.</p>
         ) : (
           <ul className="space-y-1.5">
             {list.map((m) => {
