@@ -30,8 +30,8 @@ const TempleRecommendCard = () => {
       (data || []).forEach((row: any) => {
         const info = computeStatus(row.expiry_month);
         if (!info.expiryEnd || info.dday === null) return;
-        // 3개월(92일) 이내 만료 예정 또는 이미 만료됨
-        if (info.dday > 92) return;
+        // 긴급(60일 이내) 또는 주의(61~90일)만 표시
+        if (info.status !== "긴급" && info.status !== "주의") return;
         result.push({
           id: row.id,
           memberId: row.member_id,
