@@ -427,10 +427,10 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
     if (row.kind === "talk") {
       const filled = !!(a?.member_id || a?.custom_name);
       return (
-        <div className={`flex flex-col gap-0.5 p-0.5 ${statusBg(a?.status)}`}>
+        <div className={`flex flex-col gap-px p-px ${statusBg(a?.status)}`}>
           <Popover>
             <PopoverTrigger asChild>
-              <button type="button" className="h-6 w-full px-1 text-left text-xs hover:bg-muted">
+              <button type="button" className="h-5 w-full px-1 text-left text-xs hover:bg-muted leading-none">
                 {nameOf(a) || <span className="text-muted-foreground">+ 사람</span>}
               </button>
             </PopoverTrigger>
@@ -450,7 +450,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           </Popover>
           <button
             type="button"
-            className="truncate rounded bg-background px-1 py-0.5 text-left text-[10px] text-muted-foreground hover:bg-muted"
+            className="truncate rounded bg-background px-1 py-px text-left text-[10px] text-muted-foreground hover:bg-muted leading-none"
             onClick={() =>
               setTalkModal({
                 open: true,
