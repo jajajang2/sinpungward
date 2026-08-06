@@ -68,7 +68,7 @@ const TempleRecommendCard = () => {
               return (
                 <li key={m.id}>
                   <button
-                    onClick={() => navigate(m.memberId ? `/members?memberId=${m.memberId}` : "/temple-recommend")}
+                    onClick={() => navigate(m.memberId ? `/members?memberId=${m.memberId}` : "/temple-recommends")}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-left"
                   >
                     <div className="flex items-center gap-2 min-w-0">
