@@ -25,6 +25,7 @@ interface Props {
   onChanged: () => void;
   bishopricCandidates: MemberLite[];
   musicCandidates: MemberLite[];
+  className?: string;
 }
 
 function sundaysOf(year: number, month: number): string[] {
