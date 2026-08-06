@@ -279,7 +279,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
               // Track skip cells due to rowSpan merges from prior rows
               return (
                 <tr key={row.role}>
-                  <td className="border bg-muted/30 px-1.5 py-0.5 font-medium sticky left-0 z-10">{row.label}</td>
+                  <td className="border bg-muted/30 px-1 py-px font-medium sticky left-0 z-10">{row.label}</td>
                   {sundays.map((d) => {
                     const m = meetings[d];
                     const evt: EventType = (m?.event_type as EventType) || "일반";
