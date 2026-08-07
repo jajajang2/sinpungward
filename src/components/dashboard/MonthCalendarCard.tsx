@@ -56,13 +56,13 @@ const MonthCalendarCard = () => {
           <CalendarIcon className="w-4 h-4 text-primary" />
           {year}년 {month + 1}월 일정
           <div className="ml-auto flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setCursor(new Date(year, month - 1, 1))}>
+            <Button variant="ghost" size="sm" className="h-11 w-11 md:h-7 md:w-7 p-0" onClick={() => setCursor(new Date(year, month - 1, 1))}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => { const d = new Date(); setCursor(new Date(d.getFullYear(), d.getMonth(), 1)); }}>
+            <Button variant="ghost" size="sm" className="h-11 md:h-7 px-3 md:px-2 text-xs" onClick={() => { const d = new Date(); setCursor(new Date(d.getFullYear(), d.getMonth(), 1)); }}>
               오늘
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setCursor(new Date(year, month + 1, 1))}>
+            <Button variant="ghost" size="sm" className="h-11 w-11 md:h-7 md:w-7 p-0" onClick={() => setCursor(new Date(year, month + 1, 1))}>
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -78,7 +78,7 @@ const MonthCalendarCard = () => {
         </div>
         <div className="grid grid-cols-7 gap-1">
           {cells.map((d, i) => {
-            if (d === null) return <div key={i} className="min-h-[92px]" />;
+            if (d === null) return <div key={i} className="min-h-[64px] md:min-h-[92px]" />;
             const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
             const dayEvents = events[dateStr] || [];
             const isToday = dateStr === today;
@@ -89,7 +89,7 @@ const MonthCalendarCard = () => {
               <button
                 key={i}
                 onClick={() => setSelectedDate(dateStr)}
-                className={`min-h-[92px] rounded-md border text-xs flex flex-col items-stretch justify-start p-1.5 gap-1 transition-colors hover:bg-accent text-left overflow-hidden ${
+                className={`w-full min-w-0 min-h-[64px] md:min-h-[92px] rounded-md border text-xs flex flex-col items-stretch justify-start p-1.5 gap-1 transition-colors hover:bg-accent text-left overflow-hidden ${
                   isToday ? "border-primary bg-primary/10" : "border-border"
                 }`}
               >
