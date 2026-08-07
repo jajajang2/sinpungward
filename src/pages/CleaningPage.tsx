@@ -737,15 +737,19 @@ export default function CleaningPage() {
 
         {/* ===== 명단 ===== */}
         <TabsContent value="roster" className="space-y-3">
-          <div className="flex justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={exportRoster}>
-              <Download className="w-4 h-4" /> Excel 내보내기
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => window.print()}>
-              <Printer className="w-4 h-4" /> 인쇄
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 h-auto md:h-[calc(100vh-220px)]">
+          <Card className="md:sticky md:top-0 z-10">
+            <CardContent className="p-3">
+              <div className="flex justify-end gap-2">
+                <Button className="h-11 md:h-9 w-full md:w-auto" variant="outline" onClick={exportRoster}>
+                  <Download className="w-4 h-4" /> Excel 내보내기
+                </Button>
+                <Button className="h-11 md:h-9 w-full md:w-auto" variant="outline" onClick={() => window.print()}>
+                  <Printer className="w-4 h-4" /> 인쇄
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 h-auto md:h-[calc(100vh-220px)]">
             {teams.map((t) => {
               const list = [...familiesByTeam(t.id)].sort((a, b) => {
                 const sa = a.head ? (attendanceDates.get(a.head.id)?.size ?? 0) : 0;
