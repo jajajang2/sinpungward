@@ -99,7 +99,7 @@ const EventDialog = ({ open, onClose, date, onChanged }: Props) => {
                     <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{e.description}</p>
                   )}
                 </div>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleDelete(e.id)}>
+                <Button variant="ghost" size="sm" className="h-11 w-11 md:h-7 md:w-7 p-0" onClick={() => handleDelete(e.id)}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
