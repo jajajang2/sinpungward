@@ -421,11 +421,11 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
 
       <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
         <TabsList className="mx-5 mt-3 grid h-auto grid-cols-3 w-auto sm:grid-cols-5">
-          <TabsTrigger value="basic" className="text-xs">기본정보</TabsTrigger>
-          <TabsTrigger value="family" className="text-xs">가족정보</TabsTrigger>
-          <TabsTrigger value="church" className="text-xs">교회정보</TabsTrigger>
-          <TabsTrigger value="notes" className="text-xs">구체적 정보</TabsTrigger>
-          <TabsTrigger value="attendance" className="text-xs">출석정보</TabsTrigger>
+          <TabsTrigger value="basic" className="text-xs min-h-[44px] md:min-h-0">기본정보</TabsTrigger>
+          <TabsTrigger value="family" className="text-xs min-h-[44px] md:min-h-0">가족정보</TabsTrigger>
+          <TabsTrigger value="church" className="text-xs min-h-[44px] md:min-h-0">교회정보</TabsTrigger>
+          <TabsTrigger value="notes" className="text-xs min-h-[44px] md:min-h-0">구체적 정보</TabsTrigger>
+          <TabsTrigger value="attendance" className="text-xs min-h-[44px] md:min-h-0">출석정보</TabsTrigger>
         </TabsList>
 
         {/* ── 기본정보 ── */}
@@ -635,22 +635,22 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label className="text-xs">날짜</Label>
-                <Input type="date" value={newNote.note_date} onChange={e => setNewNote(n => ({ ...n, note_date: e.target.value }))} className="h-7 text-xs" />
+                <Input type="date" value={newNote.note_date} onChange={e => setNewNote(n => ({ ...n, note_date: e.target.value }))} className="h-11 md:h-7 text-xs" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">작성자</Label>
-                <Input value={newNote.author} onChange={e => setNewNote(n => ({ ...n, author: e.target.value }))} placeholder="이름" className="h-7 text-xs" />
+                <Input value={newNote.author} onChange={e => setNewNote(n => ({ ...n, author: e.target.value }))} placeholder="이름" className="h-11 md:h-7 text-xs" />
               </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">내용</Label>
               <Textarea value={newNote.content} onChange={e => setNewNote(n => ({ ...n, content: e.target.value }))} rows={2} placeholder="기재할 내용을 입력하세요" className="text-xs" />
             </div>
-            <Button size="sm" className="w-full h-7 text-xs" onClick={addNote}>기록 추가</Button>
+            <Button size="sm" className="w-full h-11 md:h-7 text-xs" onClick={addNote}>기록 추가</Button>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-xs">
+          <div className="table-scroll table-sticky-first rounded-lg border border-border">
+            <table className="w-full min-w-[600px] text-xs">
               <thead>
                 <tr className="bg-[hsl(var(--table-header))]">
                   <th className="px-3 py-2 text-left font-semibold w-24">날짜</th>
@@ -690,8 +690,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
               출석 기록이 없습니다
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-xs">
+            <div className="table-scroll table-sticky-first rounded-lg border border-border">
+              <table className="w-full min-w-[600px] text-xs">
                 <thead>
                   <tr className="bg-[hsl(var(--table-header))]">
                     <th className="px-3 py-2 text-left font-semibold w-16">#</th>
@@ -754,7 +754,7 @@ export const FamilyNameCombobox = ({
             }}
             onFocus={() => setOpen(true)}
             placeholder="이름 검색..."
-            className="h-7 text-xs pr-6"
+            className="h-11 md:h-7 text-xs pr-6"
           />
           <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
         </div>
@@ -828,7 +828,7 @@ export const RelationshipSelect = ({ value, onChange }: { value: string; onChang
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between h-7 font-normal text-xs px-2"
+          className="w-full justify-between h-11 md:h-7 font-normal text-xs px-2"
         >
           <span className={cn("truncate", !value && "text-muted-foreground")}>
             {value || "관계 선택..."}
