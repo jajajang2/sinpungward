@@ -488,7 +488,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                 id="special-care"
                 checked={member.is_special_care ?? false}
                 onChange={e => setMember(m => m ? { ...m, is_special_care: e.target.checked } : m)}
-                className="w-4 h-4 accent-primary"
+                className="w-5 h-5 md:w-4 md:h-4 accent-primary"
               />
               <div>
                 <Label htmlFor="special-care" className="text-sm font-semibold cursor-pointer text-foreground">특별관리회원</Label>
@@ -571,7 +571,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                       id="temple"
                       checked={ci.temple_recommend || false}
                       onChange={e => update('temple_recommend', e.target.checked)}
-                      className="w-4 h-4 accent-primary"
+                      className="w-5 h-5 md:w-4 md:h-4 accent-primary"
                     />
                     <Label htmlFor="temple" className="text-sm font-semibold cursor-pointer">성전추천서 보유</Label>
                   </div>
