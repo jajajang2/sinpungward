@@ -501,7 +501,7 @@ export default function CleaningPage() {
       </div>
 
       <Tabs defaultValue="schedule">
-        <TabsList>
+        <TabsList className="grid grid-cols-3 w-full md:inline-flex md:w-auto">
           <TabsTrigger value="schedule">청소 일정</TabsTrigger>
           <TabsTrigger value="teams">조 편성</TabsTrigger>
           <TabsTrigger value="roster">명단</TabsTrigger>
