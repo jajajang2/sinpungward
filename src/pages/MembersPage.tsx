@@ -309,7 +309,7 @@ const MembersPage = () => {
       return (
         <div className="flex flex-col min-h-dvh md:h-screen md:overflow-hidden bg-card">
           <div className="px-3 py-2 border-b border-border shrink-0 flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5 px-2" onClick={handleBack}>
+            <Button variant="ghost" size="sm" className="h-11 md:h-8 text-xs gap-1.5 px-3 md:px-2" onClick={handleBack}>
               <ArrowLeft className="w-4 h-4" /> 목록으로
             </Button>
           </div>
@@ -338,16 +338,16 @@ const MembersPage = () => {
               <p className="text-xs text-muted-foreground">총 {members.length}명</p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <Button variant="destructive" size="sm" className="h-7 text-xs px-2" onClick={() => setShowDeleteAll(true)}>
+              <Button variant="destructive" size="sm" className="h-11 md:h-7 text-xs px-3 md:px-2" onClick={() => setShowDeleteAll(true)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => setShowImport(true)}>
+              <Button variant="outline" size="sm" className="h-11 md:h-7 text-xs px-3 md:px-2" onClick={() => setShowImport(true)}>
                 <Upload className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => setShowExport(true)}>
+              <Button variant="outline" size="sm" className="h-11 md:h-7 text-xs px-3 md:px-2" onClick={() => setShowExport(true)}>
                 <Download className="w-3.5 h-3.5" />
               </Button>
-              <Button size="sm" className="h-7 text-xs px-2" onClick={() => setShowAdd(true)}>
+              <Button size="sm" className="h-11 md:h-7 text-xs px-3 md:px-2" onClick={() => setShowAdd(true)}>
                 <Plus className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -358,7 +358,7 @@ const MembersPage = () => {
               placeholder="이름 또는 전화번호 검색..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-7 h-8 text-xs"
+              className="pl-7 h-11 md:h-8 text-xs"
             />
           </div>
         </div>
