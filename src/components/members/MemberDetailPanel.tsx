@@ -421,11 +421,11 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
 
       <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
         <TabsList className="mx-5 mt-3 grid h-auto grid-cols-3 w-auto sm:grid-cols-5">
-          <TabsTrigger data-x="min-h-[44px] md:min-h-0" value="basic" className="text-xs">기본정보</TabsTrigger>
-          <TabsTrigger data-x="min-h-[44px] md:min-h-0" value="family" className="text-xs">가족정보</TabsTrigger>
-          <TabsTrigger data-x="min-h-[44px] md:min-h-0" value="church" className="text-xs">교회정보</TabsTrigger>
-          <TabsTrigger data-x="min-h-[44px] md:min-h-0" value="notes" className="text-xs">구체적 정보</TabsTrigger>
-          <TabsTrigger data-x="min-h-[44px] md:min-h-0" value="attendance" className="text-xs">출석정보</TabsTrigger>
+          <TabsTrigger value="basic" className="text-xs min-h-[44px] md:min-h-0">기본정보</TabsTrigger>
+          <TabsTrigger value="family" className="text-xs min-h-[44px] md:min-h-0">가족정보</TabsTrigger>
+          <TabsTrigger value="church" className="text-xs min-h-[44px] md:min-h-0">교회정보</TabsTrigger>
+          <TabsTrigger value="notes" className="text-xs min-h-[44px] md:min-h-0">구체적 정보</TabsTrigger>
+          <TabsTrigger value="attendance" className="text-xs min-h-[44px] md:min-h-0">출석정보</TabsTrigger>
         </TabsList>
 
         {/* ── 기본정보 ── */}
