@@ -368,7 +368,7 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
             </div>
             <div className="flex items-center gap-2">
               <Tabs value={absentRange} onValueChange={v => setAbsentRange(v as any)}>
-                <TabsList className="h-8">
+                <TabsList className="h-11 md:h-8">
                   <TabsTrigger value="2w" className="text-xs px-2">2주</TabsTrigger>
                   <TabsTrigger value="4w" className="text-xs px-2">4주</TabsTrigger>
                   <TabsTrigger value="3m" className="text-xs px-2">3개월</TabsTrigger>
@@ -377,7 +377,7 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 px-2"
+                className="h-11 md:h-8 px-3 md:px-2"
                 onClick={exportAbsentees}
                 disabled={exporting || absentees.length === 0}
               >
@@ -398,7 +398,7 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
                   key={m.id}
                   type="button"
                   onClick={() => goToMember(m.id)}
-                  className="text-xs px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 hover:underline transition-colors cursor-pointer"
+                  className="text-xs px-3 md:px-2.5 py-2 md:py-1 min-h-[44px] md:min-h-0 rounded-full bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 hover:underline transition-colors cursor-pointer"
                   title="회원기록으로 이동"
                 >
                   {m.name}
@@ -414,6 +414,25 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="text-base font-semibold">개인별 출석률</h3>
           <span className="text-xs text-muted-foreground">최근 3개월</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+          {(() => {
+            const n = personalRates.length;
+            const avg = n ? Math.round(personalRates.reduce((a, b) => a + b.rate, 0) / n) : 0;
+            const high = personalRates.filter(p => p.rate >= 80).length;
+            const low = personalRates.filter(p => p.rate < 50).length;
+            const items = [
+              { label: "평균 출석률", value: `${avg}%` },
+              { label: "80% 이상", value: `${high}명` },
+              { label: "50% 미만", value: `${low}명` },
+            ];
+            return items.map(i => (
+              <div key={i.label} className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                <p className="text-xs text-muted-foreground">{i.label}</p>
+                <p className="text-lg font-semibold text-foreground">{i.value}</p>
+              </div>
+            ));
+          })()}
         </div>
         <div className="relative mb-3">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
