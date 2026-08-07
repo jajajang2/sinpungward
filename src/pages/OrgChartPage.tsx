@@ -275,12 +275,12 @@ export default function OrgChartPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground">
+          <label className="flex min-h-[44px] md:min-h-0 items-center gap-1.5 cursor-pointer select-none text-xs text-muted-foreground">
             <input
               type="checkbox"
               checked={!hideEmpty}
               onChange={e => setHideEmpty(!e.target.checked)}
-              className="w-3.5 h-3.5 accent-primary"
+              className="w-5 h-5 md:w-3.5 md:h-3.5 accent-primary"
             />
             미배정 숨김 해제
           </label>

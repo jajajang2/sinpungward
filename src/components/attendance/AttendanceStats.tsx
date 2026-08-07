@@ -440,7 +440,7 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
             value={personalSearch}
             onChange={e => setPersonalSearch(e.target.value)}
             placeholder="이름 또는 연락처로 검색"
-            className="pl-8 h-9 text-sm"
+            className="pl-8 h-11 md:h-9 text-sm"
           />
         </div>
         <div className="max-h-96 overflow-y-auto table-scroll table-sticky-first">
