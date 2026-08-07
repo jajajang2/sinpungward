@@ -66,7 +66,7 @@ const RecentAttendanceCard = () => {
         {loading ? (
           <p className="text-sm text-muted-foreground">불러오는 중...</p>
         ) : (
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {data.map((w) => (
               <div
                 key={w.label}

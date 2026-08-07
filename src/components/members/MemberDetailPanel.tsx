@@ -420,7 +420,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
       </div>
 
       <Tabs defaultValue="basic" className="flex flex-col flex-1 min-h-0">
-        <TabsList className="mx-5 mt-3 grid grid-cols-5 w-auto">
+        <TabsList className="mx-5 mt-3 grid h-auto grid-cols-3 w-auto sm:grid-cols-5">
           <TabsTrigger value="basic" className="text-xs">기본정보</TabsTrigger>
           <TabsTrigger value="family" className="text-xs">가족정보</TabsTrigger>
           <TabsTrigger value="church" className="text-xs">교회정보</TabsTrigger>
@@ -430,7 +430,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
 
         {/* ── 기본정보 ── */}
         <TabsContent value="basic" className="flex-1 overflow-y-auto px-5 pb-5 space-y-4 mt-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="col-span-2 space-y-1">
               <Label className="text-xs">이름</Label>
               <Input value={member.name} onChange={e => setMember(m => m ? { ...m, name: e.target.value } : m)} />
@@ -529,7 +529,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
               : null;
 
             return (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label className="text-xs">회원기록번호</Label>
                   <Input value={ci.record_number || ''} onChange={e => update('record_number', e.target.value)} />
@@ -578,7 +578,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
 
                   {ci.temple_recommend && (
                     <div className="pl-6 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">감독 접견일자</Label>
                           <Input
@@ -632,7 +632,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
         <TabsContent value="notes" className="flex-1 overflow-y-auto px-5 pb-5 mt-4 space-y-4">
           <div className="p-3 bg-muted rounded-lg space-y-2">
             <p className="text-xs font-semibold text-foreground">새 기록 추가</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label className="text-xs">날짜</Label>
                 <Input type="date" value={newNote.note_date} onChange={e => setNewNote(n => ({ ...n, note_date: e.target.value }))} className="h-7 text-xs" />

@@ -109,7 +109,7 @@ const AddMemberDialog = ({ open, onClose, onSaved }: AddMemberDialogProps) => {
           <DialogTitle>회원 추가</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="col-span-2 space-y-1.5">
               <Label>이름 <span className="text-destructive">*</span></Label>
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="홍길동" />
