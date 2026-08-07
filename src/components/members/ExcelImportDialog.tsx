@@ -225,7 +225,7 @@ const ExcelImportDialog = ({ open, onClose, onImported }: ExcelImportDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0">
+      <DialogContent mobileVariant="fullscreen" className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
           <DialogTitle>Excel 가져오기</DialogTitle>
         </DialogHeader>
