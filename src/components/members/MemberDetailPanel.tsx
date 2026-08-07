@@ -402,9 +402,9 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                 onUpdated();
               }}
             />
-            <div>
-              <h2 className="font-bold text-foreground text-lg">{member.name}</h2>
-              <p className="text-xs text-muted-foreground">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-bold text-foreground text-lg truncate">{member.name}</h2>
+              <p className="text-xs text-muted-foreground truncate">
                 {member.gender && `${member.gender}성`}
                 {age != null && ` · ${age}세`}
                 {churchInfo?.current_calling?.length ? ` · ${churchInfo.current_calling.join(', ')}` : ''}
