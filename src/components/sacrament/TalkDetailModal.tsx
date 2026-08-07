@@ -27,7 +27,7 @@ export default function TalkDetailModal({ open, onOpenChange, title, initialTopi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" mobileVariant="fullscreen">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

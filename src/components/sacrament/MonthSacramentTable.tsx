@@ -208,11 +208,11 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
       <div className="border-b bg-muted/50 px-2 py-1 text-xs font-semibold shrink-0">
         {year}년 {month}월 성찬식 계획표
       </div>
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <table className="w-full h-full border-collapse text-xs table-fixed">
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto md:overflow-hidden">
+        <table className="w-full h-full min-w-[560px] md:min-w-0 border-collapse text-xs table-fixed">
           <thead>
             <tr>
-              <th className="border bg-muted px-1 py-px text-left font-medium w-20 sticky left-0 z-10">항목</th>
+              <th className="border bg-muted px-1 py-px text-left font-medium w-16 md:w-20 sticky left-0 z-20">항목</th>
               {sundays.map((d) => {
                 const dayNum = parseInt(d.split("-")[2], 10);
                 const m = meetings[d];
@@ -279,7 +279,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
               // Track skip cells due to rowSpan merges from prior rows
               return (
                 <tr key={row.role}>
-                  <td className="border bg-muted/30 px-1 py-px font-medium sticky left-0 z-10">{row.label}</td>
+                  <td className="border bg-card md:bg-muted/30 px-1 py-px font-medium sticky left-0 z-10">{row.label}</td>
                   {sundays.map((d) => {
                     const m = meetings[d];
                     const evt: EventType = (m?.event_type as EventType) || "일반";
@@ -370,7 +370,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
         <Input
           defaultValue={a?.hymn_number || ""}
           placeholder="번호"
-          className="h-5 border-0 text-[11px] px-1 py-0"
+          className="h-10 md:h-5 border-0 text-base md:text-[11px] px-1 py-0"
           onBlur={(e) => {
             const v = e.target.value.trim();
             if ((a?.hymn_number || "") === v) return;
@@ -400,7 +400,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={`h-5 w-full px-1 text-left text-[11px] hover:bg-muted ${bgClass}`}
+              className={`h-10 md:h-5 w-full px-1 text-left text-[11px] hover:bg-muted ${bgClass}`}
             >
               {displayName || <span className="text-muted-foreground">+</span>}
             </button>
@@ -430,7 +430,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
         <div className={`flex flex-col gap-px p-px ${statusBg(a?.status)}`}>
           <Popover>
             <PopoverTrigger asChild>
-              <button type="button" className="h-5 w-full px-1 text-left text-xs hover:bg-muted leading-none">
+              <button type="button" className="h-10 md:h-5 w-full px-1 text-left text-xs hover:bg-muted leading-none">
                 {nameOf(a) || <span className="text-muted-foreground">+ 사람</span>}
               </button>
             </PopoverTrigger>
@@ -450,7 +450,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
           </Popover>
           <button
             type="button"
-            className="truncate rounded bg-background px-1 py-px text-left text-[10px] text-muted-foreground hover:bg-muted leading-none"
+            className="min-h-[40px] md:min-h-0 truncate rounded bg-background px-1 py-px text-left text-[10px] text-muted-foreground hover:bg-muted leading-none"
             onClick={() =>
               setTalkModal({
                 open: true,
@@ -477,7 +477,7 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
               <div key={a.id} className={`flex items-center gap-px ${statusBg(a.status)}`}>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button type="button" className="h-5 flex-1 px-1 text-left text-xs hover:bg-muted leading-none">
+                    <button type="button" className="h-10 md:h-5 flex-1 px-1 text-left text-xs hover:bg-muted leading-none">
                       {nameOf(a) || <span className="text-muted-foreground">선택</span>}
                     </button>
                   </PopoverTrigger>
