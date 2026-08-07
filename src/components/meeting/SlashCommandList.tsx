@@ -61,7 +61,7 @@ const SlashCommandList = forwardRef<unknown, Props>(({ items, command }, ref) =>
   });
 
   return (
-    <div className="max-h-[360px] w-[520px] overflow-y-auto rounded-lg border border-border bg-popover p-2 shadow-lg">
+    <div className="max-h-[360px] w-[min(92vw,520px)] overflow-y-auto rounded-lg border border-border bg-popover p-2 shadow-lg">
       {groups.map((g) => (
         <div key={g.name} className="mb-1">
           <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">{g.name}</div>

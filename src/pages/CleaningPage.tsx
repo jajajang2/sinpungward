@@ -660,7 +660,7 @@ export default function CleaningPage() {
               <Printer className="w-4 h-4" /> 인쇄
             </Button>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 h-[calc(100vh-220px)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 h-auto md:h-[calc(100vh-220px)]">
             {teams.map((t) => {
               const list = [...familiesByTeam(t.id)].sort((a, b) => {
                 const sa = a.head ? (attendanceDates.get(a.head.id)?.size ?? 0) : 0;

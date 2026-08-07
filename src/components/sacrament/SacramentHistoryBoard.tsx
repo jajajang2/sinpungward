@@ -177,7 +177,7 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <div className="text-sm font-semibold">{mode === "talk" ? "회원 말씀 히스토리" : "회원 기도 히스토리"}</div>
           <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-            <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-full sm:w-[140px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="count_desc">{mode === "talk" ? "말씀 많은순" : "기도 많은순"}</SelectItem>
               <SelectItem value="count_asc">{mode === "talk" ? "말씀 적은순" : "기도 적은순"}</SelectItem>
@@ -191,7 +191,7 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
             <span>· 최근 18개월</span>
           </div>
         </div>
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-2">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-2">
           {column("형제", brothers)}
           {column("자매", sisters)}
         </div>

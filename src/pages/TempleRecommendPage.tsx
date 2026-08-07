@@ -247,7 +247,7 @@ const Dashboard = ({ rows }: { rows: RecommendRow[] }) => {
         {(["REGULAR", "LIMITED_USE"] as const).map((t) => (
           <div key={t} className="rounded-lg border p-4 bg-card">
             <div className="text-sm font-semibold mb-2">{typeLabel(t)}</div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {STATUS_ORDER.map((s) => (
                 <div key={s} className={`rounded border p-2 text-center ${colorFor(s)}`}>
                   <div className="text-[10px]">{s}</div>

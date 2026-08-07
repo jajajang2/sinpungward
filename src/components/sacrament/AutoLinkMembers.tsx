@@ -140,7 +140,7 @@ export default function AutoLinkMembers({ onChanged }: Props) {
 
           {plan && (
             <>
-              <div className="grid grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
                 <Card label="로드된 회원" value={plan.totalMembers} />
                 <Card label="연결 가능" value={plan.toLink.length} tone="success" />
                 <Card label="동명이인 보류" value={plan.duplicates.length} tone="warn" />

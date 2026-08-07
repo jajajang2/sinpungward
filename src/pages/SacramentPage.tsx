@@ -126,10 +126,10 @@ export default function SacramentPage() {
                 placeholder="이름 검색"
                 value={nameQuery}
                 onChange={(e) => setNameQuery(e.target.value)}
-                className="h-8 w-[160px] text-xs"
+                className="h-8 w-full sm:w-[160px] text-xs"
               />
               {searchResults.length > 0 && (
-                <div className="absolute left-0 top-9 z-50 w-[280px] overflow-y-auto rounded-md border bg-popover p-1 shadow-md" style={{ maxHeight: 5 * 28 + 8 }}>
+                <div className="absolute left-0 top-9 z-50 w-[min(90vw,280px)] overflow-y-auto rounded-md border bg-popover p-1 shadow-md" style={{ maxHeight: 5 * 28 + 8 }}>
                   <ul className="divide-y">
                     {searchResults.map((r) => (
                       <li key={r.id} className="flex h-7 items-center gap-2 px-1 text-xs">

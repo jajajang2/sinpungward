@@ -474,7 +474,7 @@ export default function SacramentImportExport({ onChanged }: Props) {
             <DialogTitle>가져오기 미리보기</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-5 gap-2 text-xs">
+          <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-5">
             <SummaryCard label="처리 일요일" value={summary.meetings} />
             <SummaryCard label="총 배정" value={summary.total} />
             <SummaryCard label="회원 매칭" value={summary.matched} tone="success" />

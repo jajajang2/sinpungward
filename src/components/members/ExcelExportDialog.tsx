@@ -172,7 +172,7 @@ const ExcelExportDialog = ({ open, onClose }: ExcelExportDialogProps) => {
 
         <div className="space-y-4 py-2">
           {/* Mode select */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setMode("all")}
