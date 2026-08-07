@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import BlockNoteEditorView from "@/components/meeting/BlockNoteEditor";
 import BlockNoteReadOnly from "@/components/meeting/BlockNoteReadOnly";
@@ -46,6 +47,7 @@ export default function MeetingMinutesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+  const [catSheetOpen, setCatSheetOpen] = useState(false);
 
   useEffect(() => {
     fetchMinutes();
@@ -182,51 +184,76 @@ export default function MeetingMinutesPage() {
   const showForm = isEditing || isCreating;
   const showList = !showDetail && !showForm;
 
+  const sidebarBody = (
+    <>
+      <div className="px-4 py-4 border-b">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">카테고리</p>
+        <div className="space-y-0.5">
+          {CATEGORIES.map((cat) => {
+            const count = cat === "전체" ? minutes.length : minutes.filter((m) => m.category === cat).length;
+            return (
+              <button
+                key={cat}
+                onClick={() => { setSelectedCategory(cat); handleBack(); setCatSheetOpen(false); }}
+                className={cn(
+                  "w-full flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors min-h-11 md:min-h-0",
+                  selectedCategory === cat
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "text-foreground hover:bg-muted"
+                )}
+              >
+                <span>{cat}</span>
+                <span className={cn("text-xs", selectedCategory === cat ? "opacity-80" : "text-muted-foreground")}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="px-4 py-3 mt-auto border-t">
+        <Button size="sm" className="w-full min-h-11 md:min-h-0" onClick={() => { handleNewClick(); setCatSheetOpen(false); }}>
+          <Plus className="w-4 h-4" /> 새 회의록
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex min-h-dvh md:h-screen md:overflow-hidden">
-      {/* Left Sidebar */}
-      <aside className="w-[200px] shrink-0 flex flex-col border-r bg-muted/30">
-        <div className="px-4 py-4 border-b">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">카테고리</p>
-          <div className="space-y-0.5">
-            {CATEGORIES.map((cat) => {
-              const count = cat === "전체" ? minutes.length : minutes.filter((m) => m.category === cat).length;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => { setSelectedCategory(cat); handleBack(); }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors",
-                    selectedCategory === cat
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-foreground hover:bg-muted"
-                  )}
-                >
-                  <span>{cat}</span>
-                  <span className={cn("text-xs", selectedCategory === cat ? "opacity-80" : "text-muted-foreground")}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="px-4 py-3 mt-auto border-t">
-          <Button size="sm" className="w-full" onClick={handleNewClick}>
-            <Plus className="w-4 h-4" /> 새 회의록
-          </Button>
-        </div>
+      {/* Left Sidebar (desktop) */}
+      <aside className="hidden w-[200px] shrink-0 md:flex flex-col border-r bg-muted/30">
+        {sidebarBody}
       </aside>
+
+      {/* Category drawer (mobile) */}
+      <Sheet open={catSheetOpen} onOpenChange={setCatSheetOpen}>
+        <SheetContent side="left" className="w-[260px] p-0 flex flex-col">
+          <SheetHeader className="px-4 pt-4 text-left">
+            <SheetTitle>회의록</SheetTitle>
+          </SheetHeader>
+          {sidebarBody}
+        </SheetContent>
+      </Sheet>
 
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         {!showForm && (
-        <div className="flex items-center gap-3 px-6 py-4 border-b bg-background">
+        <div className="flex items-center gap-2 md:gap-3 px-3 md:px-6 py-3 md:py-4 border-b bg-background">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden h-11 w-11 shrink-0"
+            aria-label="카테고리 열기"
+            onClick={() => setCatSheetOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
           {(showDetail || showForm) && (
-            <Button variant="ghost" size="sm" onClick={handleBack} className="mr-1">
+            <Button variant="ghost" size="sm" onClick={handleBack} className="mr-1 min-h-11 md:min-h-0">
               <ArrowLeft className="w-4 h-4" />
-              목록으로
+              <span className="hidden sm:inline">목록으로</span>
             </Button>
           )}
           <div className="flex-1">
