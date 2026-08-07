@@ -190,7 +190,7 @@ export const NonHoldersView = ({
       </div>
 
       <Tabs defaultValue="non-holders">
-        <TabsList>
+        <TabsList className="flex w-full justify-start overflow-x-auto md:w-auto">
           <TabsTrigger value="non-holders">미소지자</TabsTrigger>
           <TabsTrigger value="matching">
             매칭 필요{needsMatching.length > 0 ? ` (${needsMatching.length})` : ""}
