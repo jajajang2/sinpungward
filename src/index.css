@@ -234,3 +234,55 @@
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 0.875rem;
 }
+
+/* ---------------------------------------------------------------
+   Mobile touch targets (< md). Desktop density stays unchanged.
+   Uses min-height/min-width so it wins even where utilities set
+   an explicit h-6 / h-7 height.
+---------------------------------------------------------------- */
+@media (max-width: 767px) {
+  /* iOS zoom prevention: form controls must render at >= 16px */
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: 16px;
+  }
+
+  button:not([data-no-touch-target]),
+  [role="button"]:not([data-no-touch-target]),
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  a[role="button"],
+  summary {
+    min-height: 44px;
+  }
+
+  button:not([data-no-touch-target]),
+  [role="button"]:not([data-no-touch-target]),
+  [role="tab"] {
+    min-width: 44px;
+  }
+
+  /* Tab strips / toolbars keep their items comfortably tall */
+  [role="tablist"] {
+    min-height: 48px;
+    gap: 0.5rem;
+  }
+
+  /* Adjacent tappable elements: at least 8px apart */
+  .gap-0,
+  .gap-0\.5,
+  .gap-1,
+  .gap-1\.5 {
+    gap: 0.5rem;
+  }
+
+  /* Small icon-only controls inside dense tables keep their box but
+     gain a transparent tap area */
+  table button:not([data-no-touch-target]) {
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
