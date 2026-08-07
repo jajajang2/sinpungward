@@ -561,7 +561,7 @@ const AttendancePage = () => {
                   ? "min-h-[2.75rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[4.35rem]"
                   : "min-h-[2.15rem] aspect-square w-full p-0 text-center align-top [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-md last:[&:has([aria-selected])]:rounded-md md:min-h-[3.35rem]";
                 const dayClassName = isCenter
-                  ? "h-full w-full rounded-lg px-1 py-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-1 md:py-1.25"
+                  ? "h-full min-h-[44px] w-full rounded-lg px-1 py-1 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:min-h-0 md:px-1 md:py-1.25"
                   : "h-full w-full rounded-lg px-0.5 py-0.5 font-normal hover:bg-accent hover:text-accent-foreground aria-selected:bg-primary aria-selected:text-primary-foreground md:px-0.5 md:py-0.75";
 
                 return (
