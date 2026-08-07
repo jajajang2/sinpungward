@@ -134,6 +134,9 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
     const bottomKind: "talk" | "prayer" = mode === "talk" ? "prayer" : "talk";
     const top = g[topKind];
     const bottom = g[bottomKind];
+    const months = Array.from(new Set([...top, ...bottom].map((r) => monthKey(r.meeting_date)))).sort();
+    const countTalk = <span key="t" className="text-blue-600">말 {g.talk.length}</span>;
+    const countPrayer = <span key="p" className="text-yellow-700">기 {g.prayer.length}</span>;
     return (
       <li key={m.id} className="flex items-start gap-2 px-2 py-1.5">
         <div className="w-20 shrink-0">
@@ -142,27 +145,37 @@ export default function SacramentHistoryBoard({ members, refreshKey, onChanged, 
             {age !== null && <span className="ml-1 text-[10px] text-muted-foreground">({age})</span>}
           </div>
           <div className="text-[10px] text-muted-foreground">
-            <span className="text-blue-600">말 {g.talk.length}</span>
+            {mode === "talk" ? countTalk : countPrayer}
             <span className="mx-1">·</span>
-            <span className="text-yellow-700">기 {g.prayer.length}</span>
+            {mode === "talk" ? countPrayer : countTalk}
           </div>
         </div>
         <div className="min-w-0 flex-1 overflow-x-auto pb-0.5">
-          {top.length === 0 && bottom.length === 0 && <span className="text-[10px] text-muted-foreground">-</span>}
-          {(top.length > 0 || bottom.length > 0) && (
-            <>
-              <div className="flex gap-1">
-                {top.length ? top.map(renderChip) : <div className="h-[15px]" />}
-              </div>
-              <div className="mt-0.5 flex gap-1">
-                {bottom.length ? bottom.map(renderChip) : <div className="h-[15px]" />}
-              </div>
-            </>
+          {months.length === 0 ? (
+            <span className="text-[10px] text-muted-foreground">-</span>
+          ) : (
+            <div className="flex gap-1">
+              {months.map((mk) => {
+                const t = top.filter((r) => monthKey(r.meeting_date) === mk);
+                const b = bottom.filter((r) => monthKey(r.meeting_date) === mk);
+                return (
+                  <div key={mk} className="flex shrink-0 flex-col gap-0.5">
+                    <div className="flex gap-1">
+                      {t.length ? t.map(renderChip) : <div className="h-[15px]" />}
+                    </div>
+                    <div className="flex gap-1">
+                      {b.length ? b.map(renderChip) : <div className="h-[15px]" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </li>
     );
   };
+
 
   const column = (title: string, list: MemberLite[]) => (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
