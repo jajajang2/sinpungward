@@ -190,7 +190,7 @@ export const NonHoldersView = ({
       </div>
 
       <Tabs defaultValue="non-holders">
-        <TabsList>
+        <TabsList className="flex w-full justify-start overflow-x-auto md:w-auto">
           <TabsTrigger value="non-holders">미소지자</TabsTrigger>
           <TabsTrigger value="matching">
             매칭 필요{needsMatching.length > 0 ? ` (${needsMatching.length})` : ""}
@@ -262,7 +262,7 @@ export const NonHoldersView = ({
                         disabled={linkingId === rec.id}
                         onValueChange={(v) => handleLink(rec.id, v)}
                       >
-                        <SelectTrigger className="w-56 h-8">
+                        <SelectTrigger className="w-full min-w-[180px] md:w-56 h-11 md:h-8">
                           <SelectValue placeholder="회원 선택..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-72">

@@ -397,7 +397,7 @@ const TempleRecommendPage = () => {
         <p className="text-sm text-muted-foreground">상태는 오늘 날짜 기준으로 자동 계산됩니다.</p>
       </div>
       <Tabs defaultValue="dashboard">
-        <TabsList>
+        <TabsList className="flex w-full justify-start overflow-x-auto md:w-auto">
           <TabsTrigger value="dashboard">대시보드</TabsTrigger>
           <TabsTrigger value="list">추천서 목록</TabsTrigger>
           <TabsTrigger value="non-holders">미소지자 명단</TabsTrigger>
@@ -422,7 +422,7 @@ const TempleRecommendPage = () => {
         </TabsContent>
         <TabsContent value="import" className="mt-4">
           <Tabs defaultValue="adult">
-            <TabsList>
+            <TabsList className="flex w-full justify-start overflow-x-auto md:w-auto">
               <TabsTrigger value="adult">성인 명단 (정규)</TabsTrigger>
               <TabsTrigger value="youth">청소년 명단 (제한사용)</TabsTrigger>
             </TabsList>

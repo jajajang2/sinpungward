@@ -84,7 +84,7 @@ const AssignDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent mobileVariant="fullscreen">
         <DialogHeader>
           <DialogTitle>접견 배정 — {recommend?.lcr_name}</DialogTitle>
         </DialogHeader>
@@ -241,6 +241,8 @@ export const InterviewKanbanView = ({
     return g;
   }, [filtered]);
 
+  const [mobileStatus, setMobileStatus] = useState<InterviewRow["status"]>(KANBAN_STATUSES[0]);
+
   const updateStatus = async (id: string, status: InterviewRow["status"]) => {
     const patch: any = { status };
     if (status === "완료") patch.completed_at = new Date().toISOString();
@@ -254,14 +256,14 @@ export const InterviewKanbanView = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">접견자 필터:</span>
         <div className="inline-flex rounded-md border overflow-hidden">
           {(["ALL", ...ASSIGNEES] as const).map((v) => (
             <button
               key={v}
               onClick={() => setAssigneeFilter(v as any)}
-              className={`px-3 py-1.5 text-sm ${assigneeFilter === v ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
+              className={`px-3 py-1.5 text-sm min-h-11 md:min-h-0 ${assigneeFilter === v ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
             >
               {v === "ALL" ? "전체" : v}
             </button>
@@ -269,10 +271,24 @@ export const InterviewKanbanView = ({
         </div>
       </div>
 
+      {/* 모바일: 상태 탭 (가로 스크롤 칩) */}
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:hidden">
+        {KANBAN_STATUSES.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setMobileStatus(s)}
+            className={`shrink-0 rounded-full border px-4 min-h-11 text-sm ${mobileStatus === s ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}
+          >
+            {s} ({grouped[s].length})
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {KANBAN_STATUSES.map((s) => (
-          <div key={s} className={`rounded-lg border p-3 ${kanbanBg[s]} min-h-[400px]`}>
-            <div className="flex items-center justify-between mb-2">
+          <div key={s} className={`rounded-lg border p-3 ${kanbanBg[s]} md:min-h-[400px] ${mobileStatus === s ? "" : "hidden md:block"}`}>
+            <div className="hidden md:flex items-center justify-between mb-2">
               <div className="text-sm font-semibold">{s}</div>
               <div className="text-xs text-muted-foreground">{grouped[s].length}</div>
             </div>
@@ -291,13 +307,13 @@ export const InterviewKanbanView = ({
                     )}
                     <div className="flex flex-wrap gap-2 pt-1 md:gap-1">
                       {s !== "완료" && (
-                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "완료")}>완료</Button>
+                        <Button size="sm" variant="outline" className="h-11 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "완료")}>완료</Button>
                       )}
                       {s !== "보류" && s !== "완료" && (
-                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "보류")}>보류</Button>
+                        <Button size="sm" variant="outline" className="h-11 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "보류")}>보류</Button>
                       )}
                       {s !== "배정됨" && s !== "완료" && (
-                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "배정됨")}>배정됨</Button>
+                        <Button size="sm" variant="outline" className="h-11 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "배정됨")}>배정됨</Button>
                       )}
                     </div>
                   </div>
