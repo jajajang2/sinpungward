@@ -289,15 +289,15 @@ export const InterviewKanbanView = ({
                     {it.scheduled_at && (
                       <div className="text-muted-foreground">예정: {new Date(it.scheduled_at).toLocaleString("ko-KR")}</div>
                     )}
-                    <div className="flex gap-1 pt-1">
+                    <div className="flex flex-wrap gap-2 pt-1 md:gap-1">
                       {s !== "완료" && (
-                        <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => updateStatus(it.id, "완료")}>완료</Button>
+                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "완료")}>완료</Button>
                       )}
                       {s !== "보류" && s !== "완료" && (
-                        <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => updateStatus(it.id, "보류")}>보류</Button>
+                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "보류")}>보류</Button>
                       )}
                       {s !== "배정됨" && s !== "완료" && (
-                        <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => updateStatus(it.id, "배정됨")}>배정됨</Button>
+                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs md:h-6 md:px-2 md:text-[11px]" onClick={() => updateStatus(it.id, "배정됨")}>배정됨</Button>
                       )}
                     </div>
                   </div>
