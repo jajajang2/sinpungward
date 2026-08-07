@@ -337,7 +337,7 @@ const AttendancePage = () => {
 
   // 가족 단위 그룹핑 (filteredMembers 기준)
   const familyGroups = useMemo(() => {
-    if (isSearching) return null;
+    // 검색 중에도 가족 단위로 묶어서 표시
     const memberById = new Map(members.map((m) => [m.id, m]));
     const filteredIds = new Set(filteredMembers.map((m) => m.id));
     const famById = new Map(families.map((f) => [f.id, f]));
