@@ -262,7 +262,7 @@ export const NonHoldersView = ({
                         disabled={linkingId === rec.id}
                         onValueChange={(v) => handleLink(rec.id, v)}
                       >
-                        <SelectTrigger className="w-56 h-8">
+                        <SelectTrigger className="w-full min-w-[180px] md:w-56 h-11 md:h-8">
                           <SelectValue placeholder="회원 선택..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-72">
