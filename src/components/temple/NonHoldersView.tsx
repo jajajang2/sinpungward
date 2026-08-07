@@ -138,8 +138,8 @@ export const NonHoldersView = ({
   };
 
   const renderTable = (list: (NonHolderMember & { age: number })[]) => (
-    <div className="border rounded-lg overflow-x-auto">
-      <table className="w-full text-sm">
+    <div className="border rounded-lg table-scroll table-sticky-first">
+      <table className="w-full min-w-[640px] text-sm">
         <thead className="bg-muted">
           <tr>
             <th className="px-3 py-2 text-left">이름</th>
@@ -237,8 +237,8 @@ export const NonHoldersView = ({
             onChange={(e) => setUnmatchedSearch(e.target.value)}
             className="w-64"
           />
-          <div className="border rounded-lg overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="border rounded-lg table-scroll table-sticky-first">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-muted">
                 <tr>
                   <th className="px-3 py-2 text-left">추천서 이름</th>

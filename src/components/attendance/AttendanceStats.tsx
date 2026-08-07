@@ -424,8 +424,8 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
             className="pl-8 h-9 text-sm"
           />
         </div>
-        <div className="max-h-96 overflow-y-auto">
-          <table className="w-full text-sm">
+        <div className="max-h-96 overflow-y-auto table-scroll table-sticky-first">
+          <table className="w-full min-w-[520px] text-sm">
             <thead className="sticky top-0 bg-card">
               <tr className="border-b border-border text-xs text-muted-foreground">
                 <th className="text-left py-2 font-medium">이름</th>

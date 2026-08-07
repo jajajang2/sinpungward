@@ -286,3 +286,27 @@
     min-width: 40px;
   }
 }
+
+/* ---------------------------------------------------------------
+   Wide data tables on mobile: local horizontal scroll with a
+   sticky first column. Page-level horizontal scroll stays disabled.
+---------------------------------------------------------------- */
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .table-sticky-first table th:first-child,
+  .table-sticky-first table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: hsl(var(--card));
+    box-shadow: 1px 0 0 0 hsl(var(--border));
+  }
+  .table-sticky-first table thead th:first-child {
+    z-index: 3;
+  }
+}

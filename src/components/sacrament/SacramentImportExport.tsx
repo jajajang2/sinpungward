@@ -483,7 +483,7 @@ export default function SacramentImportExport({ onChanged }: Props) {
           </div>
 
           <div className="overflow-auto border rounded mt-2 flex-1">
-            <table className="w-full text-xs">
+            <table className="w-full min-w-[640px] text-xs">
               <thead className="bg-muted sticky top-0">
                 <tr>
                   <th className="px-2 py-1 text-left">날짜</th>
