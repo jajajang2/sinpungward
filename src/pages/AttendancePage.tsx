@@ -274,15 +274,36 @@ const AttendancePage = () => {
   const filteredMembers = useMemo(() => {
     const query = memberSearch.trim().toLowerCase();
 
+    // 검색 시: 검색어에 맞는 회원 + 그 회원의 가족 전체를 대상으로 함
+    let searchIds: Set<string> | null = null;
+    if (query) {
+      const matched = members.filter((m) => m.name.toLowerCase().includes(query));
+      const famOf = new Map<string, string>();
+      const byFam = new Map<string, string[]>();
+      for (const fm of familyMembers) {
+        famOf.set(fm.member_id, fm.family_id);
+        const arr = byFam.get(fm.family_id) || [];
+        arr.push(fm.member_id);
+        byFam.set(fm.family_id, arr);
+      }
+      searchIds = new Set<string>();
+      for (const m of matched) {
+        searchIds.add(m.id);
+        const fid = famOf.get(m.id);
+        if (fid) (byFam.get(fid) || []).forEach((id) => searchIds!.add(id));
+      }
+    }
+
     return members.filter((member) => {
+      if (searchIds) return searchIds.has(member.id);
       if (!selectedGroup.filter(member)) return false;
       if (selectedGroup.id === "singles" && excludedFromSingles.has(member.id)) return false;
-      if (!query) return true;
-      return member.name.toLowerCase().includes(query);
+      return true;
     });
-  }, [memberSearch, members, selectedGroup, excludedFromSingles]);
+  }, [memberSearch, members, familyMembers, selectedGroup, excludedFromSingles]);
 
   const isSearching = memberSearch.trim().length > 0;
+
 
   // 최근 8주(56일) 개인 출석률
   const attendanceRates = useMemo(() => {
@@ -316,7 +337,7 @@ const AttendancePage = () => {
 
   // 가족 단위 그룹핑 (filteredMembers 기준)
   const familyGroups = useMemo(() => {
-    if (isSearching) return null;
+    // 검색 중에도 가족 단위로 묶어서 표시
     const memberById = new Map(members.map((m) => [m.id, m]));
     const filteredIds = new Set(filteredMembers.map((m) => m.id));
     const famById = new Map(families.map((f) => [f.id, f]));
@@ -795,7 +816,7 @@ const AttendancePage = () => {
                     </div>
                   );
                 };
-                if (isSearching || !familyGroups) {
+                if (!familyGroups) {
                   return filteredMembers.map(renderMemberRow);
                 }
                 return familyGroups.map((g) => (
