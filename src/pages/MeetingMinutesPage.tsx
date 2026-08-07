@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import BlockNoteEditorView from "@/components/meeting/BlockNoteEditor";
 import BlockNoteReadOnly from "@/components/meeting/BlockNoteReadOnly";
@@ -46,6 +47,7 @@ export default function MeetingMinutesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+  const [catSheetOpen, setCatSheetOpen] = useState(false);
 
   useEffect(() => {
     fetchMinutes();
