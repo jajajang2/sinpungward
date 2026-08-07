@@ -43,7 +43,7 @@ export default function PersonPicker({
       type="button"
       size="sm"
       variant={currentStatus === s ? "default" : "outline"}
-      className={`flex-1 h-7 px-1 text-xs ${currentStatus === s ? cls : ""}`}
+      className={`flex-1 min-h-11 md:min-h-0 md:h-7 px-1 text-xs ${currentStatus === s ? cls : ""}`}
       onClick={() => onStatus?.(s)}
     >
       {s}
@@ -53,7 +53,7 @@ export default function PersonPicker({
   const hasCandidates = candidates !== undefined;
 
   return (
-    <div className="w-64 space-y-2 p-2">
+    <div className="w-[min(88vw,16rem)] md:w-64 space-y-2 p-2">
       {hasCandidates ? (
         <div className="max-h-56 overflow-y-auto rounded border">
           {candidates.length === 0 ? (
