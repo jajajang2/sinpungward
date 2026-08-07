@@ -501,7 +501,7 @@ export default function CleaningPage() {
       </div>
 
       <Tabs defaultValue="schedule">
-        <TabsList>
+        <TabsList className="grid grid-cols-3 w-full md:inline-flex md:w-auto">
           <TabsTrigger value="schedule">청소 일정</TabsTrigger>
           <TabsTrigger value="teams">조 편성</TabsTrigger>
           <TabsTrigger value="roster">명단</TabsTrigger>
@@ -509,11 +509,11 @@ export default function CleaningPage() {
 
         {/* ===== 일정 ===== */}
         <TabsContent value="schedule" className="space-y-4">
-          <Card>
-            <CardHeader>
+          <Card className="md:sticky md:top-0 z-10">
+            <CardHeader className="pb-3">
               <CardTitle className="text-base">토요일 일정 생성</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+            <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
               <div>
                 <Label className="text-xs">시작일</Label>
                 <Input type="date" value={genStart} onChange={(e) => setGenStart(e.target.value)} />
@@ -536,7 +536,9 @@ export default function CleaningPage() {
                 <Label className="text-xs">순환 순서 (콤마)</Label>
                 <Input value={genCycle} onChange={(e) => setGenCycle(e.target.value)} placeholder="A,B,C,D" />
               </div>
-              <Button onClick={generateSchedule}>일정 생성</Button>
+              <Button onClick={generateSchedule} className="col-span-2 md:col-span-1 w-full">
+                일정 생성
+              </Button>
             </CardContent>
           </Card>
 
@@ -555,14 +557,29 @@ export default function CleaningPage() {
                     return (
                       <div
                         key={s.id}
-                        className="flex items-center gap-3 p-2 rounded-md border bg-card"
+                        className="rounded-lg border bg-card p-3 flex flex-col gap-2 md:flex-row md:items-center md:gap-3"
                       >
-                        <div className="text-sm font-medium w-32 shrink-0">
-                          {d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.
-                          {String(d.getDate()).padStart(2, "0")} (토)
+                        <div className="flex items-start justify-between gap-2 md:contents">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium md:w-32 md:shrink-0">
+                              {d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.
+                              {String(d.getDate()).padStart(2, "0")} (토)
+                            </div>
+                            <span className="text-xs text-muted-foreground md:hidden">
+                              {team ? `${team.code}조 (${team.name})` : "-"}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 md:order-last"
+                            onClick={() => deleteSchedule(s.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                         <Select value={s.team_id} onValueChange={(v) => updateScheduleTeam(s.id, v)}>
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-full md:w-32">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -573,12 +590,9 @@ export default function CleaningPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <span className="text-xs text-muted-foreground flex-1 truncate">
+                        <span className="hidden md:block text-xs text-muted-foreground flex-1 truncate">
                           {team ? `${team.code}조 (${team.name})` : "-"}
                         </span>
-                        <Button variant="ghost" size="icon" onClick={() => deleteSchedule(s.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div>
                     );
                   })}
