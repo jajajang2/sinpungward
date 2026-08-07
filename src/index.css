@@ -67,12 +67,19 @@
   }
 
   html {
-    font-size: 90%;
+    font-size: 100%;
+  }
+
+  @media (min-width: 768px) {
+    html {
+      font-size: 90%;
+    }
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    overflow-x: hidden;
   }
 }
 
