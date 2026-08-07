@@ -169,6 +169,24 @@ const AttendancePage = () => {
 
   const selectedDateStr = selectedDate ? toDateStr(selectedDate) : null;
 
+  // 모바일 상단 날짜 칩: 최근 10주 일요일 (선택된 날짜 포함)
+  const sundayChips = useMemo(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    const lastSunday = new Date(base);
+    lastSunday.setDate(base.getDate() - base.getDay());
+    const list: Date[] = [];
+    for (let i = 0; i < 10; i++) {
+      const d = new Date(lastSunday);
+      d.setDate(lastSunday.getDate() - i * 7);
+      list.push(d);
+    }
+    if (selectedDate && !list.some((d) => toDateStr(d) === toDateStr(selectedDate))) {
+      list.unshift(new Date(selectedDate));
+    }
+    return list;
+  }, [selectedDate]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -656,6 +674,30 @@ const AttendancePage = () => {
             <Button variant="outline" onClick={() => setSelectedDate(undefined)} className="w-full md:w-auto">다른 날짜 선택</Button>
           </div>
 
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:hidden">
+            {sundayChips.map((d) => {
+              const ds = toDateStr(d);
+              const active = ds === selectedDateStr;
+              return (
+                <button
+                  key={ds}
+                  type="button"
+                  onClick={() => handleSelectDate(new Date(d))}
+                  className={`shrink-0 rounded-full border px-3 min-h-[44px] text-sm font-medium transition-colors ${
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-foreground"
+                  }`}
+                >
+                  {format(d, "M/d")}
+                  <span className={`ml-1 text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                    {attendanceCountsByDate[ds] || 0}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="flex gap-2 overflow-x-auto pb-1">
             {GROUPS.map((group) => {
               const isSelected = selectedGroupId === group.id;
@@ -735,7 +777,20 @@ const AttendancePage = () => {
                         <div className="text-[11px] text-muted-foreground md:text-xs">{selectedGroup.description}</div>
                       </div>
                       <div className="flex justify-center">
-                        <Checkbox checked={checked} onCheckedChange={() => toggleAttendance(member.id)} aria-label={`${member.name} 출석 체크`} />
+                        <button
+                          type="button"
+                          onClick={() => toggleAttendance(member.id)}
+                          aria-label={`${member.name} 출석 체크`}
+                          aria-pressed={checked}
+                          className="flex h-11 w-11 items-center justify-center rounded-md md:h-8 md:w-8"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            tabIndex={-1}
+                            className="pointer-events-none h-6 w-6 md:h-4 md:w-4"
+                            aria-hidden="true"
+                          />
+                        </button>
                       </div>
                     </div>
                   );
@@ -818,7 +873,7 @@ const AttendancePage = () => {
             else setIsVisitorDialogOpen(true);
           }}
         >
-          <DialogContent className="max-h-[90vh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto p-4 sm:p-5">
+          <DialogContent className="dialog-mobile-sheet max-h-[90vh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto p-4 sm:p-5">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
                 <UserPlus className="h-4 w-4 text-primary" />방문자 입력
