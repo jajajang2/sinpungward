@@ -469,7 +469,7 @@ export default function SacramentImportExport({ onChanged }: Props) {
       </Popover>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+        <DialogContent mobileVariant="fullscreen" className="max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>가져오기 미리보기</DialogTitle>
           </DialogHeader>

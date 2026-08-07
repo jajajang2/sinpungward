@@ -104,7 +104,7 @@ const AddMemberDialog = ({ open, onClose, onSaved }: AddMemberDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent mobileVariant="fullscreen" className="max-w-md">
         <DialogHeader>
           <DialogTitle>회원 추가</DialogTitle>
         </DialogHeader>
