@@ -51,7 +51,7 @@ const AttendanceStatsPage = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-auto p-4 md:p-6">
+    <div className="min-h-dvh md:h-screen overflow-y-auto p-4 md:p-6">
       <AttendanceStats members={members} attendance={attendance} records={records} />
     </div>
   );

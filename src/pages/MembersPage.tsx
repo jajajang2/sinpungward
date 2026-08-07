@@ -307,7 +307,7 @@ const MembersPage = () => {
 
     if (selectedMember) {
       return (
-        <div className="flex flex-col h-screen overflow-hidden bg-card">
+        <div className="flex flex-col min-h-dvh md:h-screen md:overflow-hidden bg-card">
           <div className="px-3 py-2 border-b border-border shrink-0 flex items-center gap-2">
             <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5 px-2" onClick={handleBack}>
               <ArrowLeft className="w-4 h-4" /> 목록으로
@@ -329,7 +329,7 @@ const MembersPage = () => {
     }
 
     return (
-      <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex flex-col min-h-dvh md:h-screen md:overflow-hidden">
         {/* Header */}
         <div className="px-3 py-3 border-b border-border bg-card shrink-0">
           <div className="flex items-center justify-between gap-2 mb-2">
@@ -455,7 +455,7 @@ const MembersPage = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex min-h-dvh md:h-screen md:overflow-hidden">
       {/* ── Left panel: group list ── */}
       <div className={`flex flex-col shrink-0 border-r border-border bg-card transition-all duration-200 ${selectedGroupId ? 'w-52' : 'flex-1 max-w-xs'}`}>
         <div className="px-4 py-4 border-b border-border">
