@@ -848,7 +848,7 @@ export default function CleaningPage() {
             {teams.map((t) => (
               <Button
                 key={t.id}
-                variant={assignSheetFamily?.teamId === t.id ? "default" : "outline"}
+                variant={assignmentByFamily.get(assignSheetFamily?.id ?? "")?.team_id === t.id ? "default" : "outline"}
                 className="w-full h-12 justify-start"
                 onClick={async () => {
                   const f = assignSheetFamily;
