@@ -47,7 +47,7 @@ const Layout = () => {
           </div>
         </header>
 
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <Outlet />
         </main>
       </div>

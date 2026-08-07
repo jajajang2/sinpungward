@@ -116,7 +116,7 @@ export default function SacramentPage() {
       <Tabs defaultValue="schedule" className="flex min-h-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
-            <TabsList className="h-8">
+            <TabsList className="h-11 md:h-8">
               <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
               <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
               <TabsTrigger value="prayer" className="text-xs py-1">기도 히스토리</TabsTrigger>
@@ -126,7 +126,7 @@ export default function SacramentPage() {
                 placeholder="이름 검색"
                 value={nameQuery}
                 onChange={(e) => setNameQuery(e.target.value)}
-                className="h-8 w-full sm:w-[160px] text-xs"
+                className="h-11 md:h-8 w-full sm:w-[160px] text-xs"
               />
               {searchResults.length > 0 && (
                 <div className="absolute left-0 top-9 z-50 w-[min(90vw,280px)] overflow-y-auto rounded-md border bg-popover p-1 shadow-md" style={{ maxHeight: 5 * 28 + 8 }}>

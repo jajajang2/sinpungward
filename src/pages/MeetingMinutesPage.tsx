@@ -264,7 +264,7 @@ export default function MeetingMinutesPage() {
                   placeholder="제목 또는 내용 검색..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9"
+                  className="pl-9 h-11 md:h-9"
                 />
               </div>
             )}
