@@ -816,7 +816,7 @@ const AttendancePage = () => {
                     </div>
                   );
                 };
-                if (isSearching || !familyGroups) {
+                if (!familyGroups) {
                   return filteredMembers.map(renderMemberRow);
                 }
                 return familyGroups.map((g) => (
