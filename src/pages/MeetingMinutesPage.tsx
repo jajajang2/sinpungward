@@ -183,7 +183,7 @@ export default function MeetingMinutesPage() {
   const showList = !showDetail && !showForm;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-dvh md:h-screen md:overflow-hidden">
       {/* Left Sidebar */}
       <aside className="w-[200px] shrink-0 flex flex-col border-r bg-muted/30">
         <div className="px-4 py-4 border-b">

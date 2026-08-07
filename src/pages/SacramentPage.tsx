@@ -104,7 +104,7 @@ export default function SacramentPage() {
   const second = useMemo(() => addMonths(anchor, 1), [anchor]);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden p-2 md:p-3 gap-2">
+    <div className="flex min-h-dvh flex-col md:h-screen md:overflow-hidden p-2 md:p-3 gap-2">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <h1 className="text-base font-bold md:text-lg leading-tight">성찬식 순서</h1>
         <div className="flex items-center gap-1">

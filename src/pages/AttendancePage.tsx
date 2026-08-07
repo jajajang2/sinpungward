@@ -505,7 +505,7 @@ const AttendancePage = () => {
 
   if (!selectedDate) {
     return (
-      <div className="h-screen overflow-y-auto bg-background">
+      <div className="min-h-dvh md:h-screen overflow-y-auto bg-background">
         <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-6 px-4 py-5 md:px-6 md:py-6">
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">출석부</h1>
@@ -630,7 +630,7 @@ const AttendancePage = () => {
   }
 
   return (
-    <div className="min-h-screen overflow-y-auto bg-background">
+    <div className="min-h-dvh md:min-h-screen overflow-y-auto bg-background">
       <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-3 px-3 pb-5 pt-16 sm:px-4 md:h-screen md:gap-4 md:px-6 md:py-6">
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

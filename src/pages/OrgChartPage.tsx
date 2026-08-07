@@ -264,7 +264,7 @@ export default function OrgChartPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col min-h-dvh md:h-screen">
       {/* ── Header ── */}
       <div className="sticky top-0 z-20 bg-card border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
         <div>
