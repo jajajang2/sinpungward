@@ -21,7 +21,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2, Download } from "lucide-react";
+import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2, Download, Info } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from "xlsx";
 import {
   DndContext,
@@ -420,6 +428,8 @@ export default function CleaningPage() {
 
   // 가족 멤버 보기 다이얼로그
   const [memberDialogFamily, setMemberDialogFamily] = useState<FamilyView | null>(null);
+  const [assignSheetFamily, setAssignSheetFamily] = useState<FamilyView | null>(null);
+  const isMobile = useIsMobile();
 
   // Excel export — 조별 시트, [조][구성원] 컬럼, 구성원 줄바꿈
   const exportRoster = () => {
@@ -615,18 +625,78 @@ export default function CleaningPage() {
               </Button>
             </div>
           )}
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={autoAssign}>
-              <Wand2 className="w-4 h-4" /> 자동 배분
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setResetOpen(true)}>
-              <RotateCcw className="w-4 h-4" /> 전체 초기화
-            </Button>
-            <span className="text-xs text-muted-foreground self-center ml-2">
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
+              <Button className="h-11 md:h-9 w-full md:w-auto" onClick={autoAssign}>
+                <Wand2 className="w-4 h-4" /> 자동 배분
+              </Button>
+              <Button
+                variant="outline"
+                className="h-11 md:h-9 w-full md:w-auto"
+                onClick={() => setResetOpen(true)}
+              >
+                <RotateCcw className="w-4 h-4" /> 전체 초기화
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
               총 {familyViews.length}가족 · 미배정 {unassignedFamilies.length}
-            </span>
+              <span className="md:hidden"> · 가족 칩을 탭하면 조를 변경할 수 있습니다</span>
+            </p>
           </div>
 
+          {/* 모바일: 탭 배정 */}
+          <div className="md:hidden space-y-3">
+            {[{ id: "unassigned", title: "미배정", list: unassignedFamilies, sub: `${unassignedFamilies.length}가족`, accent: false },
+              ...teams.map((t) => ({
+                id: t.id,
+                title: `${t.code}조 ${t.is_fixed ? "★" : ""}`,
+                list: familiesByTeam(t.id),
+                sub: `${t.name}`,
+                accent: t.is_fixed,
+              }))].map((sec) => (
+              <div
+                key={sec.id}
+                className={`rounded-lg border bg-card p-3 ${sec.accent ? "border-[hsl(var(--gold))]" : ""}`}
+              >
+                <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                  <span className="text-sm font-semibold">{sec.title}</span>
+                  <span className="text-xs text-muted-foreground">{sec.sub} · {sec.list.length}가족</span>
+                </div>
+                {sec.list.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">없음</p>
+                ) : (
+                  <div className="space-y-2">
+                    {sec.list.map((f) => (
+                      <div key={f.id} className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setAssignSheetFamily(f)}
+                          className="flex-1 min-h-[44px] text-left px-3 py-2 rounded-md border bg-background"
+                        >
+                          <div className="text-sm font-medium truncate">{teamBoxLabel(f)}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {f.members.length}명 · {Math.round(f.score * 100)}%
+                          </div>
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-11 w-11 shrink-0"
+                          aria-label="가족 구성원 보기"
+                          onClick={() => setMemberDialogFamily(f)}
+                        >
+                          <Info className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 데스크톱: 드래그 앤 드롭 */}
+          <div className="hidden md:block">
           <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
             <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
               {/* 미배정 */}
@@ -662,6 +732,7 @@ export default function CleaningPage() {
               ) : null}
             </DragOverlay>
           </DndContext>
+          </div>
         </TabsContent>
 
         {/* ===== 명단 ===== */}
@@ -767,6 +838,42 @@ export default function CleaningPage() {
         </DialogContent>
       </Dialog>
 
+      <Sheet open={!!assignSheetFamily} onOpenChange={(o) => !o && setAssignSheetFamily(null)}>
+        <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+          <SheetHeader className="text-left">
+            <SheetTitle>{assignSheetFamily ? teamBoxLabel(assignSheetFamily) : ""}</SheetTitle>
+            <SheetDescription>배정할 조를 선택하세요</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 space-y-2">
+            {teams.map((t) => (
+              <Button
+                key={t.id}
+                variant={assignSheetFamily?.teamId === t.id ? "default" : "outline"}
+                className="w-full h-12 justify-start"
+                onClick={async () => {
+                  const f = assignSheetFamily;
+                  setAssignSheetFamily(null);
+                  if (f) await moveFamilyToTeam(f.id, t.id);
+                }}
+              >
+                {t.code}조 · {t.name}
+              </Button>
+            ))}
+            <Button
+              variant="ghost"
+              className="w-full h-12 justify-start text-muted-foreground"
+              onClick={async () => {
+                const f = assignSheetFamily;
+                setAssignSheetFamily(null);
+                if (f) await moveFamilyToTeam(f.id, null);
+              }}
+            >
+              미배정으로 이동
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <Dialog open={!!memberDialogFamily} onOpenChange={(o) => !o && setMemberDialogFamily(null)}>
         <DialogContent>
           <DialogHeader>
@@ -836,9 +943,22 @@ function FamilyChip({ family, label, onOpen }: { family: FamilyView; label: stri
       }`}
       title={`더블클릭: 가족 보기 · 출석 점수: ${(family.score * 100).toFixed(0)}%`}
     >
-      <div className="font-medium truncate">{label}</div>
-      <div className="text-[10px] text-muted-foreground">
-        {family.members.length}명 · {Math.round(family.score * 100)}%
+      <div className="flex items-start gap-1">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium truncate">{label}</div>
+          <div className="text-[10px] text-muted-foreground">
+            {family.members.length}명 · {Math.round(family.score * 100)}%
+          </div>
+        </div>
+        <button
+          type="button"
+          aria-label="가족 구성원 보기"
+          className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onOpen(); }}
+        >
+          <Info className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );
