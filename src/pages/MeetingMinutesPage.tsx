@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save, Menu } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileText, Calendar, Search, X, Save, Menu, FilePlus2, History } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import BlockNoteEditorView from "@/components/meeting/BlockNoteEditor";
 import BlockNoteReadOnly from "@/components/meeting/BlockNoteReadOnly";
@@ -48,6 +49,7 @@ export default function MeetingMinutesPage() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
   const [catSheetOpen, setCatSheetOpen] = useState(false);
+  const [addChoiceOpen, setAddChoiceOpen] = useState(false);
 
   useEffect(() => {
     fetchMinutes();
@@ -106,11 +108,45 @@ export default function MeetingMinutesPage() {
   }
 
   function handleNewClick() {
+    if (selectedCategory === "감독단회의") {
+      setAddChoiceOpen(true);
+      return;
+    }
     setForm(emptyForm());
     setIsPrivate(false);
     setIsCreating(true);
     setIsEditing(false);
     setSelectedMinute(null);
+  }
+
+  function beginCreate(overrides: Partial<ReturnType<typeof emptyForm>>) {
+    setForm({ ...emptyForm(), ...overrides });
+    setIsPrivate(false);
+    setIsCreating(true);
+    setIsEditing(false);
+    setSelectedMinute(null);
+    setEditorKey((k) => k + 1);
+    setAddChoiceOpen(false);
+  }
+
+  // 감독단회의 — 새로운 회의록(빈 표준 양식)
+  function startBishopricBlank() {
+    beginCreate({ category: "감독단회의" });
+  }
+
+  // 감독단회의 — 이전 회의록 연동(가장 최근 감독단회의 내용을 이어받아 새 문서 시작)
+  function startBishopricFromPrevious() {
+    const previous = minutes.find((m) => m.category === "감독단회의");
+    if (!previous) {
+      startBishopricBlank();
+      return;
+    }
+    beginCreate({
+      title: previous.title,
+      category: "감독단회의",
+      content: previous.content,
+      attendees: previous.attendees ?? "",
+    });
   }
 
   function handleEditClick() {
@@ -213,7 +249,7 @@ export default function MeetingMinutesPage() {
       </div>
       <div className="px-4 py-3 mt-auto border-t">
         <Button size="sm" className="w-full min-h-11 md:min-h-0" onClick={() => { handleNewClick(); setCatSheetOpen(false); }}>
-          <Plus className="w-4 h-4" /> 새 회의록
+          <Plus className="w-4 h-4" /> {selectedCategory === "감독단회의" ? "회의록 추가" : "새 회의록"}
         </Button>
       </div>
     </>
@@ -235,6 +271,45 @@ export default function MeetingMinutesPage() {
           {sidebarBody}
         </SheetContent>
       </Sheet>
+
+      {/* 감독단회의 회의록 추가 — 신규/연동 선택 */}
+      <Dialog open={addChoiceOpen} onOpenChange={setAddChoiceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>회의록 추가</DialogTitle>
+            <DialogDescription>감독단모임 회의록을 어떻게 시작할까요?</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={startBishopricFromPrevious}
+              disabled={!minutes.some((m) => m.category === "감독단회의")}
+              className="flex items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <History className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div>
+                <div className="font-medium">이전 회의록 연동</div>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  가장 최근 감독단모임 회의록 내용을 그대로 이어받아 새 회의록을 작성합니다.
+                </p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={startBishopricBlank}
+              className="flex items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-muted/60"
+            >
+              <FilePlus2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div>
+                <div className="font-medium">새로운 회의록</div>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  빈 감독단모임 표준 양식으로 새로 작성합니다.
+                </p>
+              </div>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -307,7 +382,7 @@ export default function MeetingMinutesPage() {
                   <FileText className="w-10 h-10 mb-3 opacity-40" />
                   <p className="text-sm">회의록이 없습니다</p>
                   <Button size="sm" variant="outline" className="mt-3" onClick={handleNewClick}>
-                    <Plus className="w-4 h-4" /> 새 회의록 작성
+                    <Plus className="w-4 h-4" /> {selectedCategory === "감독단회의" ? "회의록 추가" : "새 회의록 작성"}
                   </Button>
                 </div>
               ) : (
@@ -344,7 +419,7 @@ export default function MeetingMinutesPage() {
 
           {/* Detail View */}
           {showDetail && selectedMinute && (
-            <div className="max-w-3xl mx-auto px-8 py-8">
+            <div className="max-w-[72rem] mx-auto px-8 py-8">
               {/* Title */}
               <h1 className="text-2xl font-bold text-foreground mb-4">
                 {selectedMinute.title}
@@ -380,7 +455,7 @@ export default function MeetingMinutesPage() {
           {showForm && (
             <div className="flex h-full flex-col bg-muted/30">
               <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
-                <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+                <div className="mx-auto flex w-full max-w-[84rem] flex-col gap-4">
                   {/* Top bar: back + title */}
                   <div className="flex items-center gap-3">
                     <Button variant="ghost" size="icon" onClick={handleBack} aria-label="뒤로가기" className="shrink-0">
@@ -448,7 +523,7 @@ export default function MeetingMinutesPage() {
 
               {/* Footer */}
               <div className="border-t border-border bg-card/90 px-4 py-3 backdrop-blur md:px-8">
-                <div className="mx-auto flex w-full max-w-4xl items-center justify-end gap-3">
+                <div className="mx-auto flex w-full max-w-[84rem] items-center justify-end gap-3">
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={handleBack}>
                       <X className="h-4 w-4" />

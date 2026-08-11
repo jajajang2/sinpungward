@@ -379,4 +379,14 @@
   .blocknote-wrapper .bn-block-content table {
     max-width: 100%;
   }
+  /* 제목 블록 글씨 크기를 한 단계씩 축소 (기본값: 1단계 3em, 2단계 2em, 3단계 1.3em) */
+  .blocknote-wrapper [data-content-type="heading"] {
+    --level: 2em;
+  }
+  .blocknote-wrapper [data-content-type="heading"][data-level="2"] {
+    --level: 1.3em;
+  }
+  .blocknote-wrapper [data-content-type="heading"][data-level="3"] {
+    --level: 1em;
+  }
 }
