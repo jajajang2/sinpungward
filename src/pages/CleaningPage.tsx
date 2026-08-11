@@ -656,16 +656,16 @@ export default function CleaningPage() {
               }))].map((sec) => (
               <div
                 key={sec.id}
-                className={`rounded-lg border bg-card p-3 ${sec.accent ? "border-[hsl(var(--gold))]" : ""}`}
+                className={`rounded-lg border bg-card p-3 flex flex-col ${sec.accent ? "border-[hsl(var(--gold))]" : ""}`}
               >
-                <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                <div className="flex items-center justify-between mb-2 pb-2 border-b shrink-0">
                   <span className="text-sm font-semibold">{sec.title}</span>
                   <span className="text-xs text-muted-foreground">{sec.sub} · {sec.list.length}가족</span>
                 </div>
                 {sec.list.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-2">없음</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[45vh] overflow-y-auto">
                     {sec.list.map((f) => (
                       <div key={f.id} className="flex items-center gap-2">
                         <button
@@ -698,7 +698,7 @@ export default function CleaningPage() {
           {/* 데스크톱: 드래그 앤 드롭 */}
           <div className="hidden md:block">
           <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-            <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-6 gap-3 md:h-[calc(100vh-260px)]">
               {/* 미배정 */}
               <DropColumn id="unassigned" title="미배정" subtitle={`${unassignedFamilies.length}가족`}>
                 {unassignedFamilies.map((f) => (
@@ -921,15 +921,15 @@ function DropColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg border bg-card p-2 min-h-[160px] transition-colors ${
+      className={`rounded-lg border bg-card p-2 min-h-[160px] md:h-full flex flex-col overflow-hidden transition-colors ${
         isOver ? "border-primary bg-primary/5" : ""
       } ${accent ? "border-[hsl(var(--gold))]" : ""}`}
     >
-      <div className="px-1 py-1 mb-2 border-b">
+      <div className="px-1 py-1 mb-2 border-b shrink-0">
         <div className="text-sm font-semibold">{title}</div>
         {subtitle && <div className="text-[10px] text-muted-foreground">{subtitle}</div>}
       </div>
-      <div className="space-y-1.5">{children}</div>
+      <div className="space-y-1.5 flex-1 overflow-y-auto min-h-0 pr-0.5">{children}</div>
     </div>
   );
 }
