@@ -698,7 +698,7 @@ export default function CleaningPage() {
           {/* 데스크톱: 드래그 앤 드롭 */}
           <div className="hidden md:block">
           <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-            <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-6 gap-3 md:h-[calc(100vh-260px)]">
               {/* 미배정 */}
               <DropColumn id="unassigned" title="미배정" subtitle={`${unassignedFamilies.length}가족`}>
                 {unassignedFamilies.map((f) => (
