@@ -431,7 +431,105 @@ export default function CleaningPage() {
   const [assignSheetFamily, setAssignSheetFamily] = useState<FamilyView | null>(null);
   const isMobile = useIsMobile();
 
+  // ===== 명단(Roster) =====
+  const sortedTeams = useMemo(
+    () => [...teams].sort((a, b) => a.sort_order - b.sort_order),
+    [teams]
+  );
+
+  /** 가족 구성원 정렬: 대표 → 배우자 → 자녀 */
+  const orderedMembers = (f: FamilyView): Member[] => {
+    const headId = f.head?.id;
+    const spouseId = f.spouse?.id;
+    const out: Member[] = [];
+    if (f.head) out.push(f.head);
+    if (f.spouse) out.push(f.spouse);
+    for (const m of f.members) {
+      if (m.id !== headId && m.id !== spouseId) out.push(m);
+    }
+    return out;
+  };
+
+  /** 조별 명단 — 대표자 이름 가나다순 */
+  const rosterList = (teamId: string) =>
+    [...familiesByTeam(teamId)].sort((a, b) =>
+      (a.head?.name ?? "").replace(/\s/g, "").localeCompare((b.head?.name ?? "").replace(/\s/g, ""), "ko")
+    );
+
+  const rosterTotals = useMemo(() => {
+    let fams = 0;
+    let ppl = 0;
+    for (const t of teams) {
+      const list = familiesByTeam(t.id);
+      fams += list.length;
+      ppl += list.reduce((s, f) => s + f.members.length, 0);
+    }
+    return { fams, ppl };
+  }, [teams, assignments, familyById]);
+
+  /** PDF 내보내기 — 명단 형식 그대로 인쇄(브라우저 PDF 저장) */
+  const exportRosterPdf = () => {
+    const cols = sortedTeams
+      .map((t) => {
+        const list = rosterList(t.id);
+        const ppl = list.reduce((s, f) => s + f.members.length, 0);
+        const rows = list
+          .map((f, i) => {
+            const ms = orderedMembers(f);
+            const rest = ms
+              .slice(1)
+              .map((m) => `<span class="sub">${m.name}</span>`)
+              .join('<span class="dot">·</span>');
+            return `<li><span class="num">${i + 1}</span><span class="nm"><b>${
+              ms[0]?.name ?? "-"
+            }</b>${rest ? '<span class="dot">·</span>' + rest : ""}</span></li>`;
+          })
+          .join("");
+        return `<div class="col"><div class="hd"><div class="t">${t.code}조</div><div class="s">${list.length}세대 · ${ppl}명</div></div><ul>${rows}</ul></div>`;
+      })
+      .join("");
+
+    const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>신풍와드 청소 봉사 조 명단</title>
+<style>
+@page { size: A4 landscape; margin: 12mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; color:#1b2a4e; margin:0; }
+h1 { text-align:center; font-size:24px; margin:0 0 6px; letter-spacing:-0.5px; }
+.sub-title { text-align:center; font-size:11px; color:#6b7280; margin-bottom:10px; }
+.rule { height:3px; background:#1b2a4e; border-radius:2px; margin-bottom:14px; }
+.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.col { border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+.hd { background:#1b2a4e; color:#fff; text-align:center; padding:8px 4px; }
+.hd .t { font-weight:800; font-size:14px; }
+.hd .s { font-size:10px; opacity:.8; margin-top:2px; }
+ul { list-style:none; margin:0; padding:0; }
+li { display:flex; gap:6px; padding:5px 8px; border-bottom:1px solid #f1f2f5; font-size:11px; align-items:baseline; }
+li:last-child { border-bottom:0; }
+.num { color:#9ca3af; font-size:9px; width:14px; text-align:right; flex:0 0 auto; }
+.nm b { color:#1b2a4e; }
+.sub { color:#8a90a2; }
+.dot { color:#c9cddb; margin:0 4px; }
+footer { text-align:center; font-size:10px; color:#9ca3af; margin-top:12px; }
+</style></head><body>
+<h1>신풍와드 청소 봉사 조 명단</h1>
+<div class="sub-title">청소 봉사는 매주 <b>토요일</b>에 진행됩니다</div>
+<div class="rule"></div>
+<div class="grid">${cols}</div>
+<footer>전체 ${rosterTotals.fams}세대 · ${rosterTotals.ppl}명 &nbsp;|&nbsp; 각 세대의 첫 번째 이름이 대표입니다. 문의는 감독단에게 말씀해 주세요.</footer>
+<script>window.onload=()=>{window.focus();window.print();}<\/script>
+</body></html>`;
+
+    const w = window.open("", "_blank", "width=1200,height=900");
+    if (!w) {
+      toast({ title: "팝업 차단", description: "팝업을 허용한 뒤 다시 시도해 주세요.", variant: "destructive" });
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+  };
+
   // Excel export — 조별 시트, [조][구성원] 컬럼, 구성원 줄바꿈
+
   const exportRoster = () => {
     const wb = XLSX.utils.book_new();
     const sortedTeams = [...teams].sort((a, b) => a.sort_order - b.sort_order);
