@@ -417,8 +417,11 @@ export default function CleaningPage() {
   };
 
   const unassignedFamilies = familyViews.filter((f) => !assignmentByFamily.get(f.id));
+  /** 조별 가족 목록 — 가족대표 이름 가나다순 (조편성/명단/내보내기 공통) */
   const familiesByTeam = (teamId: string) =>
-    assignments.filter((a) => a.team_id === teamId).map((a) => familyById.get(a.family_id)).filter(Boolean) as FamilyView[];
+    (assignments.filter((a) => a.team_id === teamId).map((a) => familyById.get(a.family_id)).filter(Boolean) as FamilyView[]).sort(
+      (a, b) => (a.head?.name ?? "").replace(/\s/g, "").localeCompare((b.head?.name ?? "").replace(/\s/g, ""), "ko")
+    );
 
   // 팀 박스용 라벨: 가족이면 "{head}의 가족", 독신이면 이름만
   const teamBoxLabel = (f: FamilyView) => {
@@ -451,10 +454,7 @@ export default function CleaningPage() {
   };
 
   /** 조별 명단 — 대표자 이름 가나다순 */
-  const rosterList = (teamId: string) =>
-    [...familiesByTeam(teamId)].sort((a, b) =>
-      (a.head?.name ?? "").replace(/\s/g, "").localeCompare((b.head?.name ?? "").replace(/\s/g, ""), "ko")
-    );
+  const rosterList = (teamId: string) => familiesByTeam(teamId);
 
   const rosterTotals = useMemo(() => {
     let fams = 0;
