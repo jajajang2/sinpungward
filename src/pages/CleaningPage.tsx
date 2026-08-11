@@ -656,16 +656,16 @@ export default function CleaningPage() {
               }))].map((sec) => (
               <div
                 key={sec.id}
-                className={`rounded-lg border bg-card p-3 ${sec.accent ? "border-[hsl(var(--gold))]" : ""}`}
+                className={`rounded-lg border bg-card p-3 flex flex-col ${sec.accent ? "border-[hsl(var(--gold))]" : ""}`}
               >
-                <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                <div className="flex items-center justify-between mb-2 pb-2 border-b shrink-0">
                   <span className="text-sm font-semibold">{sec.title}</span>
                   <span className="text-xs text-muted-foreground">{sec.sub} · {sec.list.length}가족</span>
                 </div>
                 {sec.list.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-2">없음</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[45vh] overflow-y-auto">
                     {sec.list.map((f) => (
                       <div key={f.id} className="flex items-center gap-2">
                         <button
