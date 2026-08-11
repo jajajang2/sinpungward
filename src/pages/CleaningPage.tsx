@@ -921,15 +921,15 @@ function DropColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg border bg-card p-2 min-h-[160px] transition-colors ${
+      className={`rounded-lg border bg-card p-2 min-h-[160px] md:h-full flex flex-col overflow-hidden transition-colors ${
         isOver ? "border-primary bg-primary/5" : ""
       } ${accent ? "border-[hsl(var(--gold))]" : ""}`}
     >
-      <div className="px-1 py-1 mb-2 border-b">
+      <div className="px-1 py-1 mb-2 border-b shrink-0">
         <div className="text-sm font-semibold">{title}</div>
         {subtitle && <div className="text-[10px] text-muted-foreground">{subtitle}</div>}
       </div>
-      <div className="space-y-1.5">{children}</div>
+      <div className="space-y-1.5 flex-1 overflow-y-auto min-h-0 pr-0.5">{children}</div>
     </div>
   );
 }
