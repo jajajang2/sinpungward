@@ -10,6 +10,8 @@ type Rel = {
 interface BuildResult {
   familiesCreated: number;
   membersAssigned: number;
+  teamsPreserved: number;
+  teamsUnresolved: number;
 }
 
 const calcAge = (bd?: string | null): number | null => {
@@ -35,8 +37,14 @@ const calcAge = (bd?: string | null): number | null => {
  *      - 만 19세 이상이면서 부모도 명단에 없음(혹은 부모 가족 없음) → single
  *  5) 배우자 없이 자녀만 있는 사람도 본인이 head인 가족.
  *  6) birth_date 없으면 미성년으로 간주(어린 자녀가 1인 가족으로 빠지지 않게).
+ *
+ * preserveTeams가 true이면, 재구성 후에도 각 회원이 이전에 속했던 조 배정을
+ * 최대한 이어받는다(대표 → 배우자 → 자녀 순으로 이전 조 조회). 예를 들어
+ * 두 사람이 새로 배우자 관계로 묶이면, 그 새 가족은 대표(head)가 이전에
+ * 배정되어 있던 조로 그대로 들어간다. 기존 가족이 갈라져 나온 사람도
+ * 본인이 이전에 속해 있던 조로(새 가족 이름으로) 재배정된다.
  */
-export async function rebuildFamilies(): Promise<BuildResult> {
+export async function rebuildFamilies(preserveTeams = false): Promise<BuildResult> {
   const { data: members, error: mErr } = await supabase
     .from("members")
     .select("id, name, gender, birth_date, marriage_date");
@@ -46,6 +54,22 @@ export async function rebuildFamilies(): Promise<BuildResult> {
     .from("member_relations")
     .select("member_id, related_member_id, relation_type");
   if (rErr) throw rErr;
+
+  // preserveTeams: 회원별 이전 조 배정을 미리 조회해둔다.
+  const prevTeamByMember = new Map<string, string>();
+  if (preserveTeams) {
+    const [{ data: prevFm }, { data: prevAssign }] = await Promise.all([
+      supabase.from("family_members").select("family_id, member_id"),
+      supabase.from("team_assignments").select("family_id, team_id"),
+    ]);
+    const teamByFamily = new Map<string, string>(
+      (prevAssign ?? []).map((a: any) => [a.family_id as string, a.team_id as string])
+    );
+    for (const fm of (prevFm ?? []) as { family_id: string; member_id: string }[]) {
+      const teamId = teamByFamily.get(fm.family_id);
+      if (teamId) prevTeamByMember.set(fm.member_id, teamId);
+    }
+  }
 
   const memberMap = new Map<string, Member>(
     (members ?? []).map((m) => [m.id, m as Member])
@@ -173,6 +197,9 @@ export async function rebuildFamilies(): Promise<BuildResult> {
 
   let membersAssigned = 0;
   let familiesCreated = 0;
+  let teamsPreserved = 0;
+  let teamsUnresolved = 0;
+  const teamAssignRows: { family_id: string; team_id: string; assigned_method: "auto" }[] = [];
 
   for (const draft of families.values()) {
     const { data: fam, error: fErr } = await supabase
@@ -209,7 +236,28 @@ export async function rebuildFamilies(): Promise<BuildResult> {
     if (fmErr) throw fmErr;
     membersAssigned += rows.length;
     familiesCreated += 1;
+
+    if (preserveTeams) {
+      // 대표 → 배우자 → 자녀 순으로 이전 조 배정을 물려받는다.
+      const candidateIds = [draft.headId, draft.spouseId, ...draft.childIds].filter(
+        (id): id is string => !!id
+      );
+      const inheritedTeamId = candidateIds
+        .map((id) => prevTeamByMember.get(id))
+        .find((teamId) => !!teamId);
+      if (inheritedTeamId) {
+        teamAssignRows.push({ family_id: fam.id, team_id: inheritedTeamId, assigned_method: "auto" });
+        teamsPreserved += 1;
+      } else {
+        teamsUnresolved += 1;
+      }
+    }
   }
 
-  return { familiesCreated, membersAssigned };
+  if (preserveTeams && teamAssignRows.length > 0) {
+    const { error: taErr } = await supabase.from("team_assignments").insert(teamAssignRows);
+    if (taErr) throw taErr;
+  }
+
+  return { familiesCreated, membersAssigned, teamsPreserved, teamsUnresolved };
 }

@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2, Download, Info } from "lucide-react";
 import {
   Sheet,
@@ -127,6 +128,7 @@ export default function CleaningPage() {
   // Build dialog
   const [rebuildOpen, setRebuildOpen] = useState(false);
   const [rebuildBusy, setRebuildBusy] = useState(false);
+  const [rebuildMode, setRebuildMode] = useState<"preserve" | "reset">("preserve");
 
   // Reset dialog
   const [resetOpen, setResetOpen] = useState(false);
@@ -255,8 +257,14 @@ export default function CleaningPage() {
   const handleRebuildFamilies = async () => {
     try {
       setRebuildBusy(true);
-      const r = await rebuildFamilies();
-      toast({ title: "가족 재구성 완료", description: `가족 ${r.familiesCreated}개 · 회원 ${r.membersAssigned}명` });
+      const preserve = rebuildMode === "preserve";
+      const r = await rebuildFamilies(preserve);
+      const desc = preserve
+        ? `가족 ${r.familiesCreated}개 · 회원 ${r.membersAssigned}명 · 조 배정 유지 ${r.teamsPreserved}건${
+            r.teamsUnresolved > 0 ? ` · 미배정 ${r.teamsUnresolved}건` : ""
+          }`
+        : `가족 ${r.familiesCreated}개 · 회원 ${r.membersAssigned}명`;
+      toast({ title: "가족 재구성 완료", description: desc });
       setRebuildOpen(false);
       await loadAll();
     } catch (e: any) {
@@ -919,9 +927,47 @@ footer { text-align:center; font-size:10px; color:#9ca3af; margin-top:12px; }
             <DialogTitle>가족 재구성</DialogTitle>
             <DialogDescription>
               회원의 가족관계(부부·부모·자녀)로부터 가족 그룹을 다시 만듭니다.
-              기존 가족·조 배정이 모두 삭제되고 새로 생성됩니다.
             </DialogDescription>
           </DialogHeader>
+
+          {assignments.length > 0 ? (
+            <RadioGroup value={rebuildMode} onValueChange={(v) => setRebuildMode(v as "preserve" | "reset")} className="gap-3">
+              <label
+                htmlFor="rebuild-preserve"
+                className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${
+                  rebuildMode === "preserve" ? "border-primary bg-primary/5" : ""
+                }`}
+              >
+                <RadioGroupItem value="preserve" id="rebuild-preserve" className="mt-0.5" />
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">현재 조 유지하며 가족만 재구성</div>
+                  <p className="text-xs text-muted-foreground">
+                    회원기록에서 바뀐 가족관계만 반영합니다. 예) 김진석 형제와 박춘경 자매가 배우자로
+                    묶이면, 박춘경 자매는 김진석 형제가 배정되어 있던 조에 함께 포함됩니다. 기존 가족에서
+                    분리된 회원도 원래 배정되어 있던 조에 새 가족 이름으로 남습니다.
+                  </p>
+                </div>
+              </label>
+              <label
+                htmlFor="rebuild-reset"
+                className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${
+                  rebuildMode === "reset" ? "border-primary bg-primary/5" : ""
+                }`}
+              >
+                <RadioGroupItem value="reset" id="rebuild-reset" className="mt-0.5" />
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">전체 조 초기화</div>
+                  <p className="text-xs text-muted-foreground">
+                    기존 조 배정을 모두 삭제하고 가족만 새로 만듭니다. 이후 자동 배분이나 수동 배정을
+                    다시 해야 합니다.
+                  </p>
+                </div>
+              </label>
+            </RadioGroup>
+          ) : (
+            <p className="text-xs text-muted-foreground">현재 배정된 조가 없어 가족만 새로 생성됩니다.</p>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setRebuildOpen(false)} disabled={rebuildBusy}>
               취소
