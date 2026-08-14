@@ -926,9 +926,7 @@ export default function CleaningPage() {
                 <div className="space-y-1">
                   <div className="text-sm font-medium">현재 조 유지하며 가족만 재구성</div>
                   <p className="text-xs text-muted-foreground">
-                    회원기록에서 바뀐 가족관계만 반영합니다. 예) 김진석 형제와 박춘경 자매가 배우자로
-                    묶이면, 박춘경 자매는 김진석 형제가 배정되어 있던 조에 함께 포함됩니다. 기존 가족에서
-                    분리된 회원도 원래 배정되어 있던 조에 새 가족 이름으로 남습니다.
+                    회원기록에서 바뀐 가족관계만 반영합니다.
                   </p>
                 </div>
               </label>

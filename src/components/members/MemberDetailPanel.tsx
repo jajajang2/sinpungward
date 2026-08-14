@@ -480,7 +480,7 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
             </div>
           </div>
 
-          {/* 특별관리회원 */}
+          {/* 우선성역대상자 */}
           <div className="border-t border-border pt-4">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-[hsl(var(--table-header))] border border-border">
               <input
@@ -491,8 +491,8 @@ const MemberDetailPanel = ({ memberId, onClose, onUpdated, onNavigateToMember }:
                 className="w-5 h-5 md:w-4 md:h-4 accent-primary"
               />
               <div>
-                <Label htmlFor="special-care" className="text-sm font-semibold cursor-pointer text-foreground">특별관리회원</Label>
-                <p className="text-xs text-muted-foreground">체크 시 조직도 특별관리회원 섹션에 표시됩니다</p>
+                <Label htmlFor="special-care" className="text-sm font-semibold cursor-pointer text-foreground">우선성역대상자</Label>
+                <p className="text-xs text-muted-foreground">체크 시 출석통계의 우선성역대상자 명단에 표시됩니다</p>
               </div>
             </div>
           </div>

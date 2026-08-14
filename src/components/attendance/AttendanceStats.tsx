@@ -15,7 +15,6 @@ import {
 } from "recharts";
 import { TrendingUp, Users, Percent, UserX, CalendarDays, Download, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AnnouncementsCard } from "./AnnouncementsCard";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -50,7 +49,7 @@ const getSundays = (from: Date, to: Date): Date[] => {
 };
 
 export const AttendanceStats = ({ members, attendance, records }: Props) => {
-  const [absentRange, setAbsentRange] = useState<"2w" | "4w" | "3m">("4w");
+  const [absentRange, setAbsentRange] = useState<"week" | "2w" | "4w" | "3m">("week");
   const [exporting, setExporting] = useState(false);
   const [personalSearch, setPersonalSearch] = useState("");
   const { toast } = useToast();
@@ -67,6 +66,16 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
     const m = now.getMonth() - d.getMonth();
     if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
     return age;
+  };
+
+  // 19세 이상 남/여 = 장로정원회 / 상호부조회 소속 (MembersPage GROUPS와 동일 기준)
+  const isElder = (m: Member) => {
+    const age = getAge(m.birth_date);
+    return m.gender === "남" && age !== null && age >= 19;
+  };
+  const isReliefSociety = (m: Member) => {
+    const age = getAge(m.birth_date);
+    return m.gender === "여" && age !== null && age >= 19;
   };
 
   const totalMembers = members.length;
@@ -146,15 +155,71 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
   }, [personalRates, personalSearch]);
 
   // ── 불참석자 (해당 기간 내내 0회 출석) ──
+  // "해당주"는 일~토 기준 이번 주의 지난(또는 오늘) 일요일 하루만 확인한다.
   const absentees = useMemo(() => {
     const start = new Date(today);
-    if (absentRange === "2w") start.setDate(start.getDate() - 14);
+    let end = today;
+    if (absentRange === "week") {
+      start.setDate(start.getDate() - start.getDay());
+      end = start;
+    } else if (absentRange === "2w") start.setDate(start.getDate() - 14);
     else if (absentRange === "4w") start.setDate(start.getDate() - 28);
     else start.setMonth(start.getMonth() - 3);
-    const dates = datesInRange(start, today);
+    const dates = datesInRange(start, end);
     if (dates.length === 0) return [];
     return members.filter(m => dates.every(d => !attendance[m.id]?.[d]));
   }, [members, attendance, absentRange, meetingDates]);
+
+  const absentElders = useMemo(
+    () => absentees.filter(isElder).sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    [absentees]
+  );
+  const absentReliefSociety = useMemo(
+    () => absentees.filter(isReliefSociety).sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    [absentees]
+  );
+
+  // ── "해당주" 불참석자 세부 분류 ──
+  // 이번 주 이전 13주(실제 출석부가 열린 날) 중 1회 이상 출석했으면 "일반 불참석자"(이번 주만 예외적으로 결석),
+  // 그 외(13주 내내 0회 출석)는 "저활동 불참석자".
+  const weekPriorDates = useMemo(() => {
+    const thisWeekSunday = new Date(today);
+    thisWeekSunday.setDate(thisWeekSunday.getDate() - thisWeekSunday.getDay());
+    const thisWeekSundayStr = toDateStr(thisWeekSunday);
+    return meetingDates.filter(d => d < thisWeekSundayStr).slice(-13);
+  }, [meetingDates]);
+
+  const splitByRecentActivity = (list: Member[]) => {
+    const regular: Member[] = [];
+    const lowActivity: Member[] = [];
+    list.forEach(m => {
+      const count = weekPriorDates.filter(d => attendance[m.id]?.[d]).length;
+      if (count >= 1) regular.push(m);
+      else lowActivity.push(m);
+    });
+    return { regular, lowActivity };
+  };
+
+  const absentEldersWeek = useMemo(() => splitByRecentActivity(absentElders), [absentElders, weekPriorDates, attendance]);
+  const absentReliefSocietyWeek = useMemo(
+    () => splitByRecentActivity(absentReliefSociety),
+    [absentReliefSociety, weekPriorDates, attendance]
+  );
+
+  // ── 우선성역대상자 (나이 제한 없이 성별로만 구분 — 체크된 회원은 항상 표시) ──
+  const priorityMembers = useMemo(() => members.filter(m => m.is_special_care), [members]);
+  const priorityElders = useMemo(
+    () => priorityMembers.filter(m => m.gender === "남").sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    [priorityMembers]
+  );
+  const priorityReliefSociety = useMemo(
+    () => priorityMembers.filter(m => m.gender === "여").sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    [priorityMembers]
+  );
+  const priorityOthers = useMemo(
+    () => priorityMembers.filter(m => m.gender !== "남" && m.gender !== "여").sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    [priorityMembers]
+  );
 
   const exportAbsentees = async () => {
     if (absentees.length === 0) {
@@ -215,9 +280,9 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
       };
 
       const sorted = [...absentees].sort((a, b) => a.name.localeCompare(b.name, "ko"));
-      const elders = sorted.filter(m => m.gender === "남");
-      const reliefSociety = sorted.filter(m => m.gender === "여");
-      const others = sorted.filter(m => m.gender !== "남" && m.gender !== "여");
+      const elders = sorted.filter(isElder);
+      const reliefSociety = sorted.filter(isReliefSociety);
+      const others = sorted.filter(m => !isElder(m) && !isReliefSociety(m));
 
       const wb = XLSX.utils.book_new();
       const addSheet = (name: string, list: typeof sorted) => {
@@ -226,21 +291,39 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
         ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 8 }, { wch: 16 }, { wch: 30 }, { wch: 60 }];
         XLSX.utils.book_append_sheet(wb, ws, name);
       };
-      addSheet("장로정원회", elders);
-      addSheet("상호부조회", reliefSociety);
-      addSheet("기타", others);
+
+      let summary: string;
+      if (absentRange === "week") {
+        const eldersSplit = splitByRecentActivity(elders);
+        const rsSplit = splitByRecentActivity(reliefSociety);
+        addSheet("장로정원회_일반불참석자", eldersSplit.regular);
+        addSheet("장로정원회_저활동불참석자", eldersSplit.lowActivity);
+        addSheet("상호부조회_일반불참석자", rsSplit.regular);
+        addSheet("상호부조회_저활동불참석자", rsSplit.lowActivity);
+        addSheet("기타", others);
+        summary =
+          `장로정원회 일반 ${eldersSplit.regular.length}명·저활동 ${eldersSplit.lowActivity.length}명 · ` +
+          `상호부조회 일반 ${rsSplit.regular.length}명·저활동 ${rsSplit.lowActivity.length}명` +
+          (others.length ? ` · 기타 ${others.length}명` : "");
+      } else {
+        addSheet("장로정원회", elders);
+        addSheet("상호부조회", reliefSociety);
+        addSheet("기타", others);
+        summary = `장로정원회 ${elders.length}명 · 상호부조회 ${reliefSociety.length}명${others.length ? ` · 기타 ${others.length}명` : ""}`;
+      }
 
       if (wb.SheetNames.length === 0) {
         toast({ title: "내보낼 회원이 없습니다" });
         return;
       }
 
-      const rangeLabel = absentRange === "2w" ? "2주" : absentRange === "4w" ? "4주" : "3개월";
+      const rangeLabel =
+        absentRange === "week" ? "해당주" : absentRange === "2w" ? "2주" : absentRange === "4w" ? "4주" : "3개월";
       const today = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(wb, `불참석자_${rangeLabel}_${today}.xlsx`);
       toast({
         title: "내보내기 완료",
-        description: `장로정원회 ${elders.length}명 · 상호부조회 ${reliefSociety.length}명${others.length ? ` · 기타 ${others.length}명` : ""}`,
+        description: summary,
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "오류가 발생했습니다.";
@@ -250,6 +333,33 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
     }
   };
 
+  // 장로정원회 = 파란색, 상호부조회 = 핑크색으로 통일
+  const renderNameChips = (list: Member[], tone: "blue" | "pink" | "neutral") => {
+    if (list.length === 0) {
+      return <p className="text-xs text-muted-foreground py-3 text-center">없습니다</p>;
+    }
+    const toneClass =
+      tone === "blue"
+        ? "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20"
+        : tone === "pink"
+        ? "bg-pink-500/10 text-pink-600 border-pink-500/20 hover:bg-pink-500/20"
+        : "bg-muted text-muted-foreground border-border hover:bg-muted/70";
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {list.map(m => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => goToMember(m.id)}
+            className={`text-xs px-3 md:px-2.5 py-2 md:py-1 min-h-[44px] md:min-h-0 rounded-full border hover:underline transition-colors cursor-pointer ${toneClass}`}
+            title="회원기록으로 이동"
+          >
+            {m.name}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -356,9 +466,36 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
         </Tabs>
       </Card>
 
-      {/* ── 공지 + 불참석자 ── */}
+      {/* ── 우선성역대상자 + 불참석자 ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <AnnouncementsCard />
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-primary" />
+            <h3 className="text-base font-semibold">우선성역대상자</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                장로정원회 ({priorityElders.length}명)
+              </p>
+              {renderNameChips(priorityElders, "blue")}
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                상호부조회 ({priorityReliefSociety.length}명)
+              </p>
+              {renderNameChips(priorityReliefSociety, "pink")}
+            </div>
+          </div>
+          {priorityOthers.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                성별 미입력 ({priorityOthers.length}명)
+              </p>
+              {renderNameChips(priorityOthers, "neutral")}
+            </div>
+          )}
+        </Card>
 
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -369,6 +506,7 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
             <div className="flex items-center gap-2">
               <Tabs value={absentRange} onValueChange={v => setAbsentRange(v as any)}>
                 <TabsList className="h-11 md:h-8">
+                  <TabsTrigger value="week" className="text-xs px-2">해당주</TabsTrigger>
                   <TabsTrigger value="2w" className="text-xs px-2">2주</TabsTrigger>
                   <TabsTrigger value="4w" className="text-xs px-2">4주</TabsTrigger>
                   <TabsTrigger value="3m" className="text-xs px-2">3개월</TabsTrigger>
@@ -387,23 +525,62 @@ export const AttendanceStats = ({ members, attendance, records }: Props) => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            해당 기간 동안 한 번도 출석하지 않은 회원 ({absentees.length}명)
+            {absentRange === "week" ? "이번 주 일요일에 출석하지 않은 회원" : "해당 기간 동안 한 번도 출석하지 않은 회원"} (
+            {absentElders.length + absentReliefSociety.length}명)
           </p>
-          {absentees.length === 0 ? (
+          {absentElders.length === 0 && absentReliefSociety.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">없습니다 🎉</p>
+          ) : absentRange === "week" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-80 overflow-y-auto">
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  장로정원회 ({absentElders.length}명)
+                </p>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                    일반 불참석자 ({absentEldersWeek.regular.length}명)
+                  </p>
+                  {renderNameChips(absentEldersWeek.regular, "blue")}
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                    저활동 불참석자 ({absentEldersWeek.lowActivity.length}명)
+                  </p>
+                  {renderNameChips(absentEldersWeek.lowActivity, "blue")}
+                </div>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  상호부조회 ({absentReliefSociety.length}명)
+                </p>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                    일반 불참석자 ({absentReliefSocietyWeek.regular.length}명)
+                  </p>
+                  {renderNameChips(absentReliefSocietyWeek.regular, "pink")}
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                    저활동 불참석자 ({absentReliefSocietyWeek.lowActivity.length}명)
+                  </p>
+                  {renderNameChips(absentReliefSocietyWeek.lowActivity, "pink")}
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto">
-              {absentees.map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => goToMember(m.id)}
-                  className="text-xs px-3 md:px-2.5 py-2 md:py-1 min-h-[44px] md:min-h-0 rounded-full bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 hover:underline transition-colors cursor-pointer"
-                  title="회원기록으로 이동"
-                >
-                  {m.name}
-                </button>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-60 overflow-y-auto">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  장로정원회 ({absentElders.length}명)
+                </p>
+                {renderNameChips(absentElders, "blue")}
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  상호부조회 ({absentReliefSociety.length}명)
+                </p>
+                {renderNameChips(absentReliefSociety, "pink")}
+              </div>
             </div>
           )}
         </Card>
