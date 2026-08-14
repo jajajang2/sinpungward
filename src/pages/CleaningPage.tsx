@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import {
   DndContext,
   DragOverlay,
@@ -447,6 +449,8 @@ export default function CleaningPage() {
     () => [...teams].sort((a, b) => a.sort_order - b.sort_order),
     [teams]
   );
+  const rosterRef = useRef<HTMLDivElement>(null);
+  const [pdfExporting, setPdfExporting] = useState(false);
 
   /** 가족 구성원 정렬: 대표 → 배우자 → 자녀 */
   const orderedMembers = (f: FamilyView): Member[] => {
@@ -475,65 +479,44 @@ export default function CleaningPage() {
     return { fams, ppl };
   }, [teams, assignments, familyById]);
 
-  /** PDF 내보내기 — 명단 형식 그대로 인쇄(브라우저 PDF 저장) */
-  const exportRosterPdf = () => {
-    const cols = sortedTeams
-      .map((t) => {
-        const list = rosterList(t.id);
-        const ppl = list.reduce((s, f) => s + f.members.length, 0);
-        const rows = list
-          .map((f, i) => {
-            const ms = orderedMembers(f);
-            const rest = ms
-              .slice(1)
-              .map((m) => `<span class="sub">${m.name}</span>`)
-              .join('<span class="dot">·</span>');
-            return `<li><span class="num">${i + 1}</span><span class="nm"><b>${
-              ms[0]?.name ?? "-"
-            }</b>${rest ? '<span class="dot">·</span>' + rest : ""}</span></li>`;
-          })
-          .join("");
-        return `<div class="col"><div class="hd"><div class="t">${t.code}조</div><div class="s">${list.length}세대 · ${ppl}명</div></div><ul>${rows}</ul></div>`;
-      })
-      .join("");
+  /** PDF 내보내기 — 명단 섹션 화면 UI를 그대로 캡쳐해 A3 가로(landscape) PDF로 고해상도 다운로드 */
+  const exportRosterPdf = async () => {
+    const node = rosterRef.current;
+    if (!node) return;
+    setPdfExporting(true);
+    try {
+      const canvas = await html2canvas(node, {
+        scale: Math.max(4, window.devicePixelRatio * 2),
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        windowWidth: node.scrollWidth,
+      });
+      const imgData = canvas.toDataURL("image/png", 1.0);
 
-    const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>신풍와드 청소 봉사 조 명단</title>
-<style>
-@page { size: A4 landscape; margin: 12mm; }
-* { box-sizing: border-box; }
-body { font-family: 'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; color:#1b2a4e; margin:0; }
-h1 { text-align:center; font-size:24px; margin:0 0 6px; letter-spacing:-0.5px; }
-.sub-title { text-align:center; font-size:11px; color:#6b7280; margin-bottom:10px; }
-.rule { height:3px; background:#1b2a4e; border-radius:2px; margin-bottom:14px; }
-.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-.col { border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; }
-.hd { background:#1b2a4e; color:#fff; text-align:center; padding:8px 4px; }
-.hd .t { font-weight:800; font-size:14px; }
-.hd .s { font-size:10px; opacity:.8; margin-top:2px; }
-ul { list-style:none; margin:0; padding:0; }
-li { display:flex; gap:6px; padding:5px 8px; border-bottom:1px solid #f1f2f5; font-size:11px; align-items:baseline; }
-li:last-child { border-bottom:0; }
-.num { color:#9ca3af; font-size:9px; width:14px; text-align:right; flex:0 0 auto; }
-.nm b { color:#1b2a4e; }
-.sub { color:#8a90a2; }
-.dot { color:#c9cddb; margin:0 4px; }
-footer { text-align:center; font-size:10px; color:#9ca3af; margin-top:12px; }
-</style></head><body>
-<h1>신풍와드 청소 봉사 조 명단</h1>
-<div class="sub-title">청소 봉사는 매주 <b>토요일</b>에 진행됩니다</div>
-<div class="rule"></div>
-<div class="grid">${cols}</div>
-<footer>전체 ${rosterTotals.fams}세대 · ${rosterTotals.ppl}명 &nbsp;|&nbsp; 각 세대의 첫 번째 이름이 대표입니다. 문의는 감독단에게 말씀해 주세요.</footer>
-<script>window.onload=()=>{window.focus();window.print();}<\/script>
-</body></html>`;
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3", compress: false });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const maxW = pageWidth - margin * 2;
+      const maxH = pageHeight - margin * 2;
+      const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+      const imgW = canvas.width * ratio;
+      const imgH = canvas.height * ratio;
+      const x = (pageWidth - imgW) / 2;
+      const y = (pageHeight - imgH) / 2;
 
-    const w = window.open("", "_blank", "width=1200,height=900");
-    if (!w) {
-      toast({ title: "팝업 차단", description: "팝업을 허용한 뒤 다시 시도해 주세요.", variant: "destructive" });
-      return;
+      pdf.addImage(imgData, "PNG", x, y, imgW, imgH, undefined, "NONE");
+      const today = new Date().toISOString().slice(0, 10);
+      pdf.save(`청소조_명단_${today}.pdf`);
+    } catch (err) {
+      toast({
+        title: "PDF 생성 실패",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    } finally {
+      setPdfExporting(false);
     }
-    w.document.write(html);
-    w.document.close();
   };
 
   // Excel export — 조별 시트, [조][구성원] 컬럼, 구성원 줄바꿈
@@ -601,7 +584,7 @@ footer { text-align:center; font-size:10px; color:#9ca3af; margin-top:12px; }
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-4 md:p-6 max-w-[1800px] mx-auto space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -849,14 +832,15 @@ footer { text-align:center; font-size:10px; color:#9ca3af; margin-top:12px; }
                 <Button className="h-11 md:h-9 w-full md:w-auto" variant="outline" onClick={exportRoster}>
                   <Download className="w-4 h-4" /> Excel 내보내기
                 </Button>
-                <Button className="h-11 md:h-9 w-full md:w-auto" onClick={exportRosterPdf}>
-                  <Printer className="w-4 h-4" /> PDF 내보내기
+                <Button className="h-11 md:h-9 w-full md:w-auto" onClick={exportRosterPdf} disabled={pdfExporting}>
+                  {pdfExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                  PDF 내보내기
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <div className="rounded-xl border border-border bg-card px-4 py-6 md:px-8 md:py-8">
+          <div ref={rosterRef} className="rounded-xl border border-border bg-card px-4 py-8 md:px-14 md:py-10">
             <div className="text-center">
               <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#1b2a4e]">
                 신풍와드 청소 봉사 조 명단
@@ -867,7 +851,7 @@ footer { text-align:center; font-size:10px; color:#9ca3af; margin-top:12px; }
               <div className="h-[3px] bg-[#1b2a4e] rounded-full mt-4" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
               {sortedTeams.map((t) => {
                 const list = rosterList(t.id);
                 const ppl = list.reduce((s, f) => s + f.members.length, 0);
