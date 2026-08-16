@@ -242,6 +242,33 @@ export type Database = {
           },
         ]
       }
+      full_time_missionaries: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_minutes: {
         Row: {
           attendees: string | null

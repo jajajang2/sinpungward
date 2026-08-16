@@ -10,6 +10,7 @@ import AddMemberDialog from "@/components/members/AddMemberDialog";
 import MemberDetailPanel from "@/components/members/MemberDetailPanel";
 import ExcelImportDialog from "@/components/members/ExcelImportDialog";
 import ExcelExportDialog from "@/components/members/ExcelExportDialog";
+import MissionaryDialog from "@/components/members/MissionaryDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -139,6 +140,7 @@ const MembersPage = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showMissionary, setShowMissionary] = useState(false);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -352,14 +354,24 @@ const MembersPage = () => {
               </Button>
             </div>
           </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input
-              placeholder="이름 또는 전화번호 검색..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-7 h-11 md:h-8 text-xs"
-            />
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-11 md:h-8 shrink-0 text-xs px-3"
+              onClick={() => setShowMissionary(true)}
+            >
+              선교사
+            </Button>
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="이름 또는 전화번호 검색..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-7 h-11 md:h-8 text-xs"
+              />
+            </div>
           </div>
         </div>
 
@@ -434,6 +446,7 @@ const MembersPage = () => {
         {showExport && (
           <ExcelExportDialog open={showExport} onClose={() => setShowExport(false)} />
         )}
+        <MissionaryDialog open={showMissionary} onClose={() => setShowMissionary(false)} />
         <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -549,6 +562,16 @@ const MembersPage = () => {
                 <span className="text-xs text-muted-foreground">· {groupMembers.length}명</span>
               </div>
               <div className="flex items-center gap-1.5">
+                {selectedGroup?.id === 'all' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setShowMissionary(true)}
+                  >
+                    선교사
+                  </Button>
+                )}
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <Input
@@ -638,6 +661,7 @@ const MembersPage = () => {
       {showExport && (
         <ExcelExportDialog open={showExport} onClose={() => setShowExport(false)} />
       )}
+      <MissionaryDialog open={showMissionary} onClose={() => setShowMissionary(false)} />
       <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
         <AlertDialogContent>
           <AlertDialogHeader>
