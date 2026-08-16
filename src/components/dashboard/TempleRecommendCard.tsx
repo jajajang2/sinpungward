@@ -48,7 +48,7 @@ const TempleRecommendCard = () => {
   }, []);
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <ScrollText className="w-4 h-4 text-primary" />
@@ -56,7 +56,7 @@ const TempleRecommendCard = () => {
           <span className="ml-auto text-xs font-normal text-muted-foreground">{list.length}명</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="max-h-72 overflow-y-auto">
+      <CardContent className="flex-1 min-h-0 overflow-y-auto">
         {loading ? (
           <p className="text-sm text-muted-foreground">불러오는 중...</p>
         ) : list.length === 0 ? (
