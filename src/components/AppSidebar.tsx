@@ -1,5 +1,5 @@
 import { NavLink } from "@/components/NavLink";
-import { Users, Calendar, BarChart3, GitBranch, ChevronLeft, ChevronRight, BookOpen, LayoutDashboard, Sparkles, ListOrdered, FileCheck } from "lucide-react";
+import { Users, Calendar, BarChart3, GitBranch, ChevronLeft, ChevronRight, BookOpen, LayoutDashboard, Sparkles, ListOrdered, FileCheck, Newspaper } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ export const mainNavItems = [
 export const extraNavItems = [
   { to: "/minutes", label: "회의록", icon: BookOpen },
   { to: "/cleaning", label: "청소조", icon: Sparkles },
+  { to: "/bulletin", label: "주보", icon: Newspaper },
   { to: "/temple-recommends", label: "성전 추천서", icon: FileCheck },
 ];
 

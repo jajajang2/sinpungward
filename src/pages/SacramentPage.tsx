@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import MonthSacramentTable from "@/components/sacrament/MonthSacramentTable";
 import SacramentTalkHistory from "@/components/sacrament/SacramentTalkHistory";
 import SacramentPrayerHistory from "@/components/sacrament/SacramentPrayerHistory";
+import SacramentHymnHistory from "@/components/sacrament/SacramentHymnHistory";
 import SacramentImportExport from "@/components/sacrament/SacramentImportExport";
 import AutoLinkMembers from "@/components/sacrament/AutoLinkMembers";
 import { ROWS, type MemberLite } from "@/components/sacrament/types";
@@ -120,6 +121,7 @@ export default function SacramentPage() {
               <TabsTrigger value="schedule" className="text-xs py-1">순서표</TabsTrigger>
               <TabsTrigger value="history" className="text-xs py-1">말씀 히스토리</TabsTrigger>
               <TabsTrigger value="prayer" className="text-xs py-1">기도 히스토리</TabsTrigger>
+              <TabsTrigger value="hymn" className="text-xs py-1">찬송가 히스토리</TabsTrigger>
             </TabsList>
             <div className="relative">
               <Input
@@ -188,6 +190,10 @@ export default function SacramentPage() {
 
         <TabsContent value="prayer" className="mt-2 min-h-0 flex-1 overflow-hidden">
           <SacramentPrayerHistory members={members} refreshKey={refreshKey} onChanged={() => setRefreshKey((k) => k + 1)} />
+        </TabsContent>
+
+        <TabsContent value="hymn" className="mt-2 min-h-0 flex-1 overflow-hidden">
+          <SacramentHymnHistory refreshKey={refreshKey} />
         </TabsContent>
 
       </Tabs>

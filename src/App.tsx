@@ -13,6 +13,7 @@ import OrgChartPage from "./pages/OrgChartPage";
 import MeetingMinutesPage from "./pages/MeetingMinutesPage";
 import CleaningPage from "./pages/CleaningPage";
 import SacramentPage from "./pages/SacramentPage";
+import BulletinPage from "./pages/BulletinPage";
 import TempleRecommendPage from "./pages/TempleRecommendPage";
 import NotFound from "./pages/NotFound";
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/minutes" element={<MeetingMinutesPage />} />
             <Route path="/cleaning" element={<CleaningPage />} />
             <Route path="/sacrament" element={<SacramentPage />} />
+            <Route path="/bulletin" element={<BulletinPage />} />
             <Route path="/temple-recommends" element={<TempleRecommendPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />

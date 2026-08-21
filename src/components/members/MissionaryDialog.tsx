@@ -18,6 +18,7 @@ interface MissionaryRow {
   id: string;
   type: MissionaryType;
   name: string;
+  phone: string | null;
   sort_order: number;
 }
 
@@ -35,7 +36,7 @@ const MissionaryDialog = ({ open, onClose }: MissionaryDialogProps) => {
     setLoading(true);
     const { data, error } = await supabase
       .from("full_time_missionaries")
-      .select("id, type, name, sort_order")
+      .select("id, type, name, phone, sort_order")
       .order("sort_order", { ascending: true });
     if (error) {
       toast({ title: "오류", description: "선교사 목록을 불러오지 못했습니다.", variant: "destructive" });
@@ -55,8 +56,8 @@ const MissionaryDialog = ({ open, onClose }: MissionaryDialogProps) => {
     const maxOrder = byType(type).reduce((max, r) => Math.max(max, r.sort_order), 0);
     const { data, error } = await supabase
       .from("full_time_missionaries")
-      .insert({ type, name: "", sort_order: maxOrder + 1 })
-      .select("id, type, name, sort_order")
+      .insert({ type, name: "", phone: "", sort_order: maxOrder + 1 })
+      .select("id, type, name, phone, sort_order")
       .single();
     if (error || !data) {
       toast({ title: "오류", description: "선교사를 추가하지 못했습니다.", variant: "destructive" });
@@ -83,6 +84,17 @@ const MissionaryDialog = ({ open, onClose }: MissionaryDialogProps) => {
     const { error } = await supabase.from("full_time_missionaries").update({ name }).eq("id", id);
     if (error) {
       toast({ title: "오류", description: "이름을 저장하지 못했습니다.", variant: "destructive" });
+    }
+  };
+
+  const handlePhoneChange = (id: string, phone: string) => {
+    setRows((r) => r.map((x) => (x.id === id ? { ...x, phone } : x)));
+  };
+
+  const handlePhoneCommit = async (id: string, phone: string) => {
+    const { error } = await supabase.from("full_time_missionaries").update({ phone }).eq("id", id);
+    if (error) {
+      toast({ title: "오류", description: "전화번호를 저장하지 못했습니다.", variant: "destructive" });
     }
   };
 
@@ -115,6 +127,13 @@ const MissionaryDialog = ({ open, onClose }: MissionaryDialogProps) => {
                   onChange={(e) => handleNameChange(row.id, e.target.value)}
                   onBlur={(e) => handleNameCommit(row.id, e.target.value)}
                   className="h-8 text-sm"
+                />
+                <Input
+                  value={row.phone ?? ""}
+                  placeholder="전화번호"
+                  onChange={(e) => handlePhoneChange(row.id, e.target.value)}
+                  onBlur={(e) => handlePhoneCommit(row.id, e.target.value)}
+                  className="h-8 text-sm w-28 shrink-0"
                 />
                 <Button
                   variant="ghost"

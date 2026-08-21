@@ -109,6 +109,172 @@ export type Database = {
         }
         Relationships: []
       }
+      bulletin_bishopric: {
+        Row: {
+          created_at: string
+          id: string
+          meeting_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meeting_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meeting_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bulletin_bishopric_announcements: {
+        Row: {
+          bishopric_id: string
+          content: string
+          created_at: string
+          id: string
+          sort_order: number
+        }
+        Insert: {
+          bishopric_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+        }
+        Update: {
+          bishopric_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulletin_bishopric_announcements_bishopric_id_fkey"
+            columns: ["bishopric_id"]
+            isOneToOne: false
+            referencedRelation: "bulletin_bishopric"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulletin_notices: {
+        Row: {
+          address_text: string
+          arrival_note_text: string
+          created_at: string
+          id: string
+          image_url: string | null
+          meeting_date: string
+          scripture_text: string
+          updated_at: string
+        }
+        Insert: {
+          address_text?: string
+          arrival_note_text?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          meeting_date: string
+          scripture_text?: string
+          updated_at?: string
+        }
+        Update: {
+          address_text?: string
+          arrival_note_text?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          meeting_date?: string
+          scripture_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bulletin_notice_announcements: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          notice_id: string
+          sort_order: number
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          notice_id: string
+          sort_order?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          notice_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulletin_notice_announcements_notice_id_fkey"
+            columns: ["notice_id"]
+            isOneToOne: false
+            referencedRelation: "bulletin_notices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulletin_ward_business: {
+        Row: {
+          bishopric_id: string
+          category: string
+          created_at: string
+          custom_name: string | null
+          id: string
+          member_id: string | null
+          note: string
+          sort_order: number
+        }
+        Insert: {
+          bishopric_id: string
+          category: string
+          created_at?: string
+          custom_name?: string | null
+          id?: string
+          member_id?: string | null
+          note?: string
+          sort_order?: number
+        }
+        Update: {
+          bishopric_id?: string
+          category?: string
+          created_at?: string
+          custom_name?: string | null
+          id?: string
+          member_id?: string | null
+          note?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulletin_ward_business_bishopric_id_fkey"
+            columns: ["bishopric_id"]
+            isOneToOne: false
+            referencedRelation: "bulletin_bishopric"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulletin_ward_business_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_events: {
         Row: {
           created_at: string
@@ -247,6 +413,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          phone: string | null
           sort_order: number
           type: string
           updated_at: string
@@ -255,6 +422,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          phone?: string | null
           sort_order?: number
           type: string
           updated_at?: string
@@ -263,6 +431,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          phone?: string | null
           sort_order?: number
           type?: string
           updated_at?: string

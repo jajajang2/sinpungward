@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import PersonPicker from "./PersonPicker";
+import HymnPicker from "./HymnPicker";
 import TalkDetailModal from "./TalkDetailModal";
 import { ROWS, SPECIAL_MERGE_ROLES, calcAge, type AssignStatus, type EventType, type MemberLite, type SacramentAssignment, type SacramentMeeting } from "./types";
 
@@ -366,21 +367,25 @@ export default function MonthSacramentTable({ year, month, members, refreshKey, 
     const a = meeting ? assigns[keyOf(meeting.id, row.role, 0)] : undefined;
 
     if (row.kind === "hymn") {
+      const v = a?.hymn_number || "";
       return (
-        <Input
-          defaultValue={a?.hymn_number || ""}
-          placeholder="번호"
-          className="h-10 md:h-5 border-0 text-base md:text-[11px] px-1 py-0"
-          onBlur={(e) => {
-            const v = e.target.value.trim();
-            if ((a?.hymn_number || "") === v) return;
-            if (!v && a) {
-              deleteAssign(date, row.role, 0);
-            } else if (v) {
-              upsertAssign(date, row.role, 0, { hymn_number: v });
-            }
-          }}
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="h-10 md:h-5 w-full px-1 text-left text-base md:text-[11px] hover:bg-muted leading-none truncate"
+            >
+              {v || <span className="text-muted-foreground">번호/제목 검색</span>}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="p-0">
+            <HymnPicker
+              value={v}
+              onPick={(picked) => upsertAssign(date, row.role, 0, { hymn_number: picked })}
+              onClear={v ? () => deleteAssign(date, row.role, 0) : undefined}
+            />
+          </PopoverContent>
+        </Popover>
       );
     }
 

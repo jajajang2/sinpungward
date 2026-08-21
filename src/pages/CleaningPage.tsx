@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2, Download, Info } from "lucide-react";
+import { Sparkles, RotateCcw, Wand2, Users, Trash2, Printer, Loader2, Download, Info, Minus, Plus, Search } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -426,7 +426,9 @@ export default function CleaningPage() {
     }
   };
 
-  const unassignedFamilies = familyViews.filter((f) => !assignmentByFamily.get(f.id));
+  const unassignedFamilies = familyViews
+    .filter((f) => !assignmentByFamily.get(f.id))
+    .sort((a, b) => (a.head?.name ?? "").replace(/\s/g, "").localeCompare((b.head?.name ?? "").replace(/\s/g, ""), "ko"));
   /** 조별 가족 목록 — 가족대표 이름 가나다순 (조편성/명단/내보내기 공통) */
   const familiesByTeam = (teamId: string) =>
     (assignments.filter((a) => a.team_id === teamId).map((a) => familyById.get(a.family_id)).filter(Boolean) as FamilyView[]).sort(
@@ -442,7 +444,113 @@ export default function CleaningPage() {
   // 가족 멤버 보기 다이얼로그
   const [memberDialogFamily, setMemberDialogFamily] = useState<FamilyView | null>(null);
   const [assignSheetFamily, setAssignSheetFamily] = useState<FamilyView | null>(null);
+  const [dialogBusy, setDialogBusy] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [addMemberQuery, setAddMemberQuery] = useState("");
   const isMobile = useIsMobile();
+
+  // 데이터가 새로고침되면 열려있는 다이얼로그도 최신 가족 구성으로 동기화 (가족이 없어졌으면 닫기)
+  useEffect(() => {
+    if (!memberDialogFamily) return;
+    const fresh = familyById.get(memberDialogFamily.id);
+    if (!fresh) {
+      setMemberDialogFamily(null);
+    } else if (fresh !== memberDialogFamily) {
+      setMemberDialogFamily(fresh);
+    }
+  }, [familyById]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** 가족 명단에서 회원 한 명을 같은 조 안의 개별 인원으로 분리 */
+  const detachFromFamily = async (member: Member) => {
+    if (!memberDialogFamily) return;
+    setDialogBusy(true);
+    try {
+      const family = memberDialogFamily;
+      const teamId = assignmentByFamily.get(family.id)?.team_id ?? null;
+
+      const { data: newFam, error: famErr } = await supabase
+        .from("families")
+        .insert({ head_member_id: member.id })
+        .select("id")
+        .single();
+      if (famErr || !newFam) throw famErr ?? new Error("가족 생성 실패");
+
+      const { error: fmErr } = await supabase
+        .from("family_members")
+        .update({ family_id: newFam.id, family_role: "single" })
+        .eq("member_id", member.id);
+      if (fmErr) throw fmErr;
+
+      if (teamId) {
+        const { error: taErr } = await supabase
+          .from("team_assignments")
+          .insert({ family_id: newFam.id, team_id: teamId, assigned_method: "manual" });
+        if (taErr) throw taErr;
+      }
+
+      // 원래 가족이 비었으면 삭제, 1명만 남으면 single로 정리
+      const remaining = family.members.filter((m) => m.id !== member.id);
+      if (remaining.length === 0) {
+        await supabase.from("families").delete().eq("id", family.id);
+      } else if (remaining.length === 1) {
+        await supabase.from("family_members").update({ family_role: "single" }).eq("member_id", remaining[0].id);
+      }
+
+      await loadAll();
+      toast({ title: `${member.name} 님을 개별 인원으로 분리했습니다` });
+    } catch (e: any) {
+      toast({ title: "분리 실패", description: e.message ?? String(e), variant: "destructive" });
+    } finally {
+      setDialogBusy(false);
+    }
+  };
+
+  /** 검색으로 고른 기존 회원을 이 가족에 편입 (원래 가족/조에서는 자동으로 빠짐) */
+  const attachToFamily = async (member: Member) => {
+    if (!memberDialogFamily) return;
+    setDialogBusy(true);
+    try {
+      const targetFamilyId = memberDialogFamily.id;
+      const oldFm = familyMembers.find((fm) => fm.member_id === member.id);
+      const oldFamilyId = oldFm?.family_id ?? null;
+
+      const { error } = await supabase
+        .from("family_members")
+        .update({ family_id: targetFamilyId, family_role: "child" })
+        .eq("member_id", member.id);
+      if (error) throw error;
+
+      if (oldFamilyId && oldFamilyId !== targetFamilyId) {
+        const remainingInOld = familyMembers.filter(
+          (fm) => fm.family_id === oldFamilyId && fm.member_id !== member.id
+        );
+        if (remainingInOld.length === 0) {
+          await supabase.from("families").delete().eq("id", oldFamilyId);
+        } else if (remainingInOld.length === 1) {
+          await supabase
+            .from("family_members")
+            .update({ family_role: "single" })
+            .eq("member_id", remainingInOld[0].member_id);
+        }
+      }
+
+      await loadAll();
+      toast({ title: `${member.name} 님을 가족에 추가했습니다` });
+    } catch (e: any) {
+      toast({ title: "추가 실패", description: e.message ?? String(e), variant: "destructive" });
+    } finally {
+      setDialogBusy(false);
+      setAddMemberOpen(false);
+      setAddMemberQuery("");
+    }
+  };
+
+  const addMemberCandidates = useMemo(() => {
+    const q = addMemberQuery.trim();
+    if (!q) return [];
+    const excludeIds = new Set(memberDialogFamily?.members.map((m) => m.id) ?? []);
+    return members.filter((m) => !excludeIds.has(m.id) && m.name.includes(q)).slice(0, 20);
+  }, [members, addMemberQuery, memberDialogFamily]);
 
   // ===== 명단(Roster) =====
   const sortedTeams = useMemo(
@@ -1015,7 +1123,16 @@ export default function CleaningPage() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={!!memberDialogFamily} onOpenChange={(o) => !o && setMemberDialogFamily(null)}>
+      <Dialog
+        open={!!memberDialogFamily}
+        onOpenChange={(o) => {
+          if (!o) {
+            setMemberDialogFamily(null);
+            setAddMemberOpen(false);
+            setAddMemberQuery("");
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -1025,15 +1142,84 @@ export default function CleaningPage() {
           </DialogHeader>
           <ul className="space-y-1 text-sm">
             {memberDialogFamily?.members.map((m) => (
-              <li key={m.id} className="flex items-center gap-2">
-                <span className="font-medium">{m.name}</span>
-                {(() => { const a = calcAge(m.birth_date); return a !== null && <span className="text-xs text-muted-foreground">({a}세)</span>; })()}
-                {m.gender && <span className="text-xs text-muted-foreground">· {m.gender}</span>}
+              <li key={m.id} className="flex items-center justify-between gap-2 py-1">
+                <span className="flex items-center gap-2">
+                  <span className="font-medium">{m.name}</span>
+                  {(() => { const a = calcAge(m.birth_date); return a !== null && <span className="text-xs text-muted-foreground">({a}세)</span>; })()}
+                  {m.gender && <span className="text-xs text-muted-foreground">· {m.gender}</span>}
+                </span>
+                {memberDialogFamily.members.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    aria-label={`${m.name} 개별 인원으로 분리`}
+                    disabled={dialogBusy}
+                    onClick={() => detachFromFamily(m)}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
+
+          {addMemberOpen ? (
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  autoFocus
+                  value={addMemberQuery}
+                  onChange={(e) => setAddMemberQuery(e.target.value)}
+                  placeholder="회원 이름 검색"
+                  className="pl-8 h-9 text-sm"
+                />
+              </div>
+              {addMemberQuery.trim() && (
+                <ul className="max-h-40 overflow-y-auto space-y-0.5">
+                  {addMemberCandidates.length === 0 ? (
+                    <li className="text-xs text-muted-foreground px-2 py-2">검색 결과가 없습니다</li>
+                  ) : (
+                    addMemberCandidates.map((m) => (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          disabled={dialogBusy}
+                          onClick={() => attachToFamily(m)}
+                          className="w-full flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-left hover:bg-muted disabled:opacity-50"
+                        >
+                          <span>{m.name}</span>
+                          {(() => { const a = calcAge(m.birth_date); return a !== null && <span className="text-xs text-muted-foreground">{a}세</span>; })()}
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setAddMemberOpen(false); setAddMemberQuery(""); }}
+                >
+                  취소
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full border-dashed"
+              onClick={() => setAddMemberOpen(true)}
+              disabled={dialogBusy}
+            >
+              <Plus className="w-4 h-4" /> 회원 추가
+            </Button>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMemberDialogFamily(null)}>닫기</Button>
+            <Button variant="outline" onClick={() => { setMemberDialogFamily(null); setAddMemberOpen(false); setAddMemberQuery(""); }}>닫기</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
